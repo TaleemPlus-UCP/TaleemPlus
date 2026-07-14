@@ -1,22 +1,61 @@
-<<<<<<< HEAD
-# taleem_plus
+# TaleemPlus — Project Skeleton
 
-A new Flutter project.
+This is the starter folder structure for the 60-day solo build plan
+(`TaleemPlus_60Day_Plan.md`). Every file is a stub with a one-line comment
+saying what belongs there and which SDS section / week it maps to — nothing
+here runs yet. Fill it in feature-by-feature, in the order the plan lays out.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```
+taleemplus_app/
+├── lib/
+│   ├── main.dart              # App entry point, Firebase/DB init, routing
+│   ├── core/
+│   │   ├── theme/             # App-wide colors/text styles
+│   │   ├── constants/         # Route names, table names, pref keys
+│   │   └── utils/             # Validators, date helpers
+│   ├── data/
+│   │   ├── local/
+│   │   │   ├── db_helper.dart # SQLite setup — Week 1
+│   │   │   └── tables/        # One file per table, matches Fig.7 ERD
+│   │   ├── remote/            # Firebase service + sync_service.dart (Week 7)
+│   │   ├── models/            # Dart classes matching Fig.4 Class Diagram
+│   │   └── repositories/      # Bridge between UI and local/remote data
+│   ├── logic/                 # Providers (state management)
+│   ├── features/
+│   │   ├── auth/              # Login/signup — Week 1
+│   │   ├── admin/             # Week 2
+│   │   ├── teacher/           # Weeks 3-4 (attendance, OCR, test gen)
+│   │   ├── student/           # Week 5 (summarizer, quiz)
+│   │   └── parent/            # Week 7
+│   ├── services/ai/           # OCR, summarizer, test generator, risk predictor
+│   └── widgets/                # Shared components incl. role_guard.dart (RBAC)
+├── assets/
+│   ├── images/
+│   └── ml_models/             # risk_model.tflite goes here (Week 6)
+├── test/
+│   ├── unit/                  # Maps to Table 4 test cases
+│   └── integration/           # Offline/sync end-to-end tests
+├── ml_training/                # Python side — NOT part of the Flutter app
+│   ├── train_risk_model.py    # Week 6, Day 36-37
+│   ├── export_tflite.py       # Week 6, Day 38
+│   ├── requirements.txt
+│   └── data/synthetic_dataset.csv
+└── pubspec.yaml                # All dependencies already listed
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Before you write any feature code
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. `flutter pub get`
+2. `flutterfire configure` (sets up Firebase for this project)
+3. Fill in `lib/data/local/db_helper.dart` first — every table file and
+   repository depends on it.
+4. Build `lib/features/auth/login_screen.dart` + RBAC (`role_guard.dart`)
+   next — you can't test any role-specific screen without it.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# TaleemPlus
-TaleemPlus is a Flutter-based AI-powered academy management system that streamlines student, teacher, parent, and admin operations. It supports attendance, fee management, announcements, performance tracking, role-based access, and offline-first functionality using Hive with Firebase synchronization.
->>>>>>> d4d66885cae2f00c40002dc6b379b3e5d70afb36
+## Reference
+
+Every stub comment points back to either a Figure/Section in your SDS or a
+Week/Day in `TaleemPlus_60Day_Plan.md`. If you're ever unsure what a file
+should contain, check that plan first.
