@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart';
-// import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 
-// import 'core/theme/app_theme.dart';
-// import 'features/auth/login_screen.dart';
-// import 'logic/auth_provider.dart';
+import 'firebase_options.dart';
+import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
+import 'logic/auth_provider.dart';
+import 'features/auth/splash_screen.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/signup_screen.dart';
+import 'features/admin/admin_dashboard.dart';
+import 'features/teacher/teacher_dashboard.dart';
+import 'features/student/student_dashboard.dart';
+import 'features/parent/parent_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // TODO Week 1 Day 1: initialize Firebase
-  // await Firebase.initializeApp();
-
-  // TODO Week 1 Day 2-3: initialize local SQLite DB (see data/local/db_helper.dart)
-  // await DbHelper.instance.database;
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const TaleemPlusApp());
 }
@@ -23,26 +29,22 @@ class TaleemPlusApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: wrap with MultiProvider once logic/*_provider.dart files are built
-    return MaterialApp(
-      title: 'TaleemPlus',
-      debugShowCheckedModeBanner: false,
-      // theme: AppTheme.themeData,
-      home: const _PlaceholderHome(),
-      // home: const LoginScreen(),
-    );
-  }
-}
-
-// Remove once LoginScreen (Week 1 Day 4-5) is wired in as the real home.
-class _PlaceholderHome extends StatelessWidget {
-  const _PlaceholderHome();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('TaleemPlus — replace with LoginScreen (see main.dart TODOs)'),
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: MaterialApp(
+        title: 'TaleemPlus',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        initialRoute: AppRoutes.splash,
+        routes: {
+          AppRoutes.splash: (_) => const SplashScreen(),
+          AppRoutes.login: (_) => const LoginScreen(),
+          AppRoutes.signup: (_) => const SignupScreen(),
+          AppRoutes.adminDashboard: (_) => const AdminDashboard(),
+          AppRoutes.teacherDashboard: (_) => const TeacherDashboard(),
+          AppRoutes.studentDashboard: (_) => const StudentDashboard(),
+          AppRoutes.parentDashboard: (_) => const ParentDashboard(),
+        },
       ),
     );
   }
