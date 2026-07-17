@@ -1,12 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/app_constants.dart';
 
-/// Mirrors the `Users` table from the SDS ERD (Figure 7).
-///
-/// account_status values:
-///   'active'   -> approved, can log in
-///   'pending'  -> waiting for admin approval
-///   'rejected' -> request denied
 class AppUser {
   final String uid;
   final String fullName;
@@ -14,6 +8,7 @@ class AppUser {
   final String phoneNumber;
   final UserRole role;
   final String accountStatus;
+  final String? academyName; // New: For academy registration
   final DateTime? createdAt;
 
   const AppUser({
@@ -23,6 +18,7 @@ class AppUser {
     required this.phoneNumber,
     required this.role,
     this.accountStatus = 'active',
+    this.academyName,
     this.createdAt,
   });
 
@@ -38,6 +34,7 @@ class AppUser {
       'phone_number': phoneNumber,
       'role': role.value,
       'account_status': accountStatus,
+      'academy_name': academyName,
       'created_at': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
@@ -54,6 +51,7 @@ class AppUser {
       phoneNumber: (map['phone_number'] ?? '') as String,
       role: UserRoleX.fromValue((map['role'] ?? 'student') as String),
       accountStatus: (map['account_status'] ?? 'active') as String,
+      academyName: map['academy_name'] as String?,
       createdAt: ts is Timestamp ? ts.toDate() : null,
     );
   }

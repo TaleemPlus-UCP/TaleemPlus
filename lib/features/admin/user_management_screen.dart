@@ -24,6 +24,11 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MemberProvider>().load();
     });

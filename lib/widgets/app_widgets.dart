@@ -77,6 +77,59 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
+/// A professional logo widget that handles the splash image with a 
+/// high-quality code-based fallback if the asset is missing.
+class TaleemLogo extends StatelessWidget {
+  final double size;
+  const TaleemLogo({super.key, this.size = 96});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(size * 0.22),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.accent.withValues(alpha: 0.10),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: 0.35),
+            blurRadius: size * 0.5,
+            spreadRadius: size * 0.06,
+          ),
+        ],
+      ),
+      child: Image.asset(
+        'assets/images/splash_logo.png', // Fixed casing
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Designed fallback if image is missing
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.school_rounded,
+                size: size * 0.45,
+                color: AppColors.accent,
+              ),
+              Positioned(
+                right: 0,
+                bottom: 2,
+                child: Icon(
+                  Icons.add_circle_rounded,
+                  size: size * 0.22,
+                  color: AppColors.accent,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// Labeled text field matching the dark input style in the mockups.
 class LabeledField extends StatelessWidget {
   final String label;

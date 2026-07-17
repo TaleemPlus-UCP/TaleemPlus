@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-
 import 'firebase_options.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -10,6 +9,7 @@ import 'logic/member_provider.dart';
 import 'logic/fee_provider.dart';
 import 'logic/class_provider.dart';
 import 'logic/attendance_provider.dart';
+import 'logic/quiz_provider.dart'; // NEW
 import 'features/auth/splash_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
@@ -40,6 +40,7 @@ class TaleemPlusApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FeeProvider()),
         ChangeNotifierProvider(create: (_) => ClassProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => QuizProvider()), // NEW
       ],
       child: MaterialApp(
         title: 'Taleem Plus',

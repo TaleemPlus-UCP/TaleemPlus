@@ -11,6 +11,7 @@ import 'approval_requests_screen.dart';
 import 'fee_ledger_screen.dart';
 import 'announcements_screen.dart';
 import 'class_management_screen.dart';
+import 'admin_quiz_list_screen.dart'; // NEW
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -50,7 +51,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Icon(Icons.admin_panel_settings_rounded,
                 color: AppColors.accent, size: 22),
             SizedBox(width: 8),
-            Text('Admin Portal',
+            const Text('Admin Portal',
                 style: TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
@@ -75,6 +76,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         color: AppColors.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800)),
+                if (user?.academyName != null) ...[
+                  const SizedBox(height: 4),
+                  Text(user!.academyName!,
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
+                ],
                 const SizedBox(height: 4),
                 const Text('Academy overview',
                     style: TextStyle(color: AppColors.textSecondary)),
@@ -151,6 +160,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const AnnouncementsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _actionTile(
+                  'Test Reports & Grading',
+                  'Monitor student performance and results',
+                  Icons.analytics_rounded,
+                      () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminQuizListScreen()),
                   ),
                 ),
               ],

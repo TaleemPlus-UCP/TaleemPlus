@@ -5,6 +5,10 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/gradient_background.dart';
+import '../ocr/screens/ocr_history_screen.dart';
+import '../ocr/screens/ocr_scanner_screen.dart';
+import '../quiz/screens/monthly_report_screen.dart'; // NEW
+import '../quiz/screens/teacher_quiz_list_screen.dart'; // NEW
 import 'teacher_classes_screen.dart';
 
 class TeacherDashboard extends StatelessWidget {
@@ -31,7 +35,7 @@ class TeacherDashboard extends StatelessWidget {
             Icon(Icons.co_present_rounded,
                 color: AppColors.accent, size: 22),
             SizedBox(width: 8),
-            Text('Teacher Portal',
+            const Text('Teacher Portal',
                 style: TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
@@ -79,25 +83,56 @@ class TeacherDashboard extends StatelessWidget {
               _actionTile(
                 context,
                 'OCR Document Scanner',
-                'Scan notes with ML Kit (coming next)',
+                'Scan and manage digitized notes',
                 Icons.document_scanner_rounded,
-                null,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OcrScannerScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'OCR History',
+                'View and edit previously scanned documents',
+                Icons.history_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OcrHistoryScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'Grading & Marks Entry',
+                'Enter marks for conducted tests',
+                Icons.add_chart_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherQuizListScreen(isAiGen: false)),
+                ),
               ),
               const SizedBox(height: 12),
               _actionTile(
                 context,
                 'AI Test Paper Generator',
-                'Generate quizzes automatically (coming next)',
-                Icons.quiz_rounded,
-                null,
+                'Generate and print monthly tests',
+                Icons.auto_awesome_motion_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherQuizListScreen(isAiGen: true)),
+                ),
               ),
               const SizedBox(height: 12),
               _actionTile(
                 context,
-                'Notes Summarizer',
-                'AI-powered notes summary (coming next)',
-                Icons.auto_awesome_rounded,
-                null,
+                'Monthly Performance',
+                'View compiled student results',
+                Icons.insights_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyReportScreen()),
+                ),
               ),
             ],
           ),

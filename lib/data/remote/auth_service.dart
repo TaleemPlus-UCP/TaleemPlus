@@ -32,6 +32,7 @@ class AuthService {
     required String phoneNumber,
     required String password,
     required UserRole role,
+    String? academyName, // Added
   }) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -49,6 +50,7 @@ class AuthService {
         phoneNumber: phoneNumber.trim(),
         role: role,
         accountStatus: status,
+        academyName: academyName, // Added
         createdAt: DateTime.now(),
       );
 
@@ -101,7 +103,42 @@ class AuthService {
     if (!doc.exists || doc.data() == null) return null;
     return AppUser.fromMap(uid, doc.data()!);
   }
+  /// Returns all approved users for the requested role.
+  Future<List<AppUser>> getApprovedByRole(UserRole role) async {
+    final snap = await _users
+        .where('role', isEqualTo: role.name)
+        .where('account_status', isEqualTo: 'active')
+        .get();
 
+    final users =
+    snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
+
+    users.sort(
+          (a, b) => a.fullName.toLowerCase().compareTo(
+        b.fullName.toLowerCase(),
+      ),
+    );
+
+    return users;
+  }
+
+  /// Returns all users of a role (approved + pending + rejected).
+  Future<List<AppUser>> getUsersByRole(UserRole role) async {
+    final snap = await _users
+        .where('role', isEqualTo: role.name)
+        .get();
+
+    final users =
+    snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
+
+    users.sort(
+          (a, b) => a.fullName.toLowerCase().compareTo(
+        b.fullName.toLowerCase(),
+      ),
+    );
+
+    return users;
+  }
   // ---------- Admin approval APIs ----------
 
   Future<List<AppUser>> getPendingUsers() async {

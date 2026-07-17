@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -68,18 +69,27 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    final auth = context.read<AuthProvider>();
-    // Restore any existing session in parallel with a minimum splash time.
-    final restoreFuture = auth.tryRestoreSession();
-    await Future.delayed(const Duration(milliseconds: 2800));
-    final user = await restoreFuture;
+    try {
+      final auth = context.read<AuthProvider>();
+      
+      // Perform session restoration
+      final user = await auth.tryRestoreSession();
+      
+      // Minimum splash time to ensure animation completes
+      await Future.delayed(const Duration(milliseconds: 2500));
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      if (user != null) {
+        Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
+    } catch (e) {
+      debugPrint("Splash Bootstrap Error: $e");
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
     }
   }
 
@@ -106,26 +116,7 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _logoFade,
                       child: ScaleTransition(
                         scale: _logoScale,
-                        child: Container(
-                          padding: const EdgeInsets.all(22),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.accent.withValues(alpha: 0.10),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                AppColors.accent.withValues(alpha: 0.35),
-                                blurRadius: 50,
-                                spreadRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: Image.asset(
-                            'assets/images/splash_Logo.png',
-                            width: 96,
-                            height: 96,
-                          ),
-                        ),
+                        child: const TaleemLogo(size: 96),
                       ),
                     ),
                     const SizedBox(height: 26),
@@ -167,18 +158,34 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
 
-                    // ---- Tagline ----
+                    // ---- New Tagline ----
                     FadeTransition(
                       opacity: _taglineFade,
                       child: const Text(
-                        'AI-POWERED. FULLY OFFLINE.',
+                        'The Future of Smart Learning',
+                        style: TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ---- Original Tagline ----
+                    FadeTransition(
+                      opacity: _taglineFade,
+                      child: const Text(
+                        'AI-POWERED. SMART LEARNING.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.0,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
                         ),
                       ),
                     ),

@@ -18,6 +18,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _academyNameCtrl = TextEditingController(); // NEW
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -30,6 +31,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _academyNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
@@ -48,6 +50,7 @@ class _SignupScreenState extends State<SignupScreen> {
       phoneNumber: _phoneCtrl.text,
       password: _passwordCtrl.text,
       role: _selectedRole,
+      academyName: _selectedRole == UserRole.admin ? _academyNameCtrl.text : null,
     );
 
     if (!mounted) return;
@@ -259,6 +262,13 @@ class _SignupScreenState extends State<SignupScreen> {
             validator: Validators.fullName,
             keyboardType: TextInputType.name,
           ),
+          if (_selectedRole == UserRole.admin) // Only for Admins (Academies)
+            LabeledField(
+              label: 'Academy Name',
+              hint: 'e.g. PGC Academy Lahore',
+              controller: _academyNameCtrl,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Academy Name is required' : null,
+            ),
           LabeledField(
             label: 'Email Address',
             hint: 'name${AppRules.emailDomain}',

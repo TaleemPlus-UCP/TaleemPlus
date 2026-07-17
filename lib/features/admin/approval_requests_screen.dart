@@ -58,6 +58,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     //    (SQLite `members` table) — but only if they aren't already there.
     //    Admin doesn't appear in the User Management lists, so we skip that role.
     if (u.role != UserRole.admin) {
+      if (!mounted) return;
       final memberProvider = context.read<MemberProvider>();
       final alreadyPresent =
       memberProvider.members.any((m) => m.id == u.uid);
