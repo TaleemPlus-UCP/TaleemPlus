@@ -2,13 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/app_constants.dart';
 
 /// Mirrors the `Users` table from the SDS ERD (Figure 7).
+///
+/// account_status values:
+///   'active'   -> approved, can log in
+///   'pending'  -> waiting for admin approval
+///   'rejected' -> request denied
 class AppUser {
   final String uid;
   final String fullName;
   final String email;
   final String phoneNumber;
   final UserRole role;
-  final String accountStatus; // active / suspended
+  final String accountStatus;
   final DateTime? createdAt;
 
   const AppUser({
@@ -21,7 +26,9 @@ class AppUser {
     this.createdAt,
   });
 
-  bool get isActive => accountStatus.toLowerCase() == 'active';
+  bool get isApproved => accountStatus.toLowerCase() == 'active';
+  bool get isPending => accountStatus.toLowerCase() == 'pending';
+  bool get isRejected => accountStatus.toLowerCase() == 'rejected';
 
   Map<String, dynamic> toMap() {
     return {
@@ -48,18 +55,6 @@ class AppUser {
       role: UserRoleX.fromValue((map['role'] ?? 'student') as String),
       accountStatus: (map['account_status'] ?? 'active') as String,
       createdAt: ts is Timestamp ? ts.toDate() : null,
-    );
-  }
-
-  AppUser copyWith({String? fullName, String? phoneNumber}) {
-    return AppUser(
-      uid: uid,
-      fullName: fullName ?? this.fullName,
-      email: email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      role: role,
-      accountStatus: accountStatus,
-      createdAt: createdAt,
     );
   }
 }

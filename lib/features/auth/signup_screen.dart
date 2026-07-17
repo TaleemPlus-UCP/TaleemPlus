@@ -56,6 +56,8 @@ class _SignupScreenState extends State<SignupScreen> {
         context,
         auth.currentUser!.role.dashboardRoute,
       );
+    } else if (auth.pendingApproval) {
+      await _showPendingDialog();
     } else if (auth.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -64,6 +66,31 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _showPendingDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceAlt,
+        title: const Text('Account created',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text(
+          'Your account is waiting for admin approval. '
+              'You can log in once an admin approves it.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK',
+                style: TextStyle(color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context); // back to login
   }
 
   @override

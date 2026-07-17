@@ -7,7 +7,6 @@ import '../data/remote/auth_service.dart';
 
 enum AuthStatus { idle, loading, authenticated, error }
 
-/// Single source of truth for authentication state across the app.
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
 
@@ -17,27 +16,34 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.idle;
   AppUser? _currentUser;
   String? _errorMessage;
+  bool _pendingApproval = false;
 
   AuthStatus get status => _status;
   AppUser? get currentUser => _currentUser;
   String? get errorMessage => _errorMessage;
   bool get isLoading => _status == AuthStatus.loading;
   bool get isAuthenticated => _currentUser != null;
+  bool get pendingApproval => _pendingApproval;
 
-  /// Called by the splash screen. Restores the session if one exists.
   Future<AppUser?> tryRestoreSession() async {
     final fbUser = _authService.firebaseUser;
     if (fbUser == null) return null;
     try {
-      _currentUser = await _authService.getProfile(fbUser.uid);
-      if (_currentUser != null) _status = AuthStatus.authenticated;
-      notifyListeners();
-      return _currentUser;
+      final profile = await _authService.getProfile(fbUser.uid);
+      if (profile != null && profile.isApproved) {
+        _currentUser = profile;
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        return _currentUser;
+      }
+      return null;
     } catch (_) {
       return null;
     }
   }
 
+  /// Returns true only when the user is approved and should enter a dashboard.
+  /// Returns false for errors OR pending approval (check [pendingApproval]).
   Future<bool> signUp({
     required String fullName,
     required String email,
@@ -47,13 +53,23 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading();
     try {
-      _currentUser = await _authService.signUp(
+      final user = await _authService.signUp(
         fullName: fullName,
         email: email,
         phoneNumber: phoneNumber,
         password: password,
         role: role,
       );
+
+      if (!user.isApproved) {
+        _pendingApproval = true;
+        _currentUser = null;
+        _status = AuthStatus.idle;
+        notifyListeners();
+        return false;
+      }
+
+      _currentUser = user;
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
@@ -70,7 +86,8 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading();
     try {
-      _currentUser = await _authService.signIn(email: email, password: password);
+      _currentUser =
+      await _authService.signIn(email: email, password: password);
       _status = AuthStatus.authenticated;
       await _persistRememberMe(rememberMe, email);
       notifyListeners();
@@ -117,6 +134,7 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading() {
     _status = AuthStatus.loading;
     _errorMessage = null;
+    _pendingApproval = false;
     notifyListeners();
   }
 

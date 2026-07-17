@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/app_user.dart';
 
-/// Thrown for any auth-related failure with a user-friendly message.
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);
@@ -12,7 +11,7 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
-/// Handles all Firebase Auth + Firestore user-profile operations.
+/// Handles Firebase Auth + Firestore user profiles and admin approvals.
 class AuthService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
@@ -26,7 +25,7 @@ class AuthService {
 
   User? get firebaseUser => _auth.currentUser;
 
-  /// Registers a new account and writes the profile (incl. role) to Firestore.
+  /// Admins are auto-approved; everyone else starts as 'pending'.
   Future<AppUser> signUp({
     required String fullName,
     required String email,
@@ -41,18 +40,25 @@ class AuthService {
       );
 
       final uid = cred.user!.uid;
+      final status = role == UserRole.admin ? 'active' : 'pending';
+
       final user = AppUser(
         uid: uid,
         fullName: fullName.trim(),
         email: email.trim(),
         phoneNumber: phoneNumber.trim(),
         role: role,
-        accountStatus: 'active',
+        accountStatus: status,
         createdAt: DateTime.now(),
       );
 
       await _users.doc(uid).set(user.toMap());
       await cred.user!.updateDisplayName(fullName.trim());
+
+      // Pending users must not stay logged in until approved.
+      if (!user.isApproved) {
+        await _auth.signOut();
+      }
       return user;
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapAuthError(e));
@@ -61,7 +67,6 @@ class AuthService {
     }
   }
 
-  /// Signs in and returns the full profile (with role) from Firestore.
   Future<AppUser> signIn({
     required String email,
     required String password,
@@ -76,9 +81,14 @@ class AuthService {
       if (profile == null) {
         throw AuthException('Account profile not found. Contact your admin.');
       }
-      if (!profile.isActive) {
+      if (profile.isPending) {
         await signOut();
-        throw AuthException('This account is suspended. Contact your admin.');
+        throw AuthException('Your account is pending admin approval.');
+      }
+      if (profile.isRejected) {
+        await signOut();
+        throw AuthException(
+            'Your account request was rejected. Contact your admin.');
       }
       return profile;
     } on FirebaseAuthException catch (e) {
@@ -90,6 +100,24 @@ class AuthService {
     final doc = await _users.doc(uid).get();
     if (!doc.exists || doc.data() == null) return null;
     return AppUser.fromMap(uid, doc.data()!);
+  }
+
+  // ---------- Admin approval APIs ----------
+
+  Future<List<AppUser>> getPendingUsers() async {
+    final snap =
+    await _users.where('account_status', isEqualTo: 'pending').get();
+    return snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
+  }
+
+  Future<void> approveUser(String uid) => _setStatus(uid, 'active');
+  Future<void> rejectUser(String uid) => _setStatus(uid, 'rejected');
+
+  Future<void> _setStatus(String uid, String status) async {
+    await _users.doc(uid).update({
+      'account_status': status,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> signOut() => _auth.signOut();

@@ -6,6 +6,10 @@ import 'firebase_options.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'logic/auth_provider.dart';
+import 'logic/member_provider.dart';
+import 'logic/fee_provider.dart';
+import 'logic/class_provider.dart';
+import 'logic/attendance_provider.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
@@ -29,10 +33,16 @@ class TaleemPlusApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => MemberProvider()),
+        ChangeNotifierProvider(create: (_) => FeeProvider()),
+        ChangeNotifierProvider(create: (_) => ClassProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+      ],
       child: MaterialApp(
-        title: 'TaleemPlus',
+        title: 'Taleem Plus',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         initialRoute: AppRoutes.splash,
