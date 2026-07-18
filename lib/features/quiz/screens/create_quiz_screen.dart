@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
@@ -30,7 +33,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
   String _difficulty = 'Medium';
-  DateTime _testDate = DateTime.now();
+  final DateTime _testDate = DateTime.now();
 
   final List<QuizQuestion> _questions = [];
 
@@ -39,12 +42,249 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  bool _isAnalyzing = false;
+
+  Future<void> _pickImageAndAnalyze() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt_rounded, color: AppColors.accent),
+            title: const Text("Camera", style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.image_rounded, color: AppColors.accent),
+            title: const Text("Gallery", style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source == null) return;
+
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile == null) return;
+
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final inputImage = InputImage.fromFile(File(pickedFile.path));
+      final textRecognizer = TextRecognizer();
+      final recognizedText = await textRecognizer.processImage(inputImage);
+      await textRecognizer.close();
+
+      if (recognizedText.text.trim().isEmpty) {
+        throw Exception("No text detected in the image!");
+      }
+
+      _analyzeContentAndShowRecommendations(recognizedText.text);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("AI Analysis Failed: $e"), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
+  }
+
+  void _analyzeContentAndShowRecommendations(String text) {
+    // Offline AI Heuristic Logic
+    final lines = text.split('\n').where((l) => l.trim().length > 10).toList();
+    final wordCount = text.split(' ').length;
+    
+    // 1. Difficulty prediction based on average word length and complex markers
+    String predictedDifficulty = "Medium";
+    if (wordCount < 100) predictedDifficulty = "Easy";
+    if (text.contains('law') || text.contains('theorem') || text.contains('equation') || wordCount > 500) {
+      predictedDifficulty = "Hard";
+    }
+
+    // 2. Question counts based on content density
+    int mcqs = (wordCount / 40).clamp(3, 15).toInt();
+    int sqs = (lines.length / 4).clamp(2, 10).toInt();
+    int lqs = (wordCount > 300) ? 2 : 1;
+
+    _showAiRecommendationsDialog(predictedDifficulty, mcqs, sqs, lqs, text.substring(0, text.length > 100 ? 100 : text.length));
+  }
+
+  void _showAiRecommendationsDialog(String diff, int mcqs, int sqs, int lqs, String preview) {
+    final mcqCountCtrl = TextEditingController(text: mcqs.toString());
+    final sqCountCtrl = TextEditingController(text: sqs.toString());
+    final lqCountCtrl = TextEditingController(text: lqs.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
+            SizedBox(width: 10),
+            Text("AI Test Blueprint", style: TextStyle(color: AppColors.textPrimary)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Topic: $preview...", style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic)),
+              const SizedBox(height: 16),
+              _aiStatRow("Predicted Difficulty", diff, AppColors.accent),
+              const Divider(color: AppColors.border, height: 24),
+              const Text("ADJUST QUESTION COUNTS:", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              const SizedBox(height: 12),
+              _countInput("MCQs", mcqCountCtrl),
+              _countInput("Short Questions", sqCountCtrl),
+              _countInput("Long Questions", lqCountCtrl),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("CANCEL", style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: AppColors.textOnAccent),
+            onPressed: () {
+              final mCount = int.tryParse(mcqCountCtrl.text) ?? mcqs;
+              final sCount = int.tryParse(sqCountCtrl.text) ?? sqs;
+              final lCount = int.tryParse(lqCountCtrl.text) ?? lqs;
+              
+              _generateQuestionsLocally(preview, diff, mCount, sCount, lCount);
+              
+              setState(() {
+                _difficulty = diff;
+                _instructionsCtrl.text = "Attempt all $mCount MCQs, $sCount Short Questions and $lCount Long Questions.";
+              });
+              Navigator.pop(ctx);
+            },
+            child: const Text("GENERATE & APPLY"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _countInput(String label, TextEditingController ctrl) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13))),
+          SizedBox(
+            width: 60,
+            child: TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                fillColor: AppColors.inputFill,
+                filled: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _generateQuestionsLocally(String extractedText, String diff, int mcqs, int sqs, int lqs) {
+    // 100% Offline Heuristic Question Generation
+    final lines = extractedText.split('\n').where((l) => l.trim().length > 20).toList();
+    final List<QuizQuestion> generated = [];
+
+    // Heuristic 1: MCQs from definitions
+    int mGenerated = 0;
+    for (var line in lines) {
+      if (mGenerated >= mcqs) break;
+      if (line.contains(' is ') || line.contains(' refers to ')) {
+        final parts = line.split(RegExp(r' is | refers to '));
+        if (parts.length == 2) {
+          generated.add(QuizQuestion(
+            id: const Uuid().v4(),
+            text: "What ${line.contains(' refers to ') ? 'refers to' : 'is'} ${parts[1].trim()}?",
+            type: QuestionType.mcq,
+            options: [parts[0].trim(), "None of the above", "Both A and B", "Incorrect definition"],
+            correctIndex: 0,
+            marks: 1.0,
+          ));
+          mGenerated++;
+        }
+      }
+    }
+
+    // Heuristic 2: Short Questions from key sentences
+    int sGenerated = 0;
+    for (var line in lines) {
+      if (sGenerated >= sqs) break;
+      if (line.length < 100 && !line.contains('?')) {
+        generated.add(QuizQuestion(
+          id: const Uuid().v4(),
+          text: "Briefly explain: ${line.trim()}",
+          type: QuestionType.short,
+          marks: 2.0,
+        ));
+        sGenerated++;
+      }
+    }
+
+    // Heuristic 3: Long Questions from paragraphs
+    int lGenerated = 0;
+    for (var line in lines) {
+      if (lGenerated >= lqs) break;
+      if (line.length > 150) {
+        generated.add(QuizQuestion(
+          id: const Uuid().v4(),
+          text: "Discuss in detail the following concept: ${line.trim().substring(0, 50)}...",
+          type: QuestionType.short, // LQ is treated as long short answer in UI
+          marks: 5.0,
+        ));
+        lGenerated++;
+      }
+    }
+
+    setState(() {
+      _questions.addAll(generated);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Generated ${generated.length} questions from notes!"), backgroundColor: AppColors.success),
+    );
+  }
+
+  Widget _aiStatRow(String label, String value, Color valColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          const SizedBox(width: 8),
+          Text(value, style: TextStyle(color: valColor, fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
   void _addQuestion() {
     // ... same as before
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgBottom,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _AddQuestionSheet(onAdd: (q) => setState(() => _questions.add(q))),
     );
@@ -57,11 +297,15 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       return;
     }
 
-    final user = context.read<AuthProvider>().currentUser;
-    final cls = context.read<ClassProvider>().classes.firstWhere((c) => c.id == widget.classId);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final cp = Provider.of<ClassProvider>(context, listen: false);
+    
+    final user = auth.currentUser;
+    final cls = cp.classes.firstWhere((c) => c.id == widget.classId);
 
     final quiz = QuizModel(
       id: const Uuid().v4(),
+      academyId: user?.academyId ?? '',
       classId: widget.classId,
       classLabel: "${cls.className} (${cls.section})",
       title: _titleCtrl.text.trim(),
@@ -101,6 +345,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                if (widget.isAiGen) ...[
+                  _buildAiScanButton(),
+                  const SizedBox(height: 24),
+                ],
                 _buildFormSection('TEST BASICS', [
                   LabeledField(label: 'Test Title', hint: 'e.g. Unit 1 Quiz', controller: _titleCtrl),
                   LabeledField(label: 'Subject', hint: 'e.g. Physics', controller: _subjectCtrl),
@@ -153,6 +401,38 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAiScanButton() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
+              SizedBox(width: 10),
+              Text("AI TEST ASSISTANT", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.2)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text("Take a photo of the textbook topic to get suggested question counts and difficulty.", 
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: "SCAN TOPIC WITH AI",
+            icon: Icons.camera_enhance_rounded,
+            loading: _isAnalyzing,
+            onPressed: _pickImageAndAnalyze,
+          ),
+        ],
       ),
     );
   }
@@ -280,22 +560,20 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                 final i = entry.key;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Radio<int>(
-                        value: i,
-                        groupValue: _correctIdx,
-                        onChanged: (v) => setState(() => _correctIdx = v!),
-                        activeColor: AppColors.accent,
+                  child: RadioListTile<int>(
+                    value: i,
+                    groupValue: _correctIdx,
+                    onChanged: (v) => setState(() => _correctIdx = v!),
+                    activeColor: AppColors.accent,
+                    contentPadding: EdgeInsets.zero,
+                    title: TextField(
+                      controller: entry.value,
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Option ${i + 1}',
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      Expanded(
-                        child: TextField(
-                          controller: entry.value,
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                          decoration: InputDecoration(hintText: 'Option ${i+1}', contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               }),

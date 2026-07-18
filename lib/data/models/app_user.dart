@@ -8,7 +8,10 @@ class AppUser {
   final String phoneNumber;
   final UserRole role;
   final String accountStatus;
-  final String? academyName; // New: For academy registration
+  final String? academyName; // For display
+  final String? academyId;   // For multi-tenancy scoping
+  final String? academyAddress; // NEW
+  final String? academyPhone;   // NEW
   final DateTime? createdAt;
 
   const AppUser({
@@ -19,6 +22,9 @@ class AppUser {
     required this.role,
     this.accountStatus = 'active',
     this.academyName,
+    this.academyId,
+    this.academyAddress,
+    this.academyPhone,
     this.createdAt,
   });
 
@@ -35,6 +41,9 @@ class AppUser {
       'role': role.value,
       'account_status': accountStatus,
       'academy_name': academyName,
+      'academy_id': academyId,
+      'academy_address': academyAddress,
+      'academy_phone': academyPhone,
       'created_at': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
@@ -52,6 +61,9 @@ class AppUser {
       role: UserRoleX.fromValue((map['role'] ?? 'student') as String),
       accountStatus: (map['account_status'] ?? 'active') as String,
       academyName: map['academy_name'] as String?,
+      academyId: map['academy_id'] as String?,
+      academyAddress: map['academy_address'] as String?,
+      academyPhone: map['academy_phone'] as String?,
       createdAt: ts is Timestamp ? ts.toDate() : null,
     );
   }

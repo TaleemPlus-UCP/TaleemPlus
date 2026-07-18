@@ -25,13 +25,15 @@ class AttendanceRepository {
     await batch.commit();
   }
 
-  /// Fetch all records for a class on a given date (one-time).
+  /// Fetch all records for a class on a given date (one-time) for an academy.
   Future<List<AttendanceRecord>> forClassOnDate({
     required String classId,
     required DateTime date,
+    required String academyId, // NEW
   }) async {
     final key = _dateOnly(date);
     final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .where('log_date', isEqualTo: key)
         .get();
@@ -43,5 +45,17 @@ class AttendanceRepository {
   static String _dateOnly(DateTime d) {
     final iso = DateTime(d.year, d.month, d.day).toIso8601String();
     return iso.substring(0, 10);
+  }
+
+  /// Watch all attendance records for a specific student in an academy.
+  Stream<List<AttendanceRecord>> watchForStudent(String studentId, String academyId) {
+    return _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .orderBy('log_date', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
+        .toList());
   }
 }

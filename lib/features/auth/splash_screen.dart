@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
-import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -116,10 +115,30 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _logoFade,
                       child: ScaleTransition(
                         scale: _logoScale,
-                        child: const TaleemLogo(size: 96),
+                        child: Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent.withValues(alpha: 0.25),
+                                blurRadius: 40,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(32),
+                            child: Image.asset(
+                              'assets/images/splash_logo.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 32),
 
                     // ---- Animated App Name: "TaleemPlus" ----
                     SlideTransition(
@@ -183,9 +202,9 @@ class _SplashScreenState extends State<SplashScreen>
                         'AI-POWERED. SMART LEARNING.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
+                          letterSpacing: 2.0,
                         ),
                       ),
                     ),

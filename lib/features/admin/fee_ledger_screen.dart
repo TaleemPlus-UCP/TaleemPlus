@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/academy_member.dart';
 import '../../data/models/fee_invoice.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/fee_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../widgets/app_widgets.dart';
@@ -21,12 +22,17 @@ class FeeLedgerScreen extends StatefulWidget {
 }
 
 class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
+  String _selectedMonth = DateFormat('MMMM yyyy').format(DateTime.now());
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FeeProvider>().load();
-      context.read<MemberProvider>().load();
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        context.read<FeeProvider>().load(user.uid);
+        context.read<MemberProvider>().load(user.uid);
+      }
     });
   }
 
@@ -55,12 +61,29 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
                   child: CircularProgressIndicator(color: AppColors.accent),
                 );
               }
+
+              // Local filtering by month for the UI
+              final filteredInvoices = fees.invoices.where((inv) {
+                 try {
+                   final date = DateFormat('yyyy-MM').parse(inv.billingMonth);
+                   final label = DateFormat('MMMM yyyy').format(date);
+                   return label == _selectedMonth;
+                 } catch (e) {
+                   return false;
+                 }
+              }).toList();
+
               return RefreshIndicator(
                 color: AppColors.accent,
-                onRefresh: () => fees.load(),
+                onRefresh: () async {
+                   final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+                   if (user != null) await fees.load(user.uid);
+                },
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 90),
                   children: [
+                    _buildMonthFilter(fees),
+                    const SizedBox(height: 16),
                     _statsRow(fees),
                     const SizedBox(height: 16),
                     _defaulterBanner(fees),
@@ -73,15 +96,50 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
                           letterSpacing: 1,
                         )),
                     const SizedBox(height: 12),
-                    if (fees.invoices.isEmpty)
+                    if (filteredInvoices.isEmpty)
                       _emptyState()
                     else
-                      ...fees.invoices.map(_invoiceTile),
+                      ...filteredInvoices.map(_invoiceTile),
                   ],
                 ),
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthFilter(FeeProvider fees) {
+    // Generate unique months from existing invoices
+    final Set<String> availableMonths = fees.invoices.map((inv) {
+       try {
+         final date = DateFormat('yyyy-MM').parse(inv.billingMonth);
+         return DateFormat('MMMM yyyy').format(date);
+       } catch (e) {
+         return DateFormat('MMMM yyyy').format(DateTime.now());
+       }
+    }).toSet();
+    
+    // Add current month if not present
+    availableMonths.add(DateFormat('MMMM yyyy').format(DateTime.now()));
+    final sortedMonths = availableMonths.toList()..sort((a,b) => b.compareTo(a));
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedMonth,
+          isExpanded: true,
+          dropdownColor: AppColors.surfaceAlt,
+          items: sortedMonths.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+          onChanged: (v) => setState(() => _selectedMonth = v!),
         ),
       ),
     );
@@ -271,8 +329,9 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
                       ),
                       icon: const Icon(Icons.check_rounded, size: 18),
                       label: const Text('Mark as Paid'),
-                      onPressed: () =>
-                          context.read<FeeProvider>().markPaid(inv),
+                      onPressed: () {
+                         context.read<FeeProvider>().markPaid(inv);
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -348,7 +407,10 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
       ),
     );
     if (ok == true && mounted) {
-      await context.read<FeeProvider>().deleteInvoice(inv.id);
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        await context.read<FeeProvider>().deleteInvoice(inv.id, user.uid);
+      }
     }
   }
 
@@ -365,7 +427,7 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgBottom,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -431,12 +493,14 @@ class _AddFeeSheetState extends State<_AddFeeSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _saving = true);
+    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
     await context.read<FeeProvider>().addInvoice(
       studentId: _selectedStudent!.id,
       studentName: _selectedStudent!.fullName,
       amount: double.parse(_amountCtrl.text),
       billingMonth: DateFormat('yyyy-MM').format(_billingMonth),
       dueDate: _dueDate,
+      academyId: academyId,
     );
     if (mounted) {
       Navigator.pop(context);
@@ -506,10 +570,27 @@ class _AddFeeSheetState extends State<_AddFeeSheet> {
                         style: TextStyle(color: AppColors.textMuted)),
                     style: const TextStyle(color: AppColors.textPrimary),
                     items: widget.students
-                        .map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.fullName),
-                    ))
+                        .map((s) {
+                          // If fullName contains @, it's likely an email entered in name field. 
+                          // We'll show the prefix, but you should fix this in User Management.
+                          String displayName = s.fullName;
+                          if (displayName.contains('@')) {
+                            displayName = displayName.split('@')[0];
+                          }
+                          
+                          return DropdownMenuItem(
+                            value: s,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                if (s.fullName.contains('@'))
+                                  Text(s.fullName, style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                              ],
+                            ),
+                          );
+                        })
                         .toList(),
                     onChanged: (s) => setState(() => _selectedStudent = s),
                   ),

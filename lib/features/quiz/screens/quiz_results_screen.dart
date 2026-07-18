@@ -6,7 +6,6 @@ import '../../../logic/quiz_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/models/test_mark_model.dart';
-import '../../../widgets/app_widgets.dart';
 
 class QuizResultsScreen extends StatelessWidget {
   final QuizModel quiz;
@@ -39,7 +38,7 @@ class QuizResultsScreen extends StatelessWidget {
               ),
               Expanded(
                 child: StreamBuilder<List<TestMarkModel>>(
-                  stream: context.read<QuizProvider>().watchQuizResults(quiz.id),
+                  stream: context.read<QuizProvider>().watchQuizResults(quiz.id, quiz.academyId),
                   builder: (context, snap) {
                     if (snap.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.accent));
@@ -145,6 +144,7 @@ class QuizResultsScreen extends StatelessWidget {
       ),
     );
     if (ok == true) {
+      if (!context.mounted) return;
       await context.read<QuizProvider>().deleteQuiz(quiz.id);
       if (context.mounted) Navigator.pop(context);
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
@@ -21,7 +22,8 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ClassProvider>().listenAll(); // Fixed method name
+      final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+      context.read<ClassProvider>().listenAll(academyId); 
     });
   }
 
@@ -101,8 +103,9 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
   }
 
   Widget _buildQuizList(String classId) {
+    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
     return StreamBuilder<List<QuizModel>>(
-      stream: context.read<QuizProvider>().watchTeacherQuizzes(classId),
+      stream: context.read<QuizProvider>().watchTeacherQuizzes(classId, academyId),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.accent));

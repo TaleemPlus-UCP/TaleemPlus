@@ -31,7 +31,7 @@ class TeacherClassesScreen extends StatelessWidget {
               : StreamBuilder<List<ClassEntity>>(
             stream: context
                 .read<ClassProvider>()
-                .streamForTeacherEmail(user.email),
+                .streamForTeacher(user.uid, user.academyId ?? ''),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(

@@ -21,6 +21,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final academyId = user?.uid ?? '';
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -28,17 +31,19 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         title: const Text('Announcements',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: academyId.isEmpty ? null : FloatingActionButton.extended(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.textOnAccent,
         icon: const Icon(Icons.campaign_rounded),
         label: const Text('New Announcement'),
-        onPressed: _openComposeSheet,
+        onPressed: () => _openComposeSheet(academyId),
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: StreamBuilder<List<Announcement>>(
-            stream: _service.watchAll(),
+          child: academyId.isEmpty 
+              ? const Center(child: Text("Invalid session"))
+              : StreamBuilder<List<Announcement>>(
+            stream: _service.watchAll(academyId),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -46,9 +51,13 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 );
               }
               if (snap.hasError) {
-                return const Center(
-                  child: Text('Could not load announcements.',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Error loading announcements: ${snap.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.danger)),
+                  ),
                 );
               }
               final list = snap.data ?? const [];
@@ -57,7 +66,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
                 itemCount: list.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _announcementTile(list[i]),
+                itemBuilder: (_, i) => _announcementTile(list[i], academyId),
               );
             },
           ),
@@ -84,7 +93,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     );
   }
 
-  Widget _announcementTile(Announcement a) {
+  Widget _announcementTile(Announcement a, String academyId) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -117,24 +126,32 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               const Icon(Icons.person_rounded,
                   size: 14, color: AppColors.textMuted),
               const SizedBox(width: 4),
-              Text(a.createdByName,
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11)),
+              Expanded(
+                child: Text(a.createdByName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 11)),
+              ),
               const SizedBox(width: 12),
               const Icon(Icons.schedule_rounded,
                   size: 14, color: AppColors.textMuted),
               const SizedBox(width: 4),
-              Text(DateFormat('d MMM yyyy, h:mm a').format(a.createdAt),
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11)),
-              const Spacer(),
+              Expanded(
+                child: Text(DateFormat('d MMM yyyy, h:mm a').format(a.createdAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 11)),
+              ),
+              const SizedBox(width: 8),
               IconButton(
                 iconSize: 20,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 icon: const Icon(Icons.edit_outlined,
                     color: AppColors.textSecondary),
-                onPressed: () => _openComposeSheet(existing: a),
+                onPressed: () => _openComposeSheet(academyId, existing: a),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -201,17 +218,18 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     }
   }
 
-  void _openComposeSheet({Announcement? existing}) {
+  void _openComposeSheet(String academyId, {Announcement? existing}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgBottom,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _ComposeSheet(
         existing: existing,
         service: _service,
+        academyId: academyId,
       ),
     );
   }
@@ -221,7 +239,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 class _ComposeSheet extends StatefulWidget {
   final Announcement? existing;
   final AnnouncementService service;
-  const _ComposeSheet({this.existing, required this.service});
+  final String academyId;
+  const _ComposeSheet({this.existing, required this.service, required this.academyId});
 
   @override
   State<_ComposeSheet> createState() => _ComposeSheetState();
@@ -304,6 +323,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           targetRoles: targets,
           createdByUid: auth.uid,
           createdByName: auth.fullName,
+          academyId: widget.academyId,
         );
       }
       if (mounted) {

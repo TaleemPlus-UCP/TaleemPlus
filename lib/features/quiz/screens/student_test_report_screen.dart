@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../data/models/test_mark_model.dart';
@@ -18,6 +19,9 @@ class StudentTestReportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final academyId = user?.academyId ?? '';
+
     return Scaffold(
       appBar: AppBar(
         title: Text("$studentName's Report",
@@ -27,8 +31,10 @@ class StudentTestReportScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: StreamBuilder<List<TestMarkModel>>(
-            stream: context.read<QuizProvider>().watchStudentResults(studentUid),
+          child: academyId.isEmpty 
+              ? const Center(child: Text("Academy session error"))
+              : StreamBuilder<List<TestMarkModel>>(
+            stream: context.read<QuizProvider>().watchStudentResults(studentUid, academyId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(

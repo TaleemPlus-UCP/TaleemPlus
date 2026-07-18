@@ -17,23 +17,16 @@ class MarkEntryScreen extends StatefulWidget {
 }
 
 class _MarkEntryScreenState extends State<MarkEntryScreen> {
-  // Map to store temporary marks: { studentId : marksObtained }
   final Map<String, TextEditingController> _markControllers = {};
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // Pre-initialize controllers for each student in the class
     final cls = context.read<ClassProvider>().classes.firstWhere((c) => c.id == widget.quiz.classId);
-    for (var uid in cls.studentIds) {
-      _markControllers[uid] = TextEditingController();
+    for (var studentId in cls.studentIds) {
+      _markControllers[studentId] = TextEditingController();
     }
-    _loadExistingMarks();
-  }
-
-  Future<void> _loadExistingMarks() async {
-    // Optional: Load existing marks if already uploaded
   }
 
   @override
@@ -57,10 +50,13 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
           
           marksList.add(TestMarkModel(
             id: "${widget.quiz.id}_$uid",
+            academyId: widget.quiz.academyId,
             quizId: widget.quiz.id,
             studentId: uid,
             studentName: cls.studentNames[uid] ?? "Unknown",
             classId: widget.quiz.classId,
+            subject: widget.quiz.subject,
+            month: widget.quiz.month,
             marksObtained: obtained,
             totalMarks: widget.quiz.totalMarks,
             percentage: percentage,
@@ -71,24 +67,20 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
       });
 
       if (marksList.isEmpty) {
-        _showSnackBar("No marks entered!", isError: true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No marks entered!")));
         return;
       }
 
       await context.read<QuizProvider>().gradeBulk(marksList);
-      _showSnackBar("Marks uploaded successfully!");
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Marks saved successfully!")));
+        Navigator.pop(context);
+      }
     } catch (e) {
-      _showSnackBar("Failed to save marks: $e", isError: true);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving marks: $e")));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
-  }
-
-  void _showSnackBar(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: isError ? AppColors.danger : AppColors.success),
-    );
   }
 
   @override
@@ -99,7 +91,6 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
       appBar: AppBar(
         title: const Text('Enter Test Marks', style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
       body: GradientBackground(
         child: SafeArea(
@@ -108,21 +99,21 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
               _quizInfoCard(),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.all(20),
                   itemCount: cls.studentIds.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, i) {
                     final uid = cls.studentIds[i];
                     final name = cls.studentNames[uid] ?? "Student";
-                    return _studentMarkTile(name, _markControllers[uid]!);
+                    return _studentMarkTile(name, uid);
                   },
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: PrimaryButton(
-                  label: "UPLOAD ALL MARKS",
-                  icon: Icons.upload_file_rounded,
+                  label: "UPLOAD MARKS",
+                  icon: Icons.cloud_upload_rounded,
                   loading: _isSaving,
                   onPressed: _saveMarks,
                 ),
@@ -136,56 +127,45 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
 
   Widget _quizInfoCard() {
     return Container(
-      width: double.infinity,
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.accent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.quiz.title, style: const TextStyle(color: AppColors.accent, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text("Max Marks: ${widget.quiz.totalMarks}", style: const TextStyle(color: AppColors.textSecondary)),
+          Text(widget.quiz.title, style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text("${widget.quiz.subject} • Total: ${widget.quiz.totalMarks}", style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         ],
       ),
     );
   }
 
-  Widget _studentMarkTile(String name, TextEditingController ctrl) {
+  Widget _studentMarkTile(String name, String uid) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.accent.withOpacity(0.1),
-            child: Text(name[0], style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-          ),
+          Expanded(child: Text(name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600))),
           SizedBox(
             width: 80,
             child: TextField(
-              controller: ctrl,
+              controller: _markControllers[uid],
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: "0.0",
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                fillColor: AppColors.inputFill,
-                filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                contentPadding: EdgeInsets.zero,
+                border: InputBorder.none,
               ),
             ),
           ),

@@ -88,43 +88,39 @@ class TaleemLogo extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      padding: EdgeInsets.all(size * 0.22),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(size * 0.2),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.35),
-            blurRadius: size * 0.5,
-            spreadRadius: size * 0.06,
+            color: AppColors.accent.withValues(alpha: 0.25),
+            blurRadius: size * 0.4,
+            spreadRadius: 2,
           ),
         ],
       ),
-      child: Image.asset(
-        'assets/images/splash_logo.png', // Fixed casing
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          // Designed fallback if image is missing
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                Icons.school_rounded,
-                size: size * 0.45,
-                color: AppColors.accent,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.2),
+        child: Image.asset(
+          'assets/images/splash_logo.png',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              padding: EdgeInsets.all(size * 0.22),
+              color: AppColors.surface,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(Icons.school_rounded, size: size * 0.45, color: AppColors.accent),
+                  Positioned(
+                    right: 0,
+                    bottom: 2,
+                    child: Icon(Icons.add_circle_rounded, size: size * 0.22, color: AppColors.accent),
+                  ),
+                ],
               ),
-              Positioned(
-                right: 0,
-                bottom: 2,
-                child: Icon(
-                  Icons.add_circle_rounded,
-                  size: size * 0.22,
-                  color: AppColors.accent,
-                ),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

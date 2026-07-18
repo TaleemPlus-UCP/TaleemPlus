@@ -22,28 +22,28 @@ class ClassProvider extends ChangeNotifier {
           .firstWhere(
             (c) => c.id == classId,
         orElse: () => ClassEntity(
-            id: '', className: '', createdAt: DateTime.now()),
+            id: '', className: '', academyId: '', createdAt: DateTime.now()),
       )
           .enrollmentCount;
 
-  /// Start streaming all classes (called by Admin screens).
-  void listenAll() {
+  /// Start streaming all classes for a specific academy.
+  void listenAll(String academyId) {
     _sub?.cancel();
     _loading = true;
     notifyListeners();
-    _sub = _repo.watchAll().listen((list) {
+    _sub = _repo.watchAll(academyId).listen((list) {
       _classes = list;
       _loading = false;
       notifyListeners();
     });
   }
 
-  Future<List<ClassEntity>> fetchForTeacherEmail(String email) {
-    return _repo.watchForTeacherEmail(email).first;
+  Future<List<ClassEntity>> fetchForTeacher(String teacherUid, String academyId) {
+    return _repo.watchForTeacher(teacherUid, academyId).first;
   }
 
-  Stream<List<ClassEntity>> streamForTeacherEmail(String email) =>
-      _repo.watchForTeacherEmail(email);
+  Stream<List<ClassEntity>> streamForTeacher(String teacherUid, String academyId) =>
+      _repo.watchForTeacher(teacherUid, academyId);
 
   Future<void> createClassWithStudents({
     required String className,
@@ -51,6 +51,7 @@ class ClassProvider extends ChangeNotifier {
     required String subject,
     required AppUser teacher,
     required List<AppUser> students,
+    required String academyId, // NEW
   }) async {
     await _repo.createClass(
       className: className,
@@ -58,10 +59,18 @@ class ClassProvider extends ChangeNotifier {
       subject: subject,
       teacher: teacher,
       students: students,
+      academyId: academyId,
     );
   }
 
   Future<void> deleteClass(String classId) => _repo.deleteClass(classId);
+
+  Future<void> updateEnrollment({
+    required String classId,
+    required List<AppUser> students,
+  }) async {
+    await _repo.updateClassEnrollment(classId: classId, students: students);
+  }
 
   @override
   void dispose() {

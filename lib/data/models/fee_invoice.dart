@@ -2,6 +2,7 @@
 /// Maps to the `FeeLedgers` table in the SDS ERD (Figure 7).
 class FeeInvoice {
   final String id;
+  final String academyId; // NEW
   final String studentId;
   final String studentName;
   final double grossAmountDue;
@@ -14,6 +15,7 @@ class FeeInvoice {
 
   const FeeInvoice({
     required this.id,
+    required this.academyId, // NEW
     required this.studentId,
     required this.studentName,
     required this.grossAmountDue,
@@ -36,6 +38,7 @@ class FeeInvoice {
 
   Map<String, dynamic> toMap() => {
     'id': id,
+    'academy_id': academyId, // NEW
     'student_id': studentId,
     'student_name': studentName,
     'gross_amount_due': grossAmountDue,
@@ -50,6 +53,7 @@ class FeeInvoice {
   factory FeeInvoice.fromMap(Map<String, dynamic> map) {
     return FeeInvoice(
       id: map['id'] as String,
+      academyId: (map['academy_id'] ?? '') as String, // NEW
       studentId: (map['student_id'] ?? '') as String,
       studentName: (map['student_name'] ?? '') as String,
       grossAmountDue: (map['gross_amount_due'] as num?)?.toDouble() ?? 0,
@@ -74,6 +78,7 @@ class FeeInvoice {
   }) {
     return FeeInvoice(
       id: id,
+      academyId: academyId, // NEW
       studentId: studentId,
       studentName: studentName,
       grossAmountDue: grossAmountDue,

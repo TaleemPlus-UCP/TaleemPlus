@@ -10,7 +10,7 @@ class OcrService {
   Future<File?> pickImageFromGallery() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85, // Quality thodi kam ki hai taake processing fast ho
+      imageQuality: 100, // Max quality for better OCR accuracy
     );
     if (image != null) {
       return File(image.path);
@@ -22,7 +22,7 @@ class OcrService {
   Future<File?> captureImageWithCamera() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 85,
+      imageQuality: 100, // Max quality for better OCR accuracy
     );
     if (image != null) {
       return File(image.path);
@@ -38,16 +38,48 @@ class OcrService {
       
       String text = recognizedText.text;
       
-      // Agar text empty ho toh properly handle karein
-      if (text.isEmpty) {
-        return "";
-      }
-      
-      return text;
+      if (text.isEmpty) return "";
+
+      // Post-processing to clean common OCR noise
+      return _cleanExtractedText(text);
     } catch (e) {
-      // Production code mein error properly log honi chahiye
       throw Exception("Text recognition failed: $e");
     }
+  }
+
+  /// AI-based heuristic cleaning for common OCR mistakes
+  String _cleanExtractedText(String input) {
+    String cleaned = input;
+
+    // 1. Fix common misspelled words from OCR
+    final Map<String, String> corrections = {
+      'Passuond': 'Password',
+      'Passuord': 'Password',
+      'tuleme': 'taleem',
+      'Sasat': 'Student',
+      'Sasant': 'Student',
+      'Stndent': 'Student',
+      'Pnrent': 'Parent',
+    };
+
+    corrections.forEach((wrong, right) {
+      cleaned = cleaned.replaceAll(RegExp(wrong, caseSensitive: false), right);
+    });
+
+    // 2. Remove stray single characters that are likely noise (like dots or single 'M')
+    // but keep numbers or 'a', 'I'
+    List<String> lines = cleaned.split('\n');
+    List<String> filteredLines = [];
+
+    for (var line in lines) {
+      String trimmed = line.trim();
+      if (trimmed.length <= 1 && !RegExp(r'[0-9aAiI]').hasMatch(trimmed)) {
+        continue; // Skip noise line
+      }
+      filteredLines.add(line);
+    }
+
+    return filteredLines.join('\n').trim();
   }
 
   /// Memory clean karne ke liye

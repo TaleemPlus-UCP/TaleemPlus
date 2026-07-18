@@ -4,11 +4,17 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
+import '../../logic/session_provider.dart';
+import '../../data/remote/auth_service.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/theme_toggle_widget.dart'; // NEW
+import '../../core/theme/theme_extensions.dart'; // NEW
 import '../ocr/screens/ocr_history_screen.dart';
 import '../ocr/screens/ocr_scanner_screen.dart';
-import '../quiz/screens/monthly_report_screen.dart'; // NEW
-import '../quiz/screens/teacher_quiz_list_screen.dart'; // NEW
+import '../quiz/screens/monthly_report_screen.dart';
+import '../quiz/screens/teacher_quiz_list_screen.dart';
+import '../shared/view_announcements_screen.dart'; // NEW
 import 'teacher_classes_screen.dart';
 
 class TeacherDashboard extends StatelessWidget {
@@ -30,16 +36,25 @@ class TeacherDashboard extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.co_present_rounded,
                 color: AppColors.accent, size: 22),
             SizedBox(width: 8),
-            const Text('Teacher Portal',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Text('Teacher Portal',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.security_rounded, color: AppColors.accent),
+            onPressed: () => _showSecuritySettings(context),
+          ),
+          const ThemeToggle(), // NEW
           IconButton(
             icon: const Icon(Icons.logout_rounded,
                 color: AppColors.textSecondary),
@@ -53,17 +68,17 @@ class TeacherDashboard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             children: [
               Text('Welcome, ${user?.fullName ?? 'Teacher'}',
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
+                  style: TextStyle(
+                      color: context.appColors.textPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              const Text('Your classroom overview',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              Text('Your classroom overview',
+                  style: TextStyle(color: context.appColors.textSecondary)),
               const SizedBox(height: 24),
-              const Text('MODULES',
+              Text('MODULES',
                   style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: context.appColors.textMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1)),
@@ -82,10 +97,22 @@ class TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 12),
               _actionTile(
                 context,
+                'Announcements',
+                'View broadcasts from your academy',
+                Icons.campaign_rounded,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ViewAnnouncementsScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
                 'OCR Document Scanner',
                 'Scan and manage digitized notes',
                 Icons.document_scanner_rounded,
-                () => Navigator.push(
+                    () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OcrScannerScreen()),
                 ),
@@ -96,7 +123,7 @@ class TeacherDashboard extends StatelessWidget {
                 'OCR History',
                 'View and edit previously scanned documents',
                 Icons.history_rounded,
-                () => Navigator.push(
+                    () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OcrHistoryScreen()),
                 ),
@@ -107,9 +134,11 @@ class TeacherDashboard extends StatelessWidget {
                 'Grading & Marks Entry',
                 'Enter marks for conducted tests',
                 Icons.add_chart_rounded,
-                () => Navigator.push(
+                    () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TeacherQuizListScreen(isAiGen: false)),
+                  MaterialPageRoute(
+                      builder: (_) =>
+                      const TeacherQuizListScreen(isAiGen: false)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -118,9 +147,11 @@ class TeacherDashboard extends StatelessWidget {
                 'AI Test Paper Generator',
                 'Generate and print monthly tests',
                 Icons.auto_awesome_motion_rounded,
-                () => Navigator.push(
+                    () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TeacherQuizListScreen(isAiGen: true)),
+                  MaterialPageRoute(
+                      builder: (_) =>
+                      const TeacherQuizListScreen(isAiGen: true)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -129,14 +160,118 @@ class TeacherDashboard extends StatelessWidget {
                 'Monthly Performance',
                 'View compiled student results',
                 Icons.insights_rounded,
-                () => Navigator.push(
+                    () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MonthlyReportScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const MonthlyReportScreen()),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showSecuritySettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text("Security Settings", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Text("Enhance your account security with biometric authentication.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 24),
+            StatefulBuilder(
+              builder: (context, setInternalState) {
+                final session = context.watch<SessionProvider>();
+                return SwitchListTile(
+                  title: const Text("Biometric / Face Unlock", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: const Text("Use fingerprints or face ID to log in.", style: TextStyle(fontSize: 12)),
+                  value: session.biometricEnabled,
+                  activeColor: AppColors.accent,
+                  onChanged: (val) async {
+                    if (val) {
+                      final authenticated = await session.authenticateWithBiometrics();
+                      if (authenticated) {
+                        await session.setBiometricEnabled(true);
+                      }
+                    } else {
+                      await session.setBiometricEnabled(false);
+                    }
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _showChangePasswordDialog(context),
+              icon: const Icon(Icons.lock_reset_rounded),
+              label: const Text("Change Account Password"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                foregroundColor: AppColors.accent,
+                elevation: 0,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.accent)),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final passCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Change Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter a new password for your account.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 20),
+            LabeledField(label: "New Password", hint: "Min 6 chars", controller: passCtrl, obscure: true),
+            LabeledField(label: "Confirm Password", hint: "Re-enter", controller: confirmCtrl, obscure: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () async {
+              if (passCtrl.text != confirmCtrl.text) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match!")));
+                return;
+              }
+              if (passCtrl.text.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Minimum 6 characters required!")));
+                return;
+              }
+              try {
+                await AuthService().directUpdatePassword(passCtrl.text);
+                if (ctx.mounted) {
+                   Navigator.pop(ctx);
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password updated successfully!")));
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+              }
+            }, 
+            child: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
@@ -159,10 +294,10 @@ class TeacherDashboard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.55),
+              color: context.appColors.surface.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(14),
               border:
-              Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+              Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -173,13 +308,13 @@ class TeacherDashboard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
+                          style: TextStyle(
+                              color: context.appColors.textPrimary,
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
                       Text(subtitle,
-                          style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.appColors.textMuted, fontSize: 12)),
                     ],
                   ),
                 ),

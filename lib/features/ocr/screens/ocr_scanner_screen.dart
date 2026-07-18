@@ -193,6 +193,10 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
+
+                // OCR Tips for better accuracy
+                _buildTipsBanner(),
                 const SizedBox(height: 24),
 
                 // Image Preview
@@ -287,6 +291,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
   }
 
   Widget _choiceCard(String title, IconData icon, VoidCallback onTap) {
+    // ... logic remains same
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -314,6 +319,40 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTipsBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lightbulb_outline_rounded, color: AppColors.accent, size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "TIPS FOR BETTER SCAN",
+                  style: TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  "1. Use dark blue/black ink.\n2. Ensure good lighting (no shadows).\n3. Keep the paper flat and camera steady.",
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

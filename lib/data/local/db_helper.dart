@@ -18,12 +18,11 @@ class DbHelper {
 
   Future<Database> _open() async {
     final dir = await getDatabasesPath();
-    final path = p.join(dir, 'taleemplus.db');
+    final path = p.join(dir, 'taleemplus_v2.db'); // New DB name for fresh start with multi-tenancy
     return openDatabase(
       path,
-      version: 5, // bumped to drop classes/attendance tables
+      version: 6,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
     );
   }
 
@@ -32,20 +31,11 @@ class DbHelper {
     await _createFeeInvoices(db);
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) await _createFeeInvoices(db);
-    if (oldVersion < 5) {
-      // Classes / enrollments / attendance now live in Firestore.
-      await db.execute('DROP TABLE IF EXISTS classes');
-      await db.execute('DROP TABLE IF EXISTS class_enrollments');
-      await db.execute('DROP TABLE IF EXISTS attendance_records');
-    }
-  }
-
   Future<void> _createMembers(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS members (
         id          TEXT PRIMARY KEY,
+        academy_id  TEXT NOT NULL,
         full_name   TEXT NOT NULL,
         email       TEXT,
         phone       TEXT,
@@ -61,6 +51,7 @@ class DbHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS fee_invoices (
         id                      TEXT PRIMARY KEY,
+        academy_id              TEXT NOT NULL DEFAULT '',
         student_id              TEXT NOT NULL,
         student_name            TEXT NOT NULL,
         gross_amount_due        REAL NOT NULL,

@@ -48,10 +48,12 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
   }
 
   Future<void> _loadForDate() async {
+    final academyId = context.read<AuthProvider>().currentUser?.academyId ?? '';
     await context.read<AttendanceProvider>().loadForClassDate(
       classId: widget.classEntity.id,
       date: _selectedDate,
       allStudentIds: widget.classEntity.studentIds,
+      academyId: academyId,
     );
   }
 
@@ -317,7 +319,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
-        color: AppColors.bgBottom.withValues(alpha: 0.95),
+        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
         ),

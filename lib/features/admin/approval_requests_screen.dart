@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../widgets/gradient_background.dart';
 
@@ -51,15 +52,17 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   }
 
   Future<void> _approve(AppUser u) async {
-    // 1. Update status in Firebase to 'active' so the user can log in.
-    await _authService.approveUser(u.uid);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final admin = auth.currentUser;
+    if (admin == null) return;
+
+    // 1. Update status in Firebase to 'active' and tie to THIS admin's academy
+    await _authService.approveUser(u.uid, admin.uid);
 
     // 2. Also mirror this user into the local User Management portal
-    //    (SQLite `members` table) — but only if they aren't already there.
-    //    Admin doesn't appear in the User Management lists, so we skip that role.
     if (u.role != UserRole.admin) {
       if (!mounted) return;
-      final memberProvider = context.read<MemberProvider>();
+      final memberProvider = Provider.of<MemberProvider>(context, listen: false);
       final alreadyPresent =
       memberProvider.members.any((m) => m.id == u.uid);
       if (!alreadyPresent) {
@@ -67,26 +70,35 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
           fullName: u.fullName,
           email: u.email,
           phone: u.phoneNumber,
-          role: u.role.value, // 'teacher' | 'student' | 'parent'
+          role: u.role.value, 
+          academyId: admin.uid, 
         );
       }
     }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${u.fullName} approved')),
+        SnackBar(content: Text('${u.fullName} approved for your academy')),
       );
+      // Refresh global counts
+      Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
       _load();
     }
   }
 
   Future<void> _reject(AppUser u) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final admin = auth.currentUser;
+    if (admin == null) return;
+
     // Only change the status; keep the record for admin history.
     await _authService.rejectUser(u.uid);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${u.fullName} rejected')),
       );
+      // Refresh global counts for THIS academy
+      Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
       _load();
     }
   }

@@ -44,14 +44,15 @@ class QuizQuestion {
 
 class QuizModel {
   final String id;
+  final String academyId; 
   final String classId;
   final String classLabel;
   final String title;
   final String subject;
-  final String month;     // NEW: Academy month
-  final String session;   // NEW: Session type
-  final String chapter;   // NEW: Topic/Chapter
-  final String difficulty;// NEW: Easy, Medium, Hard
+  final String month;     
+  final String session;   
+  final String chapter;   
+  final String difficulty;
   final double totalMarks;
   final DateTime testDate;
   final String instructions;
@@ -62,6 +63,7 @@ class QuizModel {
 
   QuizModel({
     required this.id,
+    required this.academyId, 
     required this.classId,
     required this.classLabel,
     required this.title,
@@ -81,6 +83,7 @@ class QuizModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'academy_id': academyId,
       'class_id': classId,
       'class_label': classLabel,
       'title': title,
@@ -102,6 +105,7 @@ class QuizModel {
   factory QuizModel.fromMap(String id, Map<String, dynamic> map) {
     return QuizModel(
       id: id,
+      academyId: map['academy_id'] ?? '',
       classId: map['class_id'] ?? '',
       classLabel: map['class_label'] ?? '',
       title: map['title'] ?? '',

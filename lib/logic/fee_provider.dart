@@ -34,10 +34,10 @@ class FeeProvider extends ChangeNotifier {
       .toSet()
       .length;
 
-  Future<void> load() async {
+  Future<void> load(String academyId) async {
     _loading = true;
     notifyListeners();
-    _invoices = await _repo.getAll();
+    _invoices = await _repo.getAll(academyId);
     _loading = false;
     notifyListeners();
   }
@@ -48,9 +48,11 @@ class FeeProvider extends ChangeNotifier {
     required double amount,
     required String billingMonth,
     required DateTime dueDate,
+    required String academyId, // NEW
   }) async {
     final invoice = FeeInvoice(
       id: _uuid.v4(),
+      academyId: academyId, // NEW
       studentId: studentId,
       studentName: studentName,
       grossAmountDue: amount,
@@ -59,7 +61,7 @@ class FeeProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
     await _repo.add(invoice);
-    await load();
+    await load(academyId);
   }
 
   Future<void> markPaid(FeeInvoice invoice) async {
@@ -69,11 +71,16 @@ class FeeProvider extends ChangeNotifier {
       status: 'paid',
     );
     await _repo.update(updated);
-    await load();
+    await load(invoice.academyId);
   }
 
-  Future<void> deleteInvoice(String id) async {
+  Future<void> deleteInvoice(String id, String academyId) async {
     await _repo.delete(id);
-    await load();
+    await load(academyId);
+  }
+
+  /// NEW: Fetches fee history for a specific student in an academy.
+  Future<List<FeeInvoice>> getStudentFees(String studentId, String academyId) async {
+    return await _repo.getByStudent(studentId, academyId);
   }
 }

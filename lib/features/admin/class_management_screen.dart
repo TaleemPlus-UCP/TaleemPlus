@@ -7,6 +7,7 @@ import '../../core/utils/validators.dart';
 import '../../data/models/app_user.dart';
 import '../../data/models/class_entity.dart';
 import '../../data/remote/auth_service.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
@@ -23,7 +24,10 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ClassProvider>().listenAll();
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        context.read<ClassProvider>().listenAll(user.uid);
+      }
     });
   }
 
@@ -125,6 +129,10 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.group_add_rounded, color: AppColors.accent),
+            onPressed: () => _openEditSheet(c),
+          ),
+          IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.danger),
             onPressed: () => _confirmDelete(c),
           ),
@@ -162,6 +170,46 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     }
   }
 
+  Future<void> _openEditSheet(ClassEntity c) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      ),
+    );
+
+    final auth = AuthService();
+    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    List<AppUser> students = [];
+    try {
+      students = await auth.getApprovedByRole(UserRole.student, academyId);
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load students.')),
+        );
+      }
+      return;
+    }
+    if (mounted) Navigator.pop(context);
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _EditEnrollmentSheet(
+        classEntity: c,
+        allStudents: students,
+      ),
+    );
+  }
+
   Future<void> _openAddSheet() async {
     // Show loading, fetch approved teachers + students from Firebase
     showDialog(
@@ -173,11 +221,12 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     );
 
     final auth = AuthService();
+    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
     List<AppUser> teachers = [];
     List<AppUser> students = [];
     try {
-      teachers = await auth.getApprovedByRole(UserRole.teacher);
-      students = await auth.getApprovedByRole(UserRole.student);
+      teachers = await auth.getApprovedByRole(UserRole.teacher, academyId);
+      students = await auth.getApprovedByRole(UserRole.student, academyId);
     } catch (_) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
@@ -206,13 +255,194 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.bgBottom,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _AddClassSheet(
         teachers: teachers,
         students: students,
+      ),
+    );
+  }
+}
+
+class _EditEnrollmentSheet extends StatefulWidget {
+  final ClassEntity classEntity;
+  final List<AppUser> allStudents;
+  const _EditEnrollmentSheet({required this.classEntity, required this.allStudents});
+
+  @override
+  State<_EditEnrollmentSheet> createState() => _EditEnrollmentSheetState();
+}
+
+class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
+  final Set<String> _selectedStudentUids = {};
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStudentUids.addAll(widget.classEntity.studentIds);
+  }
+
+  Future<void> _save() async {
+    final chosen = widget.allStudents
+        .where((s) => _selectedStudentUids.contains(s.uid))
+        .toList();
+
+    setState(() => _saving = true);
+    try {
+      await context.read<ClassProvider>().updateEnrollment(
+        classId: widget.classEntity.id,
+        students: chosen,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Enrollment updated for "${widget.classEntity.className}"')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+              Text('Could not update enrollment. Check your connection.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: 20 + bottomInset,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text('Manage Students: ${widget.classEntity.className}',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              )),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Text('ENROLLED STUDENTS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1)),
+              const Spacer(),
+              Text('${_selectedStudentUids.length} selected',
+                  style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _studentPickerList(),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Update Enrollment',
+            icon: Icons.check_rounded,
+            loading: _saving,
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _studentPickerList() {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 300),
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: widget.allStudents.length,
+        itemBuilder: (_, i) {
+          final s = widget.allStudents[i];
+          final selected = _selectedStudentUids.contains(s.uid);
+          return InkWell(
+            onTap: () => setState(() {
+              if (selected) {
+                _selectedStudentUids.remove(s.uid);
+              } else {
+                _selectedStudentUids.add(s.uid);
+              }
+            }),
+            child: Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.border.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    selected
+                        ? Icons.check_box_rounded
+                        : Icons.check_box_outline_blank_rounded,
+                    color: selected
+                        ? AppColors.accent
+                        : AppColors.textMuted,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(s.fullName,
+                            style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600)),
+                        Text(s.email,
+                            style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -259,12 +489,14 @@ class _AddClassSheetState extends State<_AddClassSheet> {
 
     setState(() => _saving = true);
     try {
+      final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
       await context.read<ClassProvider>().createClassWithStudents(
         className: _nameCtrl.text,
         section: _sectionCtrl.text,
         subject: _subjectCtrl.text,
         teacher: _selectedTeacher!,
         students: chosen,
+        academyId: academyId,
       );
       if (mounted) {
         Navigator.pop(context);

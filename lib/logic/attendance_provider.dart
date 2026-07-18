@@ -48,6 +48,7 @@ class AttendanceProvider extends ChangeNotifier {
     required String classId,
     required DateTime date,
     required List<String> allStudentIds,
+    required String academyId, // NEW
   }) async {
     _loading = true;
     _lastError = null;
@@ -59,7 +60,7 @@ class AttendanceProvider extends ChangeNotifier {
     }
     try {
       final existing =
-      await _repo.forClassOnDate(classId: classId, date: date);
+      await _repo.forClassOnDate(classId: classId, date: date, academyId: academyId);
       for (final r in existing) {
         _statuses[r.studentId] = r.status;
       }
@@ -85,9 +86,10 @@ class AttendanceProvider extends ChangeNotifier {
         records.add(AttendanceRecord(
           id: AttendanceRecord.buildId(
               classId: classEntity.id, studentId: studentId, date: date),
+          academyId: classEntity.academyId, // PASS ACADEMY ID
           classId: classEntity.id,
           studentId: studentId,
-          studentName: classEntity.studentNames[studentId] ?? '',
+          studentName: classEntity.studentNames[studentId] ?? 'Student',
           logDate: date,
           status: status,
           markedByUid: markedByUid,
@@ -98,9 +100,9 @@ class AttendanceProvider extends ChangeNotifier {
       _saving = false;
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
       _saving = false;
-      _lastError = 'Could not save attendance. Check your connection.';
+      _lastError = 'Could not save attendance: $e';
       notifyListeners();
       return false;
     }
@@ -112,5 +114,10 @@ class AttendanceProvider extends ChangeNotifier {
     _saving = false;
     _lastError = null;
     notifyListeners();
+  }
+
+  /// Watch attendance for a specific student (Real-time).
+  Stream<List<AttendanceRecord>> watchStudentAttendance(String studentId, String academyId) {
+    return _repo.watchForStudent(studentId, academyId);
   }
 }

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
-import '../../../data/models/test_mark_model.dart';
+import '../../../data/models/class_entity.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
   const MonthlyReportScreen({super.key});
@@ -24,12 +25,26 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().currentUser;
+      if (user != null) {
+        context.read<ClassProvider>().listenAll(user.academyId ?? '');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final classes = context.watch<ClassProvider>().classes;
+    final user = context.watch<AuthProvider>().currentUser;
+    final classes = context.watch<ClassProvider>().classes
+        .where((c) => c.primaryTeacherId == user?.uid)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Monthly Performance', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Monthly Reports', style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -39,8 +54,8 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             children: [
               _buildFilters(classes),
               Expanded(
-                child: _selectedClassId == null
-                    ? _buildEmptyState('Select a class to view reports')
+                child: _selectedClassId == null 
+                    ? _buildNoClassState() 
                     : _buildReportList(),
               ),
             ],
@@ -50,37 +65,36 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
     );
   }
 
-  Widget _buildFilters(List<dynamic> classes) {
+  Widget _buildFilters(List<ClassEntity> classes) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            flex: 2,
-            child: _dropdownContainer(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedClassId,
-                  hint: const Text('Class', style: TextStyle(color: AppColors.textSecondary)),
-                  items: classes.map((c) => DropdownMenuItem(value: c.id as String, child: Text(c.displayLabel as String, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
-                  onChanged: (v) => setState(() => _selectedClassId = v),
-                  dropdownColor: AppColors.surface,
-                  isExpanded: true,
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedClassId,
+                hint: const Text('Select Class'),
+                isExpanded: true,
+                dropdownColor: AppColors.surface,
+                items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayLabel, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+                onChanged: (v) => setState(() => _selectedClassId = v),
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _dropdownContainer(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedMonth,
-                  items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m.substring(0, 3), style: const TextStyle(color: AppColors.textPrimary)))).toList(),
-                  onChanged: (v) => setState(() => _selectedMonth = v!),
-                  dropdownColor: AppColors.surface,
-                  isExpanded: true,
-                ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedMonth,
+                isExpanded: true,
+                dropdownColor: AppColors.surface,
+                items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+                onChanged: (v) => setState(() => _selectedMonth = v!),
               ),
             ),
           ),
@@ -89,120 +103,80 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
     );
   }
 
-  Widget _dropdownContainer({required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: child,
-    );
-  }
-
   Widget _buildReportList() {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final academyId = user?.academyId ?? '';
+
     return StreamBuilder<Map<String, dynamic>>(
-      stream: context.read<QuizProvider>().watchMonthlyClassReport(_selectedClassId!, _selectedMonth),
+      stream: context.read<QuizProvider>().watchMonthlyClassReport(_selectedClassId!, _selectedMonth, academyId),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.accent));
         }
+        
         final data = snap.data;
-        if (data == null || (data['studentStats'] as Map).isEmpty) {
-          return _buildEmptyState('No data found for $_selectedMonth');
+        if (data == null || data['quizCount'] == 0) {
+          return const Center(child: Text('No data found for this month', style: TextStyle(color: AppColors.textSecondary)));
         }
 
-        final stats = data['studentStats'] as Map<String, dynamic>;
-        final students = stats.values.toList();
+        final Map<String, Map<String, dynamic>> studentStats = data['studentStats'];
+        final List<String> subjects = List<String>.from(data['subjects']);
 
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          itemCount: students.length,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+          itemCount: studentStats.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _studentReportCard(students[i]),
+          itemBuilder: (context, i) {
+            final studentId = studentStats.keys.elementAt(i);
+            final stats = studentStats[studentId]!;
+            return _reportTile(stats, subjects);
+          },
         );
       },
     );
   }
 
-  Widget _studentReportCard(dynamic s) {
-    final double obtained = s['obtained'];
-    final double total = s['total'];
-    final double percentage = (obtained / total) * 100;
-    final grade = TestMarkModel.calculateGrade(percentage);
-
+  Widget _reportTile(Map<String, dynamic> stats, List<String> subjects) {
+    final double percentage = (stats['obtained'] / stats['total']) * 100;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CircleAvatar(
-                backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                child: Text(s['name'][0], style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s['name'], style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text("Overall: $obtained / $total", style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(grade, style: TextStyle(color: _getGradeColor(grade), fontSize: 18, fontWeight: FontWeight.w900)),
-                  Text("${percentage.toStringAsFixed(1)}%", style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                ],
-              ),
+              Text(stats['name'], style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text("${percentage.toStringAsFixed(1)}%", 
+                style: TextStyle(color: percentage >= 50 ? AppColors.success : AppColors.danger, fontWeight: FontWeight.bold)),
             ],
           ),
           const Divider(height: 24, color: AppColors.border),
-          ... (s['subjects'] as Map<String, dynamic>).entries.map((sub) {
-            final subObtained = sub.value['obtained'];
-            final subTotal = sub.value['total'];
+          ...subjects.map((sub) {
+            final subStats = stats['subjects'][sub] ?? {'obtained': 0.0, 'total': 0.0};
             return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(sub.key, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  Text("$subObtained / $subTotal", style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(sub, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Text("${subStats['obtained']} / ${subStats['total']}", style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 
-  Color _getGradeColor(String g) {
-    if (g.startsWith('A')) return AppColors.success;
-    if (g.startsWith('B')) return AppColors.accent;
-    if (g == 'F') return AppColors.danger;
-    return AppColors.warning;
-  }
-
-  Widget _buildEmptyState(String msg) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.analytics_outlined, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text(msg, style: const TextStyle(color: AppColors.textSecondary)),
-        ],
-      ),
-    );
+  Widget _buildNoClassState() {
+    return const Center(child: Text('Select a class to view reports', style: TextStyle(color: AppColors.textSecondary)));
   }
 }

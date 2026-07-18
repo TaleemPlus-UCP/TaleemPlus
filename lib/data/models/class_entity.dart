@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ///   - studentNames : {uid: displayName} for quick rendering
 class ClassEntity {
   final String id;
+  final String academyId; // NEW
   final String className;
   final String section;
   final String subject;
@@ -19,6 +20,7 @@ class ClassEntity {
 
   const ClassEntity({
     required this.id,
+    required this.academyId, // NEW
     required this.className,
     this.section = '',
     this.subject = '',
@@ -41,6 +43,7 @@ class ClassEntity {
   }
 
   Map<String, dynamic> toMap() => {
+    'academy_id': academyId,
     'class_name': className,
     'section': section,
     'subject': subject,
@@ -61,6 +64,7 @@ class ClassEntity {
     final ts = map['created_at'];
     return ClassEntity(
       id: id,
+      academyId: (map['academy_id'] ?? '') as String,
       className: (map['class_name'] ?? '') as String,
       section: (map['section'] ?? '') as String,
       subject: (map['subject'] ?? '') as String,

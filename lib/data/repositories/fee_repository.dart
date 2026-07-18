@@ -6,18 +6,23 @@ class FeeRepository {
   FeeRepository({DbHelper? dbHelper})
       : _dbHelper = dbHelper ?? DbHelper.instance;
 
-  Future<List<FeeInvoice>> getAll() async {
-    final db = await _dbHelper.database;
-    final rows = await db.query('fee_invoices', orderBy: 'created_at DESC');
-    return rows.map(FeeInvoice.fromMap).toList();
-  }
-
-  Future<List<FeeInvoice>> getByStudent(String studentId) async {
+  Future<List<FeeInvoice>> getAll(String academyId) async {
     final db = await _dbHelper.database;
     final rows = await db.query(
       'fee_invoices',
-      where: 'student_id = ?',
-      whereArgs: [studentId],
+      where: 'academy_id = ?',
+      whereArgs: [academyId],
+      orderBy: 'created_at DESC'
+    );
+    return rows.map(FeeInvoice.fromMap).toList();
+  }
+
+  Future<List<FeeInvoice>> getByStudent(String studentId, String academyId) async {
+    final db = await _dbHelper.database;
+    final rows = await db.query(
+      'fee_invoices',
+      where: 'student_id = ? AND academy_id = ?',
+      whereArgs: [studentId, academyId],
       orderBy: 'due_date DESC',
     );
     return rows.map(FeeInvoice.fromMap).toList();

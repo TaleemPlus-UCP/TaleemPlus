@@ -26,16 +26,20 @@ class OcrFirestoreService {
   }
 
   /// Fetches all OCR documents for a specific user (Realtime, Latest first)
+  /// NOTE: sorting phone pe hoti hai (client-side) taake Firestore
+  /// composite index ki zaroorat na pare — "requires an index" error khatam.
   Stream<List<OcrDocumentModel>> getDocuments(String uid) {
     return _firestore
         .collection(_collection)
         .where('created_by_uid', isEqualTo: uid)
-        .orderBy('created_at', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final list = snapshot.docs.map((doc) {
         return OcrDocumentModel.fromMap(doc.data(), doc.id);
       }).toList();
+      // Newest first (client-side sort — no index needed)
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
     });
   }
 
@@ -67,7 +71,8 @@ class OcrFirestoreService {
   /// Fetches a single document by ID
   Future<OcrDocumentModel?> getDocumentById(String documentId) async {
     try {
-      final doc = await _firestore.collection(_collection).doc(documentId).get();
+      final doc =
+      await _firestore.collection(_collection).doc(documentId).get();
       if (!doc.exists) return null;
       return OcrDocumentModel.fromMap(doc.data()!, doc.id);
     } catch (e) {

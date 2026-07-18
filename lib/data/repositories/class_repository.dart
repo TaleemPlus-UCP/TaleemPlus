@@ -15,19 +15,24 @@ class ClassRepository {
 
   // ---------- Reads ----------
 
-  Stream<List<ClassEntity>> watchAll() {
-    return _col.orderBy('created_at', descending: true).snapshots().map(
+  Stream<List<ClassEntity>> watchAll(String academyId) {
+    return _col
+        .where('academy_id', isEqualTo: academyId)
+        .orderBy('created_at', descending: true)
+        .snapshots().map(
           (snap) => snap.docs
           .map((d) => ClassEntity.fromMap(d.id, d.data()))
           .toList(),
     );
   }
 
-  Stream<List<ClassEntity>> watchForTeacherEmail(String email) {
-    final e = email.trim().toLowerCase();
-    return watchAll().map(
-          (list) => list
-          .where((c) => c.primaryTeacherEmail.toLowerCase() == e)
+  Stream<List<ClassEntity>> watchForTeacher(String teacherUid, String academyId) {
+    return _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('primary_teacher_id', isEqualTo: teacherUid)
+        .snapshots().map(
+          (snap) => snap.docs
+          .map((d) => ClassEntity.fromMap(d.id, d.data()))
           .toList(),
     );
   }
@@ -46,16 +51,18 @@ class ClassRepository {
     required String subject,
     required AppUser teacher,
     required List<AppUser> students,
+    required String academyId, 
   }) async {
     final docRef = _col.doc();
     final entity = ClassEntity(
       id: docRef.id,
+      academyId: academyId, 
       className: className.trim(),
       section: section.trim(),
       subject: subject.trim(),
       primaryTeacherId: teacher.uid,
       primaryTeacherName: teacher.fullName,
-      primaryTeacherEmail: teacher.email,
+      primaryTeacherEmail: teacher.email.trim().toLowerCase(), // LOWERCASE FOR CONSISTENCY
       studentIds: students.map((s) => s.uid).toList(),
       studentNames: {for (final s in students) s.uid: s.fullName},
       createdAt: DateTime.now(),
@@ -75,5 +82,17 @@ class ClassRepository {
     for (final d in att.docs) {
       await d.reference.delete();
     }
+  }
+
+  /// Updates the list of students in an existing class.
+  Future<void> updateClassEnrollment({
+    required String classId,
+    required List<AppUser> students,
+  }) async {
+    await _col.doc(classId).update({
+      'student_ids': students.map((s) => s.uid).toList(),
+      'student_names': {for (final s in students) s.uid: s.fullName},
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 }

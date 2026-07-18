@@ -45,34 +45,40 @@ class QuizProvider extends ChangeNotifier {
 
   // --- Streams (Real-time data) ---
 
-  /// Watch all tests created for a specific class
-  Stream<List<QuizModel>> watchTeacherQuizzes(String classId) {
-    return _service.watchQuizzesByClass(classId);
+  /// Watch all tests created for a specific class in an academy
+  Stream<List<QuizModel>> watchTeacherQuizzes(String classId, String academyId) {
+    return _service.watchQuizzesByClass(classId, academyId);
   }
 
   /// Watch marks for a specific test (for Teacher/Admin review)
-  Stream<List<TestMarkModel>> watchQuizResults(String quizId) {
-    return _service.watchMarksByQuiz(quizId);
+  Stream<List<TestMarkModel>> watchQuizResults(String quizId, String academyId) {
+    return _service.watchMarksByQuiz(quizId, academyId);
   }
 
   /// Watch all test results for a specific student (for Report Card)
-  Stream<List<TestMarkModel>> watchStudentResults(String uid) {
-    return _service.watchStudentMarks(uid);
+  Stream<List<TestMarkModel>> watchStudentResults(String uid, String academyId) {
+    return _service.watchStudentMarks(uid, academyId);
   }
 
   /// Watch all marks for a class (for Admin Analytics)
-  Stream<List<TestMarkModel>> watchClassResults(String classId) {
-    return _service.watchClassMarks(classId);
+  Stream<List<TestMarkModel>> watchClassResults(String classId, String academyId) {
+    return _service.watchClassMarks(classId, academyId);
   }
 
   /// NEW: Compiles monthly report data for a class
-  Stream<Map<String, dynamic>> watchMonthlyClassReport(String classId, String month) {
-    return watchClassResults(classId).asyncMap((marks) async {
+  Stream<Map<String, dynamic>> watchMonthlyClassReport(String classId, String month, String academyId) {
+    return watchClassResults(classId, academyId).asyncMap((marks) async {
       // 1. Get all quizzes for this class and month to know total possible marks
-      final quizzes = await _service.watchQuizzesByClass(classId).first;
+      final quizzes = await _service.watchQuizzesByClass(classId, academyId).first;
       final monthlyQuizzes = quizzes.where((q) => q.month == month).toList();
       
-      if (monthlyQuizzes.isEmpty) return {'totalPossible': 0.0, 'students': {}};
+      if (monthlyQuizzes.isEmpty) {
+        return {
+          'quizCount': 0,
+          'subjects': [],
+          'studentStats': <String, Map<String, dynamic>>{},
+        };
+      }
 
       final Map<String, Map<String, dynamic>> studentStats = {};
 

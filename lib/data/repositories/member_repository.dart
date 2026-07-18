@@ -7,18 +7,23 @@ class MemberRepository {
   MemberRepository({DbHelper? dbHelper})
       : _dbHelper = dbHelper ?? DbHelper.instance;
 
-  Future<List<AcademyMember>> getAll() async {
+  Future<List<AcademyMember>> getAll(String academyId) async {
     final db = await _dbHelper.database;
-    final rows = await db.query('members', orderBy: 'created_at DESC');
+    final rows = await db.query(
+      'members', 
+      where: 'academy_id = ?',
+      whereArgs: [academyId],
+      orderBy: 'created_at DESC'
+    );
     return rows.map(AcademyMember.fromMap).toList();
   }
 
-  Future<List<AcademyMember>> getByRole(String role) async {
+  Future<List<AcademyMember>> getByRole(String role, String academyId) async {
     final db = await _dbHelper.database;
     final rows = await db.query(
       'members',
-      where: 'role = ?',
-      whereArgs: [role],
+      where: 'role = ? AND academy_id = ?',
+      whereArgs: [role, academyId],
       orderBy: 'created_at DESC',
     );
     return rows.map(AcademyMember.fromMap).toList();

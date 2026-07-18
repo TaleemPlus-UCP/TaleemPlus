@@ -15,14 +15,12 @@ class Validators {
     return null;
   }
 
-  /// Enforces a valid email that ends with the institutional domain.
+  /// Enforces a valid email. 
+  /// (Previously forced institutional domain, now optional for flexibility)
   static String? email(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Email is required';
     if (!_emailRegex.hasMatch(v)) return 'Enter a valid email address';
-    if (!v.toLowerCase().endsWith(AppRules.emailDomain)) {
-      return 'Email must end with ${AppRules.emailDomain}';
-    }
     return null;
   }
 

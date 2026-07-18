@@ -1,6 +1,7 @@
 /// A person managed by the Admin: a teacher, student, or parent.
 class AcademyMember {
   final String id;
+  final String academyId; // NEW
   final String fullName;
   final String email;
   final String phone;
@@ -11,6 +12,7 @@ class AcademyMember {
 
   const AcademyMember({
     required this.id,
+    required this.academyId, // NEW
     required this.fullName,
     required this.email,
     required this.phone,
@@ -36,6 +38,7 @@ class AcademyMember {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'academy_id': academyId, // NEW
       'full_name': fullName,
       'email': email,
       'phone': phone,
@@ -49,6 +52,7 @@ class AcademyMember {
   factory AcademyMember.fromMap(Map<String, dynamic> map) {
     return AcademyMember(
       id: map['id'] as String,
+      academyId: (map['academy_id'] ?? '') as String, // NEW
       fullName: (map['full_name'] ?? '') as String,
       email: (map['email'] ?? '') as String,
       phone: (map['phone'] ?? '') as String,

@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_extensions.dart'; // NEW
 import '../../core/utils/validators.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
+import '../../logic/session_provider.dart'; // NEW
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 
@@ -69,6 +71,34 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _biometricSignIn() async {
+    final session = context.read<SessionProvider>();
+    final auth = context.read<AuthProvider>();
+    
+    // Check if biometric is enabled for this account
+    if (!session.biometricEnabled) {
+      _showError("Biometric login is not enabled. Please login with password first and enable it in settings.");
+      return;
+    }
+
+    final authenticated = await session.authenticateWithBiometrics();
+    if (authenticated) {
+      final savedEmail = await auth.loadSavedEmail();
+      if (savedEmail != null) {
+         // In a real high-security app, you'd store a secure token. 
+         // Since we are offline-first with Firebase persistence, 
+         // Firebase Auth often keeps the user logged in. 
+         // This serves as a gateway.
+         final user = await auth.tryRestoreSession();
+         if (mounted && user != null) {
+            Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
+         } else {
+            _showError("Session expired. Please login with password.");
+         }
+      }
+    }
+  }
+
   Future<void> _forgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (Validators.email(email) != null) {
@@ -118,21 +148,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 28),
                   _logo(),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'TaleemPlus',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: context.appColors.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Welcome back! Enter your credentials to securely access your local academy dashboard.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: context.appColors.textSecondary,
                       fontSize: 14,
                       height: 1.4,
                     ),
@@ -140,11 +170,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 28),
                   _card(),
                   const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Log In',
-                    icon: Icons.login_rounded,
-                    loading: loading,
-                    onPressed: loading ? null : _submit,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Log In',
+                          icon: Icons.login_rounded,
+                          loading: loading,
+                          onPressed: loading ? null : _submit,
+                        ),
+                      ),
+                      if (context.watch<SessionProvider>().biometricEnabled) ...[
+                        const SizedBox(width: 12),
+                        IconButton.filled(
+                          onPressed: loading ? null : _biometricSignIn,
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: AppColors.textOnAccent,
+                            fixedSize: const Size(56, 56),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          icon: const Icon(Icons.fingerprint_rounded, size: 28),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 24),
                   _signupLink(),
@@ -166,8 +215,8 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(16),
           color: AppColors.accent.withValues(alpha: 0.15),
         ),
-        child: const Icon(Icons.menu_book_rounded,
-            size: 34, color: AppColors.textPrimary),
+        child: Icon(Icons.menu_book_rounded,
+            size: 34, color: context.appColors.textPrimary),
       ),
     );
   }
@@ -176,9 +225,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.55),
+        color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
@@ -199,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
             suffix: IconButton(
               icon: Icon(
                 _obscure ? Icons.visibility : Icons.visibility_off,
-                color: AppColors.textMuted,
+                color: context.appColors.textMuted,
               ),
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
@@ -217,13 +266,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('Remember Me',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              Text('Remember Me',
+                  style: TextStyle(color: context.appColors.textSecondary)),
               const Spacer(),
               TextButton(
                 onPressed: _forgotPassword,
-                child: const Text('Forgot Password?',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                child: Text('Forgot Password?',
+                    style: TextStyle(color: context.appColors.textSecondary)),
               ),
             ],
           ),
@@ -236,8 +285,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("Don't have an account? ",
-            style: TextStyle(color: AppColors.textSecondary)),
+        Text("Don't have an account? ",
+            style: TextStyle(color: context.appColors.textSecondary)),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, AppRoutes.signup),
           child: const Text(

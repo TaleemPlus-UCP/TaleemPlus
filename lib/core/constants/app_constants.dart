@@ -12,12 +12,17 @@ class AppRoutes {
 }
 
 /// The four user roles supported by TaleemPlus (matches the SDS).
-enum UserRole { admin, teacher, student, parent }
+enum UserRole {
+  admin,
+  teacher,
+  student,
+  parent;
 
-extension UserRoleX on UserRole {
   /// Value stored in Firestore.
   String get value => name;
+}
 
+extension UserRoleX on UserRole {
   /// Human-readable label shown in the UI.
   String get label {
     switch (this) {
