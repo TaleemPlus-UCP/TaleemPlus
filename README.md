@@ -1,61 +1,96 @@
-# TaleemPlus — Project Skeleton
+# TaleemPlus 🚀
+**The All-in-One AI-Powered Academy Management System**
 
-This is the starter folder structure for the 60-day solo build plan
-(`TaleemPlus_60Day_Plan.md`). Every file is a stub with a one-line comment
-saying what belongs there and which SDS section / week it maps to — nothing
-here runs yet. Fill it in feature-by-feature, in the order the plan lays out.
+TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designed to digitize academy operations. It provides specialized portals for Administrators, Teachers, Students, and Parents, enhanced with 100% offline Artificial Intelligence for automated grading, test generation, and performance insights.
 
-## Structure
+---
 
-```
-taleemplus_app/
-├── lib/
-│   ├── main.dart              # App entry point, Firebase/DB init, routing
-│   ├── core/
-│   │   ├── theme/             # App-wide colors/text styles
-│   │   ├── constants/         # Route names, table names, pref keys
-│   │   └── utils/             # Validators, date helpers
-│   ├── data/
-│   │   ├── local/
-│   │   │   ├── db_helper.dart # SQLite setup — Week 1
-│   │   │   └── tables/        # One file per table, matches Fig.7 ERD
-│   │   ├── remote/            # Firebase service + sync_service.dart (Week 7)
-│   │   ├── models/            # Dart classes matching Fig.4 Class Diagram
-│   │   └── repositories/      # Bridge between UI and local/remote data
-│   ├── logic/                 # Providers (state management)
-│   ├── features/
-│   │   ├── auth/              # Login/signup — Week 1
-│   │   ├── admin/             # Week 2
-│   │   ├── teacher/           # Weeks 3-4 (attendance, OCR, test gen)
-│   │   ├── student/           # Week 5 (summarizer, quiz)
-│   │   └── parent/            # Week 7
-│   ├── services/ai/           # OCR, summarizer, test generator, risk predictor
-│   └── widgets/                # Shared components incl. role_guard.dart (RBAC)
-├── assets/
-│   ├── images/
-│   └── ml_models/             # risk_model.tflite goes here (Week 6)
-├── test/
-│   ├── unit/                  # Maps to Table 4 test cases
-│   └── integration/           # Offline/sync end-to-end tests
-├── ml_training/                # Python side — NOT part of the Flutter app
-│   ├── train_risk_model.py    # Week 6, Day 36-37
-│   ├── export_tflite.py       # Week 6, Day 38
-│   ├── requirements.txt
-│   └── data/synthetic_dataset.csv
-└── pubspec.yaml                # All dependencies already listed
-```
+## 🌟 Key Features
 
-## Before you write any feature code
+### 🏢 Admin Portal (Command Center)
+*   **User Management:** Centralized control to add, edit, and approve staff and students.
+*   **Bulk Fee Generation:** Create monthly challans for entire classes with a single tap.
+*   **Class Management:** Create classes, assign multiple subjects to teachers, and manage enrollments.
+*   **AI Analytics:** Predict student "At-Risk" levels and monitor academy revenue trends using local ML.
+*   **Announcements:** Broadcast important notices to specific roles or the whole academy.
 
-1. `flutter pub get`
-2. `flutterfire configure` (sets up Firebase for this project)
-3. Fill in `lib/data/local/db_helper.dart` first — every table file and
-   repository depends on it.
-4. Build `lib/features/auth/login_screen.dart` + RBAC (`role_guard.dart`)
-   next — you can't test any role-specific screen without it.
+### 👨‍🏫 Teacher Portal (Digital Classroom)
+*   **Classroom Hub:** Share study resources (Notes/Links) and answer student queries in real-time.
+*   **AI Smart Grader:** Grade handwritten student papers 100% offline using OCR and keyword matching.
+*   **AI Test Generator:** Scan textbook pages to auto-generate MCQs, Short, and Long questions.
+*   **Attendance Marking:** Digital presence tracking for all assigned classes.
+*   **Performance Tracking:** Enter and monitor student test scores.
 
-## Reference
+### 🎓 Student Portal (Learning Console)
+*   **My Classroom Hub:** View subject-wise resources, track subject-specific attendance, and discuss topics with teachers.
+*   **AI Summarizer:** Generate concise summaries from large study notes 100% offline.
+*   **Performance Analytics:** Visual progress charts and detailed test reports.
+*   **Fee Status:** Real-time tracking of paid and pending challans.
 
-Every stub comment points back to either a Figure/Section in your SDS or a
-Week/Day in `TaleemPlus_60Day_Plan.md`. If you're ever unsure what a file
-should contain, check that plan first.
+### 👪 Parent Portal (Child Monitoring)
+*   **Multi-Child Support:** Link multiple children to a single parent dashboard.
+*   **Journey Monitoring:** Real-time visibility into children's attendance, marks, and fee dues.
+*   **Direct Support:** Easy access to academy contact information and broadcasts.
+
+---
+
+## 🤖 AI & ML Capabilities (100% Offline)
+
+*   **Google ML Kit (Deep Learning):** High-precision OCR used for digitizing physical notes and answer sheets.
+*   **Heuristic NLP Algorithms:** Rule-based logic for automated test paper generation and extractive text summarization.
+*   **TFLite Inference:** On-device execution of a custom classification model for student performance prediction.
+*   **Keyword Matcher:** Intelligent scoring system for grading short answers based on teacher-defined rubrics.
+
+---
+
+## 🛠️ Tech Stack
+
+*   **Frontend:** Flutter (Dart) - Responsive UI for Mobile & Web.
+*   **State Management:** Provider.
+*   **Backend:** Firebase (Authentication, Firestore, Hosting).
+*   **AI/ML:** Google ML Kit, TensorFlow Lite, Heuristic Logic.
+*   **Utilities:** Local Auth (Biometrics), PDF Printing/Sharing, fl_chart.
+
+---
+
+## 🚀 CI/CD & DevOps
+
+The project includes a **GitHub Actions** pipeline that automatically:
+1.  Analyzes the code for errors.
+2.  Runs unit and integration tests.
+3.  Builds the **Android Release APK**.
+4.  Builds the **Web Version** ready for deployment.
+
+---
+
+## 💻 Getting Started
+
+### Prerequisites
+*   Flutter SDK (v3.22.x or later)
+*   Dart SDK (v3.x)
+*   Firebase Account
+
+### Installation
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/TaleemPlus-UCP/TaleemPlus.git
+    ```
+2.  Install dependencies:
+    ```bash
+    flutter pub get
+    ```
+3.  Configure Firebase:
+    ```bash
+    flutterfire configure
+    ```
+4.  Run the application:
+    *   **Mobile:** `flutter run`
+    *   **Web:** `flutter run -d chrome`
+
+---
+
+## 📄 License
+This project is developed as a **Final Year Project (FYP)** for BSCS (Spring 23). All rights reserved.
+
+---
+**TaleemPlus** — *Empowering Academies through Intelligent Automation.*

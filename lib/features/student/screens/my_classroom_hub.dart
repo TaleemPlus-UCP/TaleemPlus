@@ -1,0 +1,127 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_extensions.dart';
+import '../../../data/models/class_entity.dart';
+import '../../../logic/auth_provider.dart';
+import '../../../logic/class_provider.dart';
+import '../../../widgets/gradient_background.dart';
+import 'teacher_details_screen.dart';
+
+class MyClassroomHub extends StatefulWidget {
+  const MyClassroomHub({super.key});
+
+  @override
+  State<MyClassroomHub> createState() => _MyClassroomHubState();
+}
+
+class _MyClassroomHubState extends State<MyClassroomHub> {
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final classProv = context.watch<ClassProvider>();
+    
+    // Find all classes where this student is enrolled
+    final enrolledClasses = classProv.classes.where((c) => c.studentIds.contains(user?.uid)).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Classroom Hub', style: TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: GradientBackground(
+        child: SafeArea(
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: enrolledClasses.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(24),
+                      itemCount: enrolledClasses.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) => _teacherTile(enrolledClasses[index]),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _teacherTile(ClassEntity cls) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appColors.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(20),
+        leading: CircleAvatar(
+          radius: 28,
+          backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+          child: Text(cls.primaryTeacherName[0].toUpperCase(), 
+              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20)),
+        ),
+        title: Text(cls.primaryTeacherName, 
+            style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text("${cls.subject} • ${cls.className} (${cls.section})", 
+                style: TextStyle(color: context.appColors.textSecondary, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _smallBadge(Icons.menu_book_rounded, "Resources"),
+                const SizedBox(width: 8),
+                _smallBadge(Icons.question_answer_rounded, "Discussions"),
+              ],
+            ),
+          ],
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.accent),
+        onTap: () => Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (_) => TeacherDetailsScreen(classEntity: cls)),
+        ),
+      ),
+    );
+  }
+
+  Widget _smallBadge(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.accent),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.school_outlined, size: 80, color: context.appColors.textMuted.withValues(alpha: 0.3)),
+        const SizedBox(height: 20),
+        Text("No teachers assigned yet", 
+            style: TextStyle(color: context.appColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text("Contact your admin to enroll in classes.", 
+            style: TextStyle(color: context.appColors.textSecondary)),
+      ],
+    );
+  }
+}
