@@ -16,37 +16,34 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.0'
           channel: 'stable'
           cache: true
 
-      - name: Create Firebase Config Files
+      - name: Create Config Files
         run: |
+          mkdir -p android/app
           echo "${{ secrets.FIREBASE_OPTIONS }}" > lib/firebase_options.dart
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify formatting
-        run: flutter format --set-exit-if-changed lib || true # Continue even if format fails
-
-      - name: Analyze project source
-        run: flutter analyze || true # Continue even if analysis has warnings
+      - name: Analyze project
+        run: flutter analyze || true
 
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-pub
 
       - name: Build Web
-        run: flutter build web
+        run: flutter build web --no-pub
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload Web Artifact
+      - name: Upload Web
         uses: actions/upload-artifact@v4
         with:
           name: web-build
