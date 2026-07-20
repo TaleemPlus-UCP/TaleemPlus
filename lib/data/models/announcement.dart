@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// A broadcast message from an admin to one or more user roles.
 class Announcement {
   final String id;
+  final String academyId; // NEW
   final String title;
   final String message;
   final List<String> targetRoles;
@@ -13,6 +14,7 @@ class Announcement {
 
   const Announcement({
     required this.id,
+    required this.academyId,
     required this.title,
     required this.message,
     required this.targetRoles,
@@ -22,15 +24,20 @@ class Announcement {
     this.updatedAt,
   });
 
-  bool get isForAll => targetRoles.contains('all');
+  bool get isForAll => targetRoles.any((r) => r.toLowerCase() == 'all');
 
-  bool isForRole(String role) => isForAll || targetRoles.contains(role);
+  bool isForRole(String role) {
+    if (isForAll) return true;
+    final rLower = role.toLowerCase().trim();
+    return targetRoles.any((tr) => tr.toLowerCase().trim() == rLower);
+  }
 
   /// Human-readable badge like "Teachers", "Students & Parents", "Everyone".
   String get targetLabel {
     if (isForAll) return 'Everyone';
     final labels = targetRoles.map((r) {
-      switch (r) {
+      final rLower = r.toLowerCase().trim();
+      switch (rLower) {
         case 'teacher':
           return 'Teachers';
         case 'student':
@@ -41,12 +48,14 @@ class Announcement {
           return r;
       }
     }).toList();
+    if (labels.isEmpty) return 'None';
     if (labels.length == 1) return labels.first;
     if (labels.length == 2) return '${labels[0]} & ${labels[1]}';
     return labels.join(', ');
   }
 
   Map<String, dynamic> toMap() => {
+    'academy_id': academyId,
     'title': title,
     'message': message,
     'target_roles': targetRoles,
@@ -66,6 +75,7 @@ class Announcement {
     final ts2 = map['updated_at'];
     return Announcement(
       id: id,
+      academyId: (map['academy_id'] ?? '') as String,
       title: (map['title'] ?? '') as String,
       message: (map['message'] ?? '') as String,
       targetRoles: roles,

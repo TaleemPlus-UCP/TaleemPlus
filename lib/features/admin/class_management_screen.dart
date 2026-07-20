@@ -9,6 +9,7 @@ import '../../data/models/class_entity.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
+import 'screens/class_fee_status_screen.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 
@@ -57,11 +58,13 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 );
               }
               if (cp.classes.isEmpty) return _emptyState();
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                itemCount: cp.classes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _classTile(cp.classes[i]),
+              return RepaintBoundary(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                  itemCount: cp.classes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _classTile(cp.classes[i]),
+                ),
               );
             },
           ),
@@ -129,7 +132,21 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: AppColors.accent),
+            tooltip: 'Edit Details',
+            onPressed: () => _openEditClassSheet(c),
+          ),
+          IconButton(
+            icon: const Icon(Icons.payments_rounded, color: AppColors.accent),
+            tooltip: 'Fee Status',
+            onPressed: () => Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (_) => ClassFeeStatusScreen(classEntity: c)),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.group_add_rounded, color: AppColors.accent),
+            tooltip: 'Manage Enrollment',
             onPressed: () => _openEditSheet(c),
           ),
           IconButton(
@@ -168,6 +185,32 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     if (ok == true && mounted) {
       await context.read<ClassProvider>().deleteClass(c.id);
     }
+  }
+
+  void _openEditClassSheet(ClassEntity c) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+    );
+
+    final auth = AuthService();
+    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    List<AppUser> teachers = [];
+    try {
+      teachers = await auth.getApprovedByRole(UserRole.teacher, academyId);
+    } catch (_) {}
+    
+    if (mounted) Navigator.pop(context);
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _EditClassSheet(classEntity: c, teachers: teachers),
+    );
   }
 
   Future<void> _openEditSheet(ClassEntity c) async {
@@ -227,13 +270,13 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     try {
       teachers = await auth.getApprovedByRole(UserRole.teacher, academyId);
       students = await auth.getApprovedByRole(UserRole.student, academyId);
-    } catch (_) {
+    } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
               content: Text(
-                  'Could not load users. Check your connection.')),
+                  'Error loading users: $e')),
         );
       }
       return;
@@ -262,6 +305,110 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       builder: (_) => _AddClassSheet(
         teachers: teachers,
         students: students,
+      ),
+    );
+  }
+}
+
+class _EditClassSheet extends StatefulWidget {
+  final ClassEntity classEntity;
+  final List<AppUser> teachers;
+  const _EditClassSheet({required this.classEntity, required this.teachers});
+
+  @override
+  State<_EditClassSheet> createState() => _EditClassSheetState();
+}
+
+class _EditClassSheetState extends State<_EditClassSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _sectionCtrl;
+  late final TextEditingController _subjectCtrl;
+  AppUser? _selectedTeacher;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.classEntity.className);
+    _sectionCtrl = TextEditingController(text: widget.classEntity.section);
+    _subjectCtrl = TextEditingController(text: widget.classEntity.subject);
+    try {
+      _selectedTeacher = widget.teachers.firstWhere((t) => t.uid == widget.classEntity.primaryTeacherId);
+    } catch (_) {
+      _selectedTeacher = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _sectionCtrl.dispose();
+    _subjectCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedTeacher == null) return;
+    
+    setState(() => _saving = true);
+    try {
+      await context.read<ClassProvider>().updateClass(
+        classId: widget.classEntity.id,
+        className: _nameCtrl.text,
+        section: _sectionCtrl.text,
+        subject: _subjectCtrl.text,
+        teacher: _selectedTeacher!,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Class details updated!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.danger));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Edit Class Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 24),
+            LabeledField(label: 'Class Name', hint: 'e.g. Class 10', controller: _nameCtrl, validator: Validators.fullName),
+            LabeledField(label: 'Section', hint: 'e.g. A', controller: _sectionCtrl),
+            LabeledField(label: 'Subject', hint: 'e.g. Maths', controller: _subjectCtrl),
+            const Text('ASSIGNED TEACHER', style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<AppUser>(
+                  value: _selectedTeacher,
+                  isExpanded: true,
+                  dropdownColor: AppColors.surfaceAlt,
+                  hint: const Text('Select a teacher'),
+                  items: widget.teachers.map((t) => DropdownMenuItem(value: t, child: Text(t.fullName))).toList(),
+                  onChanged: (t) => setState(() => _selectedTeacher = t),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(label: 'SAVE CHANGES', icon: Icons.check_rounded, loading: _saving, onPressed: _selectedTeacher == null ? null : _save),
+          ],
+        ),
       ),
     );
   }

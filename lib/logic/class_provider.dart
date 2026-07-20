@@ -31,11 +31,19 @@ class ClassProvider extends ChangeNotifier {
     _sub?.cancel();
     _loading = true;
     notifyListeners();
-    _sub = _repo.watchAll(academyId).listen((list) {
-      _classes = list;
-      _loading = false;
-      notifyListeners();
-    });
+    _sub = _repo.watchAll(academyId).listen(
+      (list) {
+        _classes = list;
+        _loading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint("Error listening to classes: $e");
+        _classes = [];
+        _loading = false;
+        notifyListeners();
+      },
+    );
   }
 
   Future<List<ClassEntity>> fetchForTeacher(String teacherUid, String academyId) {
@@ -70,6 +78,29 @@ class ClassProvider extends ChangeNotifier {
     required List<AppUser> students,
   }) async {
     await _repo.updateClassEnrollment(classId: classId, students: students);
+  }
+
+  Future<void> updateClass({
+    required String classId,
+    String? className,
+    String? section,
+    String? subject,
+    AppUser? teacher,
+  }) async {
+    await _repo.updateClassDetails(
+      classId: classId,
+      className: className,
+      section: section,
+      subject: subject,
+      teacher: teacher,
+    );
+  }
+
+  Future<void> updateTeacher({
+    required String classId,
+    required AppUser teacher,
+  }) async {
+    await updateClass(classId: classId, teacher: teacher);
   }
 
   @override

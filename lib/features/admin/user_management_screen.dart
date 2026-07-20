@@ -8,9 +8,12 @@ import '../../data/models/academy_member.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
+import '../../data/models/app_user.dart';
+import '../../logic/class_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 import '../../core/theme/theme_extensions.dart';
+import 'class_management_screen.dart'; // To reuse some logic or just for context
 
 class UserManagementScreen extends StatefulWidget {
   final int initialIndex;
@@ -252,6 +255,8 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(m.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: context.appColors.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -259,18 +264,34 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
                 const SizedBox(height: 2),
                 if (m.extra.isNotEmpty)
                   Text(m.extra,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           color: AppColors.accent, fontSize: 12)),
                 if (m.email.isNotEmpty)
                   Text(m.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: context.appColors.textSecondary, fontSize: 12)),
                 if (m.phone.isNotEmpty)
                   Text(m.phone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: context.appColors.textMuted, fontSize: 12)),
               ],
             ),
+          ),
+          if (m.role == 'teacher')
+            IconButton(
+              icon: const Icon(Icons.add_chart_rounded, color: AppColors.accent),
+              tooltip: 'Assign Class',
+              onPressed: () => _openAssignClassSheet(context, m),
+            ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: AppColors.accent),
+            onPressed: () => _openEditSheet(context, m),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.danger),
@@ -278,6 +299,30 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
           ),
         ],
       ),
+    );
+  }
+
+  void _openAssignClassSheet(BuildContext context, AcademyMember teacher) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _QuickAssignClassSheet(teacher: teacher),
+    );
+  }
+
+  void _openEditSheet(BuildContext context, AcademyMember m) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _EditMemberSheet(member: m),
     );
   }
 
@@ -318,6 +363,241 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
   }
 }
 
+class _QuickAssignClassSheet extends StatefulWidget {
+  final AcademyMember teacher;
+  const _QuickAssignClassSheet({required this.teacher});
+
+  @override
+  State<_QuickAssignClassSheet> createState() => _QuickAssignClassSheetState();
+}
+
+class _QuickAssignClassSheetState extends State<_QuickAssignClassSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _sectionCtrl = TextEditingController();
+  final _subjectCtrl = TextEditingController();
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+
+    try {
+      final authProv = Provider.of<AuthProvider>(context, listen: false);
+      final academyId = authProv.currentUser?.uid ?? '';
+      
+      // Convert AcademyMember to a minimal AppUser for the provider
+      final teacherUser = AppUser(
+        uid: widget.teacher.id,
+        fullName: widget.teacher.fullName,
+        email: widget.teacher.email,
+        phoneNumber: widget.teacher.phone,
+        role: UserRole.teacher,
+      );
+
+      await context.read<ClassProvider>().createClassWithStudents(
+        className: _nameCtrl.text,
+        section: _sectionCtrl.text,
+        subject: _subjectCtrl.text,
+        teacher: teacherUser,
+        students: [], // Start with empty enrollment
+        academyId: academyId,
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Assigned ${_subjectCtrl.text} (${_nameCtrl.text}) to ${widget.teacher.fullName}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Assign Class to ${widget.teacher.fullName}', 
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            const Text('Create a new class assignment for this teacher.', 
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 24),
+            LabeledField(label: 'Class Name', hint: 'e.g. Class 10', controller: _nameCtrl, validator: Validators.fullName),
+            LabeledField(label: 'Section (optional)', hint: 'e.g. A', controller: _sectionCtrl),
+            LabeledField(label: 'Subject', hint: 'e.g. Physics', controller: _subjectCtrl, 
+                validator: (v) => (v == null || v.isEmpty) ? 'Subject is required' : null),
+            const SizedBox(height: 24),
+            PrimaryButton(label: 'ASSIGN CLASS', icon: Icons.check_rounded, loading: _saving, onPressed: _save),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditMemberSheet extends StatefulWidget {
+  final AcademyMember member;
+  const _EditMemberSheet({required this.member});
+
+  @override
+  State<_EditMemberSheet> createState() => _EditMemberSheetState();
+}
+
+class _EditMemberSheetState extends State<_EditMemberSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _extraCtrl;
+  DateTime? _joiningDate;
+  final List<String> _selectedSections = [];
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.member.fullName);
+    _phoneCtrl = TextEditingController(text: widget.member.phone);
+    _extraCtrl = TextEditingController(text: widget.member.extra);
+    _joiningDate = widget.member.createdAt;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _extraCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _saving = true);
+
+    try {
+      final auth = AuthService();
+      await auth.updateUserProfile(
+        uid: widget.member.id,
+        fullName: _nameCtrl.text,
+        phoneNumber: _phoneCtrl.text,
+        extraInfo: _extraCtrl.text,
+        joiningDate: _joiningDate,
+        sections: widget.member.role == 'teacher' ? _selectedSections : null,
+      );
+
+      if (mounted) {
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final admin = auth.currentUser;
+        if (admin != null) {
+          await context.read<MemberProvider>().load(admin.uid);
+        }
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final label = AcademyMember.extraLabelFor(widget.member.role);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Edit Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 20),
+            LabeledField(label: 'Full Name', hint: 'Enter name', controller: _nameCtrl, validator: Validators.fullName),
+            LabeledField(label: label, hint: 'Enter $label', controller: _extraCtrl),
+            LabeledField(label: 'Phone', hint: '+92...', controller: _phoneCtrl, keyboardType: TextInputType.phone, validator: Validators.phone),
+            const SizedBox(height: 12),
+            if (widget.member.role == 'teacher') ...[
+              const Text('Joining Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _joiningDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                  if (d != null) setState(() => _joiningDate = d);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: context.appColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.accent),
+                      const SizedBox(width: 10),
+                      Text(_joiningDate == null ? 'Select Date' : _joiningDate!.toString().split(' ')[0]),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Assigned Sections', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: ['A', 'B', 'C', 'D'].map((s) {
+                  final isSel = _selectedSections.contains(s);
+                  return ChoiceChip(
+                    label: Text(s),
+                    selected: isSel,
+                    onSelected: (v) {
+                      setState(() {
+                        if (v) _selectedSections.add(s);
+                        else _selectedSections.remove(s);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 16),
+            PrimaryButton(label: 'UPDATE PROFILE', icon: Icons.check_rounded, loading: _saving, onPressed: _save),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AddMemberSheet extends StatefulWidget {
   final String role;
   const _AddMemberSheet({required this.role});
@@ -333,6 +613,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _phoneCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController(text: "123456"); // Default password
+  DateTime? _joiningDate = DateTime.now();
+  final List<String> _selectedSections = [];
   bool _saving = false;
 
   @override
@@ -347,6 +629,18 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Duplicate check before saving
+    final membersProv = context.read<MemberProvider>();
+    final emailLower = _emailCtrl.text.trim().toLowerCase();
+    
+    if (membersProv.members.any((m) => m.email.trim().toLowerCase() == emailLower)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A user with this email already exists!'), backgroundColor: AppColors.danger),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
 
     try {
@@ -363,6 +657,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         role: UserRole.values.firstWhere((r) => r.name == widget.role),
         academyId: admin.uid, // PASS ACADEMY ID
         extraInfo: _extraCtrl.text,
+        joiningDate: _joiningDate,
+        sections: widget.role == 'teacher' ? _selectedSections : null,
       );
 
       // 2. Refresh counts in Provider
@@ -458,6 +754,56 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 textInputAction: TextInputAction.done,
                 validator: Validators.phone,
               ),
+              if (widget.role == 'teacher') ...[
+                const SizedBox(height: 16),
+                const Text('Joining Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+                    if (d != null) setState(() => _joiningDate = d);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.appColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.accent),
+                        const SizedBox(width: 10),
+                        Text(_joiningDate == null ? 'Select Date' : _joiningDate!.toString().split(' ')[0]),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Assigned Sections', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: ['A', 'B', 'C', 'D'].map((s) {
+                    final isSel = _selectedSections.contains(s);
+                    return ChoiceChip(
+                      label: Text(s),
+                      selected: isSel,
+                      onSelected: (v) {
+                        setState(() {
+                          if (v) _selectedSections.add(s);
+                          else _selectedSections.remove(s);
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
               const SizedBox(height: 8),
               PrimaryButton(
                 label: 'Create Account',

@@ -50,11 +50,15 @@ class AnnouncementService {
   Stream<List<Announcement>> watchAll(String academyId) {
     return _col
         .where('academy_id', isEqualTo: academyId)
-        .orderBy('created_at', descending: true)
         .snapshots().map(
-          (snap) => snap.docs
-          .map((d) => Announcement.fromMap(d.id, d.data()))
-          .toList(),
+          (snap) {
+            final list = snap.docs
+              .map((d) => Announcement.fromMap(d.id, d.data()))
+              .toList();
+            // Client-side sorting (Newest First) to avoid mandatory composite index
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
     );
   }
 
@@ -62,12 +66,16 @@ class AnnouncementService {
   Stream<List<Announcement>> watchForRole(String role, String academyId) {
     return _col
         .where('academy_id', isEqualTo: academyId)
-        .orderBy('created_at', descending: true)
         .snapshots().map(
-          (snap) => snap.docs
-          .map((d) => Announcement.fromMap(d.id, d.data()))
-          .where((a) => a.isForRole(role))
-          .toList(),
+          (snap) {
+            final list = snap.docs
+              .map((d) => Announcement.fromMap(d.id, d.data()))
+              .where((a) => a.isForRole(role))
+              .toList();
+            // Client-side sorting (Newest First) to avoid mandatory composite index
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
     );
   }
 }

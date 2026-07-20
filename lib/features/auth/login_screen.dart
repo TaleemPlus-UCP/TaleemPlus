@@ -75,26 +75,29 @@ class _LoginScreenState extends State<LoginScreen> {
     final session = context.read<SessionProvider>();
     final auth = context.read<AuthProvider>();
     
-    // Check if biometric is enabled for this account
     if (!session.biometricEnabled) {
-      _showError("Biometric login is not enabled. Please login with password first and enable it in settings.");
+      _showError("Biometric login is not enabled in settings.");
       return;
     }
 
     final authenticated = await session.authenticateWithBiometrics();
     if (authenticated) {
-      final savedEmail = await auth.loadSavedEmail();
-      if (savedEmail != null) {
-         // In a real high-security app, you'd store a secure token. 
-         // Since we are offline-first with Firebase persistence, 
-         // Firebase Auth often keeps the user logged in. 
-         // This serves as a gateway.
-         final user = await auth.tryRestoreSession();
-         if (mounted && user != null) {
-            Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
-         } else {
-            _showError("Session expired. Please login with password.");
-         }
+      final email = await auth.loadSavedEmail();
+      final password = await session.getSavedPassword();
+
+      if (email != null && password != null) {
+        final ok = await auth.signIn(
+          email: email,
+          password: password,
+          rememberMe: true,
+        );
+        if (mounted && ok && auth.currentUser != null) {
+          Navigator.pushReplacementNamed(context, auth.currentUser!.role.dashboardRoute);
+        } else if (auth.errorMessage != null) {
+          _showError(auth.errorMessage!);
+        }
+      } else {
+        _showError("Credentials not found. Please login with password once.");
       }
     }
   }
@@ -102,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _forgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (Validators.email(email) != null) {
-      _showError('Enter your ${AppRules.emailDomain} email first.');
+      _showError('Please enter a valid email address first.');
       return;
     }
     try {
@@ -140,11 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8),
-                  const Align(
-                    alignment: Alignment.center,
-                    child: OfflineBadge(),
-                  ),
                   const SizedBox(height: 28),
                   _logo(),
                   const SizedBox(height: 16),
@@ -254,25 +252,31 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(
-                height: 24,
-                width: 24,
-                child: Checkbox(
-                  value: _rememberMe,
-                  activeColor: AppColors.accent,
-                  checkColor: AppColors.textOnAccent,
-                  onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: _rememberMe,
+                      activeColor: AppColors.accent,
+                      checkColor: AppColors.textOnAccent,
+                      onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Remember Me',
+                      style: TextStyle(color: context.appColors.textSecondary, fontSize: 13)),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text('Remember Me',
-                  style: TextStyle(color: context.appColors.textSecondary)),
-              const Spacer(),
               TextButton(
                 onPressed: _forgotPassword,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 child: Text('Forgot Password?',
-                    style: TextStyle(color: context.appColors.textSecondary)),
+                    style: TextStyle(color: context.appColors.textSecondary, fontSize: 13)),
               ),
             ],
           ),

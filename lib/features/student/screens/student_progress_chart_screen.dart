@@ -150,8 +150,7 @@ class _StudentProgressChartScreenState
 
   Widget _buildLineChart(List<TestMarkModel> results) {
     final sortedResults = List<TestMarkModel>.from(results)
-      ..sort((a, b) => (a.updatedAt ?? DateTime(2000))
-          .compareTo(b.updatedAt ?? DateTime(2000)));
+      ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
 
     final spots = sortedResults
         .asMap()
@@ -236,7 +235,8 @@ class _StudentProgressChartScreenState
     final List<BarChartGroupData> barGroups = [];
 
     for (int i = 0; i < subjects.length; i++) {
-      final scores = subjectData[subjects[i]]!;
+      final scores = subjectData[subjects[i]] ?? [];
+      if (scores.isEmpty) continue;
       final avg = scores.reduce((a, b) => a + b) / scores.length;
 
       barGroups.add(
@@ -299,6 +299,7 @@ class _StudentProgressChartScreenState
                   final idx = val.toInt();
                   if (idx >= 0 && idx < subjects.length) {
                     final subName = subjects[idx];
+                    // Safe substring: check length first
                     final label = subName.length > 3
                         ? subName.substring(0, 3).toUpperCase()
                         : subName.toUpperCase();

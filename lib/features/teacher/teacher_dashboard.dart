@@ -6,7 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../data/remote/auth_service.dart';
+import '../../data/remote/notification_service.dart'; // NEW
 import '../../widgets/app_widgets.dart';
+import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart'; // NEW
 import '../../core/theme/theme_extensions.dart'; // NEW
@@ -14,8 +16,9 @@ import '../ocr/screens/ocr_history_screen.dart';
 import '../ocr/screens/ocr_scanner_screen.dart';
 import '../quiz/screens/monthly_report_screen.dart';
 import '../quiz/screens/teacher_quiz_list_screen.dart';
-import '../shared/view_announcements_screen.dart'; // NEW
+import '../shared/view_announcements_screen.dart';
 import 'teacher_classes_screen.dart';
+import 'teacher_announcements_screen.dart'; // NEW
 
 class TeacherDashboard extends StatelessWidget {
   const TeacherDashboard({super.key});
@@ -50,6 +53,7 @@ class TeacherDashboard extends StatelessWidget {
           ],
         ),
         actions: [
+          _notificationBell(context, user),
           IconButton(
             icon: const Icon(Icons.security_rounded, color: AppColors.accent),
             onPressed: () => _showSecuritySettings(context),
@@ -67,11 +71,15 @@ class TeacherDashboard extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('Welcome, ${user?.fullName ?? 'Teacher'}',
-                  style: TextStyle(
-                      color: context.appColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800)),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text('Welcome, ${user?.fullName ?? 'Teacher'}',
+                    style: TextStyle(
+                        color: context.appColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+              ),
               const SizedBox(height: 4),
               Text('Your classroom overview',
                   style: TextStyle(color: context.appColors.textSecondary)),
@@ -97,13 +105,25 @@ class TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 12),
               _actionTile(
                 context,
-                'Announcements',
+                'View Announcements',
                 'View broadcasts from your academy',
                 Icons.campaign_rounded,
                     () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const ViewAnnouncementsScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'Manage My Announcements',
+                'Reach out to parents & students',
+                Icons.add_comment_rounded,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherAnnouncementsScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -195,12 +215,15 @@ class TeacherDashboard extends StatelessWidget {
                   title: const Text("Biometric / Face Unlock", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                   subtitle: const Text("Use fingerprints or face ID to log in.", style: TextStyle(fontSize: 12)),
                   value: session.biometricEnabled,
-                  activeColor: AppColors.accent,
+                  activeThumbColor: AppColors.accent,
                   onChanged: (val) async {
                     if (val) {
                       final authenticated = await session.authenticateWithBiometrics();
                       if (authenticated) {
-                        await session.setBiometricEnabled(true);
+                        final pass = await _promptForPassword(context);
+                        if (pass != null) {
+                          await session.setBiometricEnabled(true, password: pass);
+                        }
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -273,6 +296,61 @@ class TeacherDashboard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<String?> _promptForPassword(BuildContext context) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Verify Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text), 
+            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _notificationBell(BuildContext context, dynamic user) {
+    if (user == null) return const SizedBox();
+    return StreamBuilder<List<dynamic>>(
+      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      builder: (context, snap) {
+        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

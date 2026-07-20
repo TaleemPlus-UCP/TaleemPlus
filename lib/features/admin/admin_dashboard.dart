@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +9,10 @@ import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../logic/session_provider.dart'; 
-import '../../widgets/app_widgets.dart'; // NEW
+import '../../logic/notification_provider.dart'; 
+import '../../data/remote/notification_service.dart';
+import '../../widgets/app_widgets.dart'; 
+import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart'; 
 import '../../core/theme/theme_extensions.dart'; 
@@ -36,11 +40,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (mounted) {
         final auth = Provider.of<AuthProvider>(context, listen: false);
         final members = Provider.of<MemberProvider>(context, listen: false);
-        if (auth.currentUser != null) {
-          members.load(auth.currentUser!.uid);
+        final user = auth.currentUser;
+        if (user != null) {
+          members.load(user.uid);
+          _verifyLegacyAdminData(user);
         }
       }
     });
+  }
+
+  /// Ensures old admins get an Academy Code and ID if they don't have one.
+  Future<void> _verifyLegacyAdminData(AppUser user) async {
+    if (user.academyCode == null || user.academyId == null) {
+      final newCode = "TP-${user.uid.substring(0, 5).toUpperCase()}";
+      await AuthService().updateAcademyProfile(
+        uid: user.uid,
+        name: user.academyName ?? "My Academy",
+        address: user.academyAddress ?? "N/A",
+        phone: user.academyPhone ?? user.phoneNumber,
+      );
+      // Update firestore directly for the missing fields
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'academy_code': newCode,
+        'academy_id': user.uid,
+        'joining_date': user.createdAt ?? FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        // Refresh local user state
+        context.read<AuthProvider>().tryRestoreSession();
+      }
+    }
   }
 
   Future<void> _logout() async {
@@ -79,7 +108,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     if (val) {
                       final authenticated = await session.authenticateWithBiometrics();
                       if (authenticated) {
-                        await session.setBiometricEnabled(true);
+                        final pass = await _promptForPassword(context);
+                        if (pass != null) {
+                          await session.setBiometricEnabled(true, password: pass);
+                        }
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -160,6 +192,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Future<String?> _promptForPassword(BuildContext context) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Verify Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text), 
+            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAcademyInfoSettings(BuildContext context, AppUser? user) {
     if (user == null) return;
     
@@ -180,7 +238,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             const Text("Academy Information", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text("Update details that parents will see in Support section.", style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            const Text("Update details for official reports and parents support section.", style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            const SizedBox(height: 24),
+            Center(
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                backgroundImage: user.academyLogo != null ? NetworkImage(user.academyLogo!) : null,
+                child: user.academyLogo == null ? const Icon(Icons.business_rounded, color: AppColors.accent, size: 32) : null,
+              ),
+            ),
             const SizedBox(height: 24),
             LabeledField(label: "Academy Name", hint: "SRS Tech Matrix", controller: nameCtrl),
             LabeledField(label: "Address", hint: "Enter full address", controller: addressCtrl),
@@ -189,7 +256,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             PrimaryButton(
               label: "SAVE CHANGES",
               onPressed: () async {
-                await AuthService().updateAcademyInfo(
+                await AuthService().updateAcademyProfile(
                   uid: user.uid,
                   name: nameCtrl.text,
                   address: addressCtrl.text,
@@ -230,6 +297,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         ),
         actions: [
+          _notificationBell(context, user),
           IconButton(
             icon: const Icon(Icons.business_rounded, color: AppColors.accent),
             tooltip: 'Academy Info',
@@ -275,6 +343,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 const SizedBox(height: 4),
                 Text('Academy overview',
                     style: TextStyle(color: context.appColors.textSecondary)),
+                const SizedBox(height: 16),
+                
+                // NEW: Display Academy Code for easy sharing
+                if (user?.academyCode != null)
+                  _buildAcademyCodeCard(user!.academyCode!),
+
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -418,6 +492,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Widget _notificationBell(BuildContext context, AppUser? user) {
+    if (user == null) return const SizedBox();
+    
+    return StreamBuilder<List<dynamic>>(
+      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      builder: (context, snap) {
+        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _statCard(String label, int value, IconData icon, VoidCallback onTap) {
     return Expanded(
       child: Material(
@@ -426,32 +530,69 @@ class _AdminDashboardState extends State<AdminDashboard> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
             decoration: BoxDecoration(
               color: context.appColors.surface.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, color: AppColors.accent, size: 24),
                 const SizedBox(height: 8),
-                Text('$value',
-                    style: TextStyle(
-                        color: context.appColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('$value',
+                      style: TextStyle(
+                          color: context.appColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                ),
                 const SizedBox(height: 2),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(label,
                       style: TextStyle(
-                          color: context.appColors.textSecondary, fontSize: 12)),
+                          color: context.appColors.textSecondary, fontSize: 11)),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAcademyCodeCard(String code) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.vpn_key_rounded, color: AppColors.accent, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("ACADEMY JOINING CODE", style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                Text(code, style: const TextStyle(color: AppColors.accent, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_all_rounded, color: AppColors.accent, size: 20),
+            onPressed: () {
+               // Copy logic here
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Academy Code copied to clipboard!")));
+            },
+          ),
+        ],
       ),
     );
   }

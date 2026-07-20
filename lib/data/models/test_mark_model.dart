@@ -76,7 +76,9 @@ class TestMarkModel {
       percentage: (map['percentage'] ?? 0).toDouble(),
       gradeLetter: map['grade_letter'] ?? 'F',
       teacherFeedback: map['teacher_feedback'],
-      updatedAt: (map['updated_at'] as Timestamp).toDate(),
+      updatedAt: map['updated_at'] is Timestamp
+          ? (map['updated_at'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

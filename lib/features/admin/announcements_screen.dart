@@ -138,7 +138,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   size: 14, color: AppColors.textMuted),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(DateFormat('d MMM yyyy, h:mm a').format(a.createdAt),
+                child: Text(DateFormat('EEEE, d MMM yyyy, h:mm a').format(a.createdAt),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

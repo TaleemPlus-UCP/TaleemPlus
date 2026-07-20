@@ -16,13 +16,18 @@ class ClassRepository {
   // ---------- Reads ----------
 
   Stream<List<ClassEntity>> watchAll(String academyId) {
+    // Removed orderBy from query to avoid index requirement.
+    // Sorting is handled in the map function.
     return _col
         .where('academy_id', isEqualTo: academyId)
-        .orderBy('created_at', descending: true)
         .snapshots().map(
-          (snap) => snap.docs
-          .map((d) => ClassEntity.fromMap(d.id, d.data()))
-          .toList(),
+          (snap) {
+            final list = snap.docs
+              .map((d) => ClassEntity.fromMap(d.id, d.data()))
+              .toList();
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
     );
   }
 
@@ -94,5 +99,35 @@ class ClassRepository {
       'student_names': {for (final s in students) s.uid: s.fullName},
       'updated_at': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Updates class details including teacher and subject.
+  Future<void> updateClassDetails({
+    required String classId,
+    String? className,
+    String? section,
+    String? subject,
+    AppUser? teacher,
+  }) async {
+    final Map<String, dynamic> updates = {
+      'updated_at': FieldValue.serverTimestamp(),
+    };
+    if (className != null) updates['class_name'] = className.trim();
+    if (section != null) updates['section'] = section.trim();
+    if (subject != null) updates['subject'] = subject.trim();
+    if (teacher != null) {
+      updates['primary_teacher_id'] = teacher.uid;
+      updates['primary_teacher_name'] = teacher.fullName;
+      updates['primary_teacher_email'] = teacher.email;
+    }
+    await _col.doc(classId).update(updates);
+  }
+
+  /// Reassigns the primary teacher of a class. (Legacy support)
+  Future<void> updateClassTeacher({
+    required String classId,
+    required AppUser teacher,
+  }) async {
+    await updateClassDetails(classId: classId, teacher: teacher);
   }
 }

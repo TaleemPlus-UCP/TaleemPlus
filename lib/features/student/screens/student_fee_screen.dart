@@ -3,13 +3,21 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
-import '../../../logic/fee_provider.dart';
+import '../../../data/models/fee_challan_model.dart';
+import '../../../data/repositories/fee_challan_repository.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
-import '../../../data/models/fee_invoice.dart';
 
-class StudentFeeScreen extends StatelessWidget {
+class StudentFeeScreen extends StatefulWidget {
   final String studentUid;
   const StudentFeeScreen({super.key, required this.studentUid});
+
+  @override
+  State<StudentFeeScreen> createState() => _StudentFeeScreenState();
+}
+
+class _StudentFeeScreenState extends State<StudentFeeScreen> {
+  final _repo = FeeChallanRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -21,31 +29,31 @@ class StudentFeeScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: FutureBuilder<List<FeeInvoice>>(
+          child: FutureBuilder<List<FeeChallanModel>>(
             future: () {
               final user = context.read<AuthProvider>().currentUser;
-              return context.read<FeeProvider>().getStudentFees(studentUid, user?.academyId ?? '');
+              return _repo.getForStudent(widget.studentUid, user?.academyId ?? '');
             }(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: AppColors.accent));
               }
 
-              final invoices = snapshot.data ?? [];
+              final challans = snapshot.data ?? [];
 
-              if (invoices.isEmpty) {
+              if (challans.isEmpty) {
                 return _buildEmptyState();
               }
 
               return Column(
                 children: [
-                  _buildSummaryHeader(invoices),
+                  _buildSummaryHeader(challans),
                   Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.all(20),
-                      itemCount: invoices.length,
+                      itemCount: challans.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) => _feeTile(invoices[index]),
+                      itemBuilder: (context, index) => _feeTile(challans[index]),
                     ),
                   ),
                 ],
@@ -57,8 +65,8 @@ class StudentFeeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryHeader(List<FeeInvoice> invoices) {
-    final pending = invoices.where((i) => !i.isPaid).fold(0.0, (sum, i) => sum + i.netBalanceDue);
+  Widget _buildSummaryHeader(List<FeeChallanModel> challans) {
+    final pending = challans.where((i) => !i.isPaid).fold(0.0, (sum, i) => sum + i.totalAmount);
     
     return Container(
       margin: const EdgeInsets.all(20),
@@ -108,9 +116,9 @@ class StudentFeeScreen extends StatelessWidget {
     );
   }
 
-  Widget _feeTile(FeeInvoice inv) {
-    final bool isOverdue = inv.isOverdue && !inv.isPaid;
-    final Color statusColor = inv.isPaid ? AppColors.success : (isOverdue ? AppColors.danger : AppColors.warning);
+  Widget _feeTile(FeeChallanModel c) {
+    final bool isOverdue = c.isOverdue && !c.isPaid;
+    final Color statusColor = c.isPaid ? AppColors.success : (isOverdue ? AppColors.danger : AppColors.warning);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -126,14 +134,14 @@ class StudentFeeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  inv.billingMonth,
+                  c.challanNumber,
                   style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  inv.isPaid 
-                    ? "Paid on ${DateFormat('MMM d, yyyy').format(inv.paidOn!)}"
-                    : "Due Date: ${DateFormat('MMM d, yyyy').format(inv.dueDate)}",
+                  c.isPaid 
+                    ? "Paid"
+                    : "Due Date: ${DateFormat('MMM d, yyyy').format(c.dueDate)}",
                   style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ],
@@ -143,7 +151,7 @@ class StudentFeeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "Rs. ${inv.grossAmountDue.toStringAsFixed(0)}",
+                "Rs. ${c.totalAmount.toStringAsFixed(0)}",
                 style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 16),
               ),
               const SizedBox(height: 4),
@@ -154,7 +162,7 @@ class StudentFeeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  inv.status.toUpperCase(),
+                  c.status.toUpperCase(),
                   style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
               ),

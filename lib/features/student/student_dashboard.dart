@@ -6,7 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../data/remote/auth_service.dart';
+import '../../data/remote/notification_service.dart'; // NEW
 import '../../widgets/app_widgets.dart';
+import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart';
 import '../../core/theme/theme_extensions.dart';
@@ -49,6 +51,7 @@ class StudentDashboard extends StatelessWidget {
           ],
         ),
         actions: [
+          _notificationBell(context, user),
           IconButton(
             icon: const Icon(Icons.security_rounded, color: AppColors.accent),
             onPressed: () => _showSecuritySettings(context),
@@ -65,11 +68,15 @@ class StudentDashboard extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('Welcome, ${user?.fullName ?? 'Student'}',
-                  style: TextStyle(
-                      color: context.appColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800)),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text('Welcome, ${user?.fullName ?? 'Student'}',
+                    style: TextStyle(
+                        color: context.appColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+              ),
               const SizedBox(height: 4),
               Text('Your learning progress overview',
                   style: TextStyle(color: context.appColors.textSecondary)),
@@ -88,7 +95,7 @@ class StudentDashboard extends StatelessWidget {
                 Icons.fact_check_rounded,
                 () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => StudentAttendanceScreen(studentUid: user!.uid)),
+                  MaterialPageRoute(builder: (_) => StudentAttendanceScreen(studentUid: user?.uid ?? '')),
                 ),
               ),
               const SizedBox(height: 12),
@@ -112,8 +119,8 @@ class StudentDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => StudentTestReportScreen(
-                      studentUid: user!.uid,
-                      studentName: user.fullName,
+                      studentUid: user?.uid ?? '',
+                      studentName: user?.fullName ?? 'Student',
                     ),
                   ),
                 ),
@@ -137,7 +144,7 @@ class StudentDashboard extends StatelessWidget {
                 Icons.insights_rounded,
                 () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => StudentProgressChartScreen(studentUid: user!.uid)),
+                  MaterialPageRoute(builder: (_) => StudentProgressChartScreen(studentUid: user?.uid ?? '')),
                 ),
               ),
               const SizedBox(height: 12),
@@ -148,13 +155,42 @@ class StudentDashboard extends StatelessWidget {
                 Icons.receipt_long_rounded,
                 () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => StudentFeeScreen(studentUid: user!.uid)),
+                  MaterialPageRoute(builder: (_) => StudentFeeScreen(studentUid: user?.uid ?? '')),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _notificationBell(BuildContext context, dynamic user) {
+    if (user == null) return const SizedBox();
+    return StreamBuilder<List<dynamic>>(
+      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      builder: (context, snap) {
+        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -180,12 +216,15 @@ class StudentDashboard extends StatelessWidget {
                   title: const Text("Biometric / Face Unlock", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                   subtitle: const Text("Use fingerprints or face ID to log in.", style: TextStyle(fontSize: 12)),
                   value: session.biometricEnabled,
-                  activeColor: AppColors.accent,
+                  activeThumbColor: AppColors.accent,
                   onChanged: (val) async {
                     if (val) {
                       final authenticated = await session.authenticateWithBiometrics();
                       if (authenticated) {
-                        await session.setBiometricEnabled(true);
+                        final pass = await _promptForPassword(context);
+                        if (pass != null) {
+                          await session.setBiometricEnabled(true, password: pass);
+                        }
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -255,6 +294,32 @@ class StudentDashboard extends StatelessWidget {
               }
             }, 
             child: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _promptForPassword(BuildContext context) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Verify Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text), 
+            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
           ),
         ],
       ),

@@ -12,8 +12,9 @@ class FeeChallanRepository {
   /// Sorting phone pe (client-side) — Firestore index ki zaroorat nahi.
   Future<List<FeeChallanModel>> getForStudent(
       String studentId, String academyId) async {
+    // academy_id hata diya taake composite index na banana paray.
+    // studentId hamesha unique hai (Firebase UID).
     final snap = await _col
-        .where('academy_id', isEqualTo: academyId)
         .where('student_id', isEqualTo: studentId)
         .get();
 
@@ -42,7 +43,6 @@ class FeeChallanRepository {
       String studentId, String academyId,
       {String? month}) async {
     final snap = await _col
-        .where('academy_id', isEqualTo: academyId)
         .where('student_id', isEqualTo: studentId)
         .get();
 
@@ -71,9 +71,8 @@ class FeeChallanRepository {
     });
   }
 
-  /// Newest first (null-safe)
+    /// Newest first
   void _sortNewestFirst(List<FeeChallanModel> list) {
-    list.sort((a, b) => (b.createdAt ?? DateTime(2000))
-        .compareTo(a.createdAt ?? DateTime(2000)));
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 }

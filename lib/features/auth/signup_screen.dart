@@ -7,6 +7,7 @@ import '../../core/utils/validators.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../data/remote/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,85 +16,159 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final _nameCtrl = TextEditingController();
-  final _academyNameCtrl = TextEditingController(); // NEW
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  
+  // Admin only
+  final _academyNameCtrl = TextEditingController();
+  final _academyAddressCtrl = TextEditingController();
+  
+  // Member only
+  final _academyCodeCtrl = TextEditingController();
+  UserRole _selectedRole = UserRole.student;
 
-  UserRole _selectedRole = UserRole.admin;
   bool _obscure = true;
-  bool _obscureConfirm = true;
+  bool _isSearchingAcademy = false;
+  String? _linkedAcademyId;
+  String? _linkedAcademyName;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        // Reset state when switching tabs
+        _linkedAcademyId = null;
+        _linkedAcademyName = null;
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _nameCtrl.dispose();
-    _academyNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
-    _passwordCtrl.dispose();
+    _passCtrl.dispose();
     _confirmCtrl.dispose();
+    _academyNameCtrl.dispose();
+    _academyAddressCtrl.dispose();
+    _academyCodeCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _verifyCode() async {
+    if (_academyCodeCtrl.text.isEmpty) return;
+    setState(() => _isSearchingAcademy = true);
+    
+    try {
+      final academy = await AuthService().findAcademyByCode(_academyCodeCtrl.text);
+      if (mounted) {
+        setState(() {
+          _isSearchingAcademy = false;
+          if (academy != null) {
+            _linkedAcademyId = academy.uid;
+            _linkedAcademyName = academy.academyName;
+          } else {
+            _linkedAcademyId = null;
+            _linkedAcademyName = null;
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid Academy Code!"), backgroundColor: AppColors.danger));
+          }
+        });
+      }
+    } catch (e) {
+      setState(() => _isSearchingAcademy = false);
+    }
+  }
+
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+
+    final isAdminFlow = _tabController.index == 0;
+    
+    // Auto-verify code if not already verified for Members
+    if (!isAdminFlow && _linkedAcademyId == null) {
+      if (_academyCodeCtrl.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Academy Code is required."), backgroundColor: AppColors.danger));
+        return;
+      }
+      await _verifyCode();
+      if (_linkedAcademyId == null) return; // _verifyCode will show its own snackbar
+    }
 
     final auth = context.read<AuthProvider>();
     final ok = await auth.signUp(
       fullName: _nameCtrl.text,
       email: _emailCtrl.text,
       phoneNumber: _phoneCtrl.text,
-      password: _passwordCtrl.text,
-      role: _selectedRole,
-      academyName: _selectedRole == UserRole.admin ? _academyNameCtrl.text : null,
+      password: _passCtrl.text,
+      role: isAdminFlow ? UserRole.admin : _selectedRole,
+      academyName: isAdminFlow ? _academyNameCtrl.text : _linkedAcademyName,
+      academyId: isAdminFlow ? null : _linkedAcademyId,
+      academyAddress: isAdminFlow ? _academyAddressCtrl.text : null,
+      academyPhone: isAdminFlow ? _phoneCtrl.text : null,
     );
 
     if (!mounted) return;
     if (ok && auth.currentUser != null) {
-      Navigator.pushReplacementNamed(
-        context,
-        auth.currentUser!.role.dashboardRoute,
-      );
-    } else if (auth.pendingApproval) {
-      await _showPendingDialog();
+      if (isAdminFlow) {
+        _showAcademyCreatedDialog(auth.currentUser!.academyCode!);
+      } else {
+        await _showPendingDialog();
+      }
     } else if (auth.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(auth.errorMessage!),
-          backgroundColor: AppColors.danger.withValues(alpha: 0.9),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.errorMessage!), backgroundColor: AppColors.danger));
     }
   }
 
-  Future<void> _showPendingDialog() async {
-    await showDialog<void>(
+  void _showAcademyCreatedDialog(String code) {
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceAlt,
-        title: const Text('Account created',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text(
-          'Your account is waiting for admin approval. '
-              'You can log in once an admin approves it.',
-          style: TextStyle(color: AppColors.textSecondary),
+        backgroundColor: AppColors.surface,
+        title: const Text("Academy Registered!", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Your academy is ready. Share this code with your teachers and students to join:", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.accent)),
+              child: Text(code, style: const TextStyle(color: AppColors.accent, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
+            ),
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK',
-                style: TextStyle(color: AppColors.accent)),
-          ),
+          PrimaryButton(label: "ENTER DASHBOARD", onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard)),
         ],
       ),
     );
-    if (mounted) Navigator.pop(context); // back to login
+  }
+
+  Future<void> _showPendingDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text("Request Sent"),
+        content: const Text("Your account is pending approval from the Academy Admin. You can login once they approve you."),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK"))],
+      ),
+    );
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -103,141 +178,181 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back,
-                            color: AppColors.textPrimary),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Spacer(),
-                      const OfflineBadge(),
-                      const Spacer(),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _logo(),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'TaleemPlus',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
+          child: Column(
+            children: [
+              _buildTopBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildTypeToggle(),
+                        const SizedBox(height: 32),
+                        _buildFormFields(),
+                        const SizedBox(height: 32),
+                        PrimaryButton(
+                          label: _tabController.index == 0 ? "REGISTER ACADEMY" : "JOIN AS ${_selectedRole.name.toUpperCase()}",
+                          icon: Icons.arrow_forward_rounded,
+                          loading: loading,
+                          onPressed: loading ? null : _submit,
+                        ),
+                        const SizedBox(height: 24),
+                        _loginLink(),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Create your profile to join your local academy workspace.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'SELECT YOUR ROLE',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _roleGrid(),
-                  const SizedBox(height: 24),
-                  _formCard(),
-                  const SizedBox(height: 20),
-                  PrimaryButton(
-                    label: 'Sign Up',
-                    icon: Icons.arrow_forward_rounded,
-                    loading: loading,
-                    onPressed: loading ? null : _submit,
-                  ),
-                  const SizedBox(height: 20),
-                  _loginLink(),
-                  const SizedBox(height: 12),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _logo() {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppColors.accent.withValues(alpha: 0.15),
-        ),
-        child: const Icon(Icons.menu_book_rounded,
-            size: 32, color: AppColors.accent),
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        children: [
+          IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
+          const Spacer(),
+          const SizedBox(width: 40),
+        ],
       ),
     );
   }
 
-  Widget _roleGrid() {
-    const roles = [
-      (UserRole.admin, Icons.vpn_key_rounded),
-      (UserRole.teacher, Icons.edit_note_rounded),
-      (UserRole.student, Icons.school_rounded),
-      (UserRole.parent, Icons.account_tree_rounded),
-    ];
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 2.0,
-      children: roles.map((r) {
-        final selected = _selectedRole == r.$1;
-        return GestureDetector(
-          onTap: () => setState(() => _selectedRole = r.$1),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: selected ? AppColors.accent : Colors.transparent,
-                width: 1.6,
-              ),
+  Widget _buildTypeToggle() {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          gradient: AppColors.accentButton,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(r.$2,
-                    color: selected
-                        ? AppColors.accent
-                        : AppColors.textSecondary,
-                    size: 22),
-                const SizedBox(height: 6),
-                Text(
-                  r.$1.label,
-                  style: TextStyle(
-                    color: selected
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+          ],
+        ),
+        labelColor: AppColors.textOnAccent,
+        unselectedLabelColor: AppColors.textSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 0.5),
+        tabs: const [
+          Tab(text: "REGISTER ACADEMY"),
+          Tab(text: "JOIN ACADEMY"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormFields() {
+    final isAdmin = _tabController.index == 0;
+    return Column(
+      children: [
+        LabeledField(label: "Full Name", hint: "Enter your name", controller: _nameCtrl, validator: Validators.fullName),
+        LabeledField(label: "Email Address", hint: "Enter email", controller: _emailCtrl, validator: Validators.email, keyboardType: TextInputType.emailAddress),
+        LabeledField(label: "Phone Number", hint: "+92...", controller: _phoneCtrl, validator: Validators.phone, keyboardType: TextInputType.phone),
+        
+        if (isAdmin) ...[
+          LabeledField(label: "Academy Name", hint: "e.g. SRS Tech Matrix", controller: _academyNameCtrl, validator: (v) => v!.isEmpty ? "Required" : null),
+          LabeledField(label: "Academy Address", hint: "Full location", controller: _academyAddressCtrl),
+        ] else ...[
+          const Align(alignment: Alignment.centerLeft, child: Text("I AM A:", style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1))),
+          const SizedBox(height: 12),
+          _buildRolePicker(),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(child: LabeledField(label: "Academy Code", hint: "TP-XXXXX", controller: _academyCodeCtrl)),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: SizedBox(
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: _isSearchingAcademy ? null : _verifyCode,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: _linkedAcademyId != null ? AppColors.success : AppColors.accent, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      backgroundColor: _linkedAcademyId != null ? AppColors.success.withValues(alpha: 0.05) : Colors.transparent,
+                    ),
+                    child: _isSearchingAcademy 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
+                        : Icon(_linkedAcademyId != null ? Icons.verified_user_rounded : Icons.vpn_key_rounded, color: _linkedAcademyId != null ? AppColors.success : AppColors.accent),
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+          if (_linkedAcademyName != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text("Joining: $_linkedAcademyName", style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12)),
+            ),
+        ],
+
+        LabeledField(
+          label: "Password", 
+          hint: "Min 6 chars", 
+          controller: _passCtrl, 
+          obscure: _obscure, 
+          validator: Validators.password,
+          suffix: IconButton(icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off, color: AppColors.textMuted), onPressed: () => setState(() => _obscure = !_obscure)),
+        ),
+        LabeledField(label: "Confirm Password", hint: "Re-enter password", controller: _confirmCtrl, obscure: _obscure, validator: (v) => Validators.confirmPassword(v, _passCtrl.text)),
+      ],
+    );
+  }
+
+  Widget _buildRolePicker() {
+    final roles = [UserRole.teacher, UserRole.student, UserRole.parent];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: roles.map((role) {
+        final selected = _selectedRole == role;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedRole = role),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: selected ? AppColors.accentButton : null,
+                color: selected ? null : AppColors.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: selected ? Colors.transparent : AppColors.border.withValues(alpha: 0.5)),
+                boxShadow: selected ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))] : null,
+              ),
+              child: Center(
+                child: Text(
+                  role.name.toUpperCase(), 
+                  style: TextStyle(
+                    color: selected ? AppColors.textOnAccent : AppColors.textSecondary, 
+                    fontSize: 10, 
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -245,93 +360,14 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _formCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        children: [
-          LabeledField(
-            label: 'Full Name',
-            hint: 'e.g. Muhammad Rakib',
-            controller: _nameCtrl,
-            validator: Validators.fullName,
-            keyboardType: TextInputType.name,
-          ),
-          if (_selectedRole == UserRole.admin) // Only for Admins (Academies)
-            LabeledField(
-              label: 'Academy Name',
-              hint: 'e.g. PGC Academy Lahore',
-              controller: _academyNameCtrl,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Academy Name is required' : null,
-            ),
-          LabeledField(
-            label: 'Email Address',
-            hint: 'name${AppRules.emailDomain}',
-            controller: _emailCtrl,
-            validator: Validators.email,
-            keyboardType: TextInputType.emailAddress,
-          ),
-          LabeledField(
-            label: 'Phone Number',
-            hint: '+92 300 1234567',
-            controller: _phoneCtrl,
-            validator: Validators.phone,
-            keyboardType: TextInputType.phone,
-          ),
-          LabeledField(
-            label: 'Password',
-            hint: 'At least ${AppRules.minPasswordLength} characters',
-            controller: _passwordCtrl,
-            obscure: _obscure,
-            validator: Validators.password,
-            suffix: IconButton(
-              icon: Icon(
-                _obscure ? Icons.visibility : Icons.visibility_off,
-                color: AppColors.textMuted,
-              ),
-              onPressed: () => setState(() => _obscure = !_obscure),
-            ),
-          ),
-          LabeledField(
-            label: 'Confirm Password',
-            hint: 'Re-enter your password',
-            controller: _confirmCtrl,
-            obscure: _obscureConfirm,
-            textInputAction: TextInputAction.done,
-            validator: (v) =>
-                Validators.confirmPassword(v, _passwordCtrl.text),
-            suffix: IconButton(
-              icon: Icon(
-                _obscureConfirm ? Icons.visibility : Icons.visibility_off,
-                color: AppColors.textMuted,
-              ),
-              onPressed: () =>
-                  setState(() => _obscureConfirm = !_obscureConfirm),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _loginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('Already have an account? ',
-            style: TextStyle(color: AppColors.textSecondary)),
+        const Text("Already have an account? ", style: TextStyle(color: AppColors.textSecondary)),
         GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Text(
-            'Log In',
-            style: TextStyle(
-                color: AppColors.accent, fontWeight: FontWeight.w700),
-          ),
+          child: const Text("Log In", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
         ),
       ],
     );

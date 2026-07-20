@@ -9,7 +9,9 @@ import '../../logic/parent_provider.dart';
 import '../../logic/session_provider.dart'; // NEW
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
-import '../../widgets/app_widgets.dart'; // NEW
+import '../../widgets/app_widgets.dart'; 
+import '../../data/remote/notification_service.dart';
+import '../shared/notifications_screen.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart';
 import '../shared/view_announcements_screen.dart';
@@ -61,6 +63,7 @@ class ParentDashboard extends StatelessWidget {
           ],
         ),
         actions: [
+          _notificationBell(context, user),
           IconButton(
             icon: const Icon(Icons.security_rounded, color: AppColors.accent),
             onPressed: () => _showSecuritySettings(context),
@@ -74,32 +77,41 @@ class ParentDashboard extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text('Welcome, ${user?.fullName ?? 'Parent'}',
-                  style: TextStyle(color: context.appColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text('Monitor your child\'s education journey', style: TextStyle(color: context.appColors.textSecondary)),
-              const SizedBox(height: 28),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('MY CHILDREN',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                  TextButton.icon(
-                    onPressed: () => _openLinkChildSheet(context),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                    label: const Text("ADD CHILD", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (parentProv.children.isEmpty)
-                _noChildrenPlaceholder(context)
-              else
-                ...parentProv.children.map((c) => _childCard(context, c)),
+          child: RefreshIndicator(
+            color: AppColors.accent,
+            onRefresh: () => parentProv.syncWithUser(user),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text('Welcome, ${user?.fullName ?? 'Parent'}',
+                      style: TextStyle(color: context.appColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(height: 4),
+                Text('Monitor your child\'s education journey', style: TextStyle(color: context.appColors.textSecondary)),
+                const SizedBox(height: 28),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('MY CHILDREN',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                    TextButton.icon(
+                      onPressed: () => _openLinkChildSheet(context),
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                      label: const Text("ADD CHILD", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (parentProv.loading && parentProv.children.isEmpty)
+                   const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.accent)))
+                else if (parentProv.children.isEmpty)
+                  _noChildrenPlaceholder(context)
+                else
+                  ...parentProv.children.map((c) => _childCard(context, c)),
 
               const SizedBox(height: 32),
               const Text('SERVICES',
@@ -131,7 +143,6 @@ class ParentDashboard extends StatelessWidget {
                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please link a child first.")));
                      return;
                    }
-                   // Pass the academyId of the first child as a default
                    final firstChild = parentProv.children.first;
                    Navigator.push(context, MaterialPageRoute(builder: (_) => AcademyContactScreen(academyId: firstChild.academyId ?? '')));
                 },
@@ -140,6 +151,36 @@ class ParentDashboard extends StatelessWidget {
           ),
         ),
       ),
+    ),
+    );
+  }
+
+  Widget _notificationBell(BuildContext context, dynamic user) {
+    if (user == null) return const SizedBox();
+    return StreamBuilder<List<dynamic>>(
+      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      builder: (context, snap) {
+        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -170,7 +211,10 @@ class ParentDashboard extends StatelessWidget {
                     if (val) {
                       final authenticated = await session.authenticateWithBiometrics();
                       if (authenticated) {
-                        await session.setBiometricEnabled(true);
+                        final pass = await _promptForPassword(context);
+                        if (pass != null) {
+                          await session.setBiometricEnabled(true, password: pass);
+                        }
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -240,6 +284,32 @@ class ParentDashboard extends StatelessWidget {
               }
             }, 
             child: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _promptForPassword(BuildContext context) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Verify Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text), 
+            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
           ),
         ],
       ),
@@ -378,14 +448,18 @@ class _LinkChildSheetState extends State<_LinkChildSheet> {
   }
 
   Future<void> _performSearch(String q) async {
-    if (q.trim().length < 3) {
+    final queryText = q.trim().toLowerCase();
+    if (queryText.isEmpty) {
       setState(() => _results = []);
       return;
     }
 
+    final parent = context.read<AuthProvider>().currentUser;
+    if (parent == null || parent.academyId == null) return;
+
     setState(() => _searching = true);
     try {
-      final list = await _authService.searchStudentsByName(q);
+      final list = await _authService.searchStudentsByName(queryText, parent.academyId!);
       if (mounted) {
         setState(() {
           _results = list;
@@ -393,7 +467,9 @@ class _LinkChildSheetState extends State<_LinkChildSheet> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _searching = false);
+      if (mounted) {
+        setState(() => _searching = false);
+      }
     }
   }
 
@@ -412,24 +488,31 @@ class _LinkChildSheetState extends State<_LinkChildSheet> {
                   fontSize: 20,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
-          const Text("Search by your child's full name to link their profile.",
+          const Text("Search by your child's full name or email address.",
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           const SizedBox(height: 24),
           TextField(
             controller: _searchCtrl,
             onChanged: _performSearch,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              hintText: "Enter child's name...",
+              hintText: "Enter Name or Email...",
               prefixIcon: const Icon(Icons.search_rounded, color: AppColors.accent),
               suffixIcon: _searching 
                   ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent)))
-                  : null,
+                  : IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: AppColors.textMuted),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _results = []);
+                      },
+                    ),
             ),
           ),
           const SizedBox(height: 16),
           if (_results.isNotEmpty)
             Container(
-              constraints: const BoxConstraints(maxHeight: 200),
+              constraints: const BoxConstraints(maxHeight: 250),
               decoration: BoxDecoration(
                 color: AppColors.surface.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
@@ -444,25 +527,41 @@ class _LinkChildSheetState extends State<_LinkChildSheet> {
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                      child: Text(s.fullName[0].toUpperCase(), style: const TextStyle(color: AppColors.accent, fontSize: 12)),
+                      child: Text(s.fullName.isNotEmpty ? s.fullName[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.accent, fontSize: 12)),
                     ),
                     title: Text(s.fullName, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
-                    subtitle: Text(s.email, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    subtitle: Text("${s.email}${s.academyName != null ? ' • ${s.academyName}' : ''}", 
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
                     trailing: const Icon(Icons.add_link_rounded, color: AppColors.accent),
                     onTap: () async {
-                      await context.read<ParentProvider>().addChild(s);
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Child linked successfully!")));
+                      try {
+                        await context.read<ParentProvider>().addChild(s);
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Child linked successfully!"), backgroundColor: AppColors.success));
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to link: $e"), backgroundColor: AppColors.danger));
+                      }
                     },
                   );
                 },
               ),
             )
-          else if (_searchCtrl.text.length >= 3 && !_searching)
+          else if (_searchCtrl.text.isNotEmpty && !_searching)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Text("No students found with that name.", textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted)),
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(Icons.person_search_rounded, color: AppColors.textMuted, size: 48),
+                  SizedBox(height: 12),
+                  Text("No students found.", 
+                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text("Make sure the name or email is correct.", 
+                    textAlign: TextAlign.center, 
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                ],
+              ),
             ),
           const SizedBox(height: 12),
         ],

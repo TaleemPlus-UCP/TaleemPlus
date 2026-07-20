@@ -13,7 +13,8 @@ import 'logic/quiz_provider.dart';
 import 'logic/theme_provider.dart';
 import 'logic/admin_ai_provider.dart';
 import 'logic/parent_provider.dart';
-import 'logic/session_provider.dart'; // NEW
+import 'logic/session_provider.dart'; 
+import 'logic/notification_provider.dart'; // NEW
 import 'features/auth/splash_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
@@ -40,8 +41,15 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => AdminAiProvider()),
-        ChangeNotifierProvider(create: (_) => ParentProvider()),
-        ChangeNotifierProvider(create: (_) => SessionProvider()), // NEW
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ParentProvider>(
+          create: (_) => ParentProvider(),
+          update: (_, auth, parent) => parent!..syncWithUser(auth.currentUser),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, SessionProvider>(
+          create: (_) => SessionProvider(),
+          update: (_, auth, session) => session!..updateAuth(auth),
+        ),
       ],
       child: const TaleemPlusApp(),
     ),

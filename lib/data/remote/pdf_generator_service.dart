@@ -1,31 +1,48 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/quiz_model.dart';
+import '../models/app_user.dart';
 
 class PdfGeneratorService {
-  /// Print preview kholta hai (system print dialog — wahan se
-  /// "Save as PDF" printer chun kar bhi save kar sakte hain)
+  /// Print preview kholta hai
   static Future<void> printTestPaper(QuizModel quiz) async {
-    final pdf = _buildDocument(quiz);
+    final pdf = await _buildDocument(quiz);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: '${quiz.title}_Paper',
     );
   }
 
-  /// Share sheet kholta hai — PDF ko Files mein save karein,
-  /// WhatsApp/Email pe bhejein, waghera. (Mobile pe "download" yehi hai)
+  /// Share sheet kholta hai
   static Future<void> shareTestPaper(QuizModel quiz) async {
-    final pdf = _buildDocument(quiz);
+    final pdf = await _buildDocument(quiz);
     final bytes = await pdf.save();
     final safeName =
     quiz.title.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
     await Printing.sharePdf(bytes: bytes, filename: '$safeName.pdf');
   }
 
-  /// PDF document banata hai (dono methods yehi use karte hain)
-  static pw.Document _buildDocument(QuizModel quiz) {
+  /// PDF document banata hai
+  static Future<pw.Document> _buildDocument(QuizModel quiz) async {
+    // 1. Fetch Academy Details
+    final academyDoc = await FirebaseFirestore.instance.collection('users').doc(quiz.academyId).get();
+    AppUser? academy;
+    if (academyDoc.exists && academyDoc.data() != null) {
+      academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
+    }
+
+    // Load network image if logo exists
+    pw.ImageProvider? logoImage;
+    if (academy?.academyLogo != null && academy!.academyLogo!.isNotEmpty) {
+      try {
+        logoImage = await networkImage(academy.academyLogo!);
+      } catch (e) {
+        print("Could not load academy logo for Test PDF: $e");
+      }
+    }
+
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -34,26 +51,52 @@ class PdfGeneratorService {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return [
-            // Header Section
-            pw.Header(
-              level: 0,
+            // Academy Header Section
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                if (logoImage != null)
+                  pw.Container(
+                    width: 50,
+                    height: 50,
+                    child: pw.Image(logoImage),
+                  ),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(academy?.academyName?.toUpperCase() ?? "TALEEMPLUS ACADEMY",
+                          style: pw.TextStyle(
+                              fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(academy?.academyAddress ?? "",
+                          style: const pw.TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 50), // Balance the logo
+              ],
+            ),
+            pw.Divider(thickness: 1, color: PdfColors.grey300),
+            pw.SizedBox(height: 10),
+
+            // Test Title Section
+            pw.Center(
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
                   pw.Text(quiz.classLabel.toUpperCase(),
                       style: const pw.TextStyle(
-                          fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 4),
+                          fontSize: 14, fontWeight: pw.FontWeight.bold)),
                   pw.Text(quiz.title,
-                      style: const pw.TextStyle(
-                          fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 4),
+                      style: pw.TextStyle(
+                          fontSize: 20, fontWeight: pw.FontWeight.bold)),
                   pw.Text("Subject: ${quiz.subject}",
-                      style: const pw.TextStyle(fontSize: 14)),
-                  pw.Divider(thickness: 2),
+                      style: const pw.TextStyle(fontSize: 12)),
                 ],
               ),
             ),
+            pw.SizedBox(height: 10),
+            pw.Divider(thickness: 2),
+            pw.SizedBox(height: 10),
 
             // Student Info Section (Blank for physical test)
             pw.Row(

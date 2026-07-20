@@ -7,6 +7,7 @@ import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
+import '../../data/remote/notification_service.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 
 /// Admin screen: list users waiting for approval and approve/reject them.
@@ -36,7 +37,9 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
       _error = null;
     });
     try {
-      final list = await _authService.getPendingUsers();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final academyId = auth.currentUser?.uid ?? '';
+      final list = await _authService.getPendingUsers(academyId);
       if (!mounted) return;
       setState(() {
         _pending = list;
@@ -59,7 +62,16 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     // 1. Update status in Firebase to 'active' and tie to THIS admin's academy
     await _authService.approveUser(u.uid, admin.uid);
 
-    // 2. Also mirror this user into the local User Management portal
+    // 2. Notify the user
+    await NotificationService().send(
+      academyId: admin.uid,
+      recipientId: u.uid,
+      title: "Account Approved ✅",
+      message: "Your account has been approved by ${admin.academyName ?? 'the administrator'}. You can now access all features.",
+      type: "approval",
+    );
+
+    // 3. Also mirror this user into the local User Management portal
     if (u.role != UserRole.admin) {
       if (!mounted) return;
       final memberProvider = Provider.of<MemberProvider>(context, listen: false);
@@ -93,6 +105,16 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
 
     // Only change the status; keep the record for admin history.
     await _authService.rejectUser(u.uid);
+
+    // Notify the user (They can see this if they try to login again)
+    await NotificationService().send(
+      academyId: admin.uid,
+      recipientId: u.uid,
+      title: "Account Rejected ❌",
+      message: "Your signup request for ${admin.academyName ?? 'this academy'} was not approved.",
+      type: "approval",
+    );
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${u.fullName} rejected')),

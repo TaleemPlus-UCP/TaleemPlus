@@ -52,7 +52,10 @@ class AllChallansScreen extends StatelessWidget {
             children: [
               CircleAvatar(
                 backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                child: Text(child.fullName[0].toUpperCase(), style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+                child: Text(
+                  child.fullName.isNotEmpty ? child.fullName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -60,7 +63,7 @@ class AllChallansScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(child.fullName, style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text("Class: ${child.academyName ?? 'General'}", style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    const Text("Student Profile", style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),

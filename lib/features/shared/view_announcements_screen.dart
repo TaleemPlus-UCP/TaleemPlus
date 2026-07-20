@@ -142,7 +142,7 @@ class _ViewAnnouncementsScreenState extends State<ViewAnnouncementsScreen> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                    DateFormat('d MMM yyyy, h:mm a').format(a.createdAt),
+                    DateFormat('EEEE, d MMM yyyy, h:mm a').format(a.createdAt),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

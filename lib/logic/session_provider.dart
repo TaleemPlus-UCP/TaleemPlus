@@ -4,20 +4,43 @@ import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_provider.dart';
 
-class SessionProvider extends ChangeNotifier {
+class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const int _timeoutSeconds = 5 * 60; // 5 minutes
   static const String _biometricKey = 'biometric_enabled';
+  static const String _savedPassKey = 'saved_pass_v1';
   
   final LocalAuthentication _localAuth = LocalAuthentication();
   Timer? _timer;
   bool _isLocked = false;
   bool _biometricEnabled = false;
+  AuthProvider? _auth;
 
   bool get isLocked => _isLocked;
   bool get biometricEnabled => _biometricEnabled;
 
   SessionProvider() {
     _loadBiometricPref();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void updateAuth(AuthProvider auth) {
+    _auth = auth;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      // Auto-logout when app goes to background as requested
+      if (_auth != null && _auth!.isAuthenticated) {
+        _auth!.signOut();
+      }
+    }
   }
 
   Future<void> _loadBiometricPref() async {
@@ -26,14 +49,27 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setBiometricEnabled(bool value) async {
+  Future<void> setBiometricEnabled(bool value, {String? password}) async {
     _biometricEnabled = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, value);
+    
+    if (value && password != null) {
+      await prefs.setString(_savedPassKey, password);
+    } else if (!value) {
+      await prefs.remove(_savedPassKey);
+    }
+    
     notifyListeners();
   }
 
+  Future<String?> getSavedPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedPassKey);
+  }
+
   void resetTimer(BuildContext context, AuthProvider auth) {
+    _auth = auth;
     _timer?.cancel();
     if (auth.isAuthenticated) {
       _timer = Timer(const Duration(seconds: _timeoutSeconds), () {

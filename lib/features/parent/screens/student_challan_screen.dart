@@ -145,6 +145,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
   }
 
   Widget _buildChallanDetails() {
+    if (_latestChallan == null) return _buildEmptyState();
     final c = _latestChallan!;
     final bool isOverdue = c.isOverdue;
     final statusColor = c.isPaid ? AppColors.success : (isOverdue ? AppColors.danger : AppColors.warning);
@@ -242,6 +243,18 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     );
   }
 
+  Future<void> _handlePrint(FeeChallanModel c) async {
+    try {
+      await ChallanPdfService.generateAndPrint(c);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Print Error: $e"), backgroundColor: AppColors.danger),
+        );
+      }
+    }
+  }
+
   Widget _buildActionButtons(FeeChallanModel c) {
     return Column(
       children: [
@@ -261,7 +274,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => ChallanPdfService.generateAndPrint(c),
+                onPressed: () => _handlePrint(c),
                 icon: const Icon(Icons.print_rounded),
                 label: const Text("PRINT"),
                 style: OutlinedButton.styleFrom(
@@ -275,9 +288,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
-                   ChallanPdfService.generateAndPrint(c);
-                },
+                onPressed: () => _handlePrint(c),
                 icon: const Icon(Icons.share_rounded),
                 label: const Text("SHARE"),
                 style: OutlinedButton.styleFrom(

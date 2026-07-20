@@ -50,13 +50,17 @@ class MemberProvider extends ChangeNotifier {
         ...firestoreParents.map((u) => _fromAppUser(u)),
       ];
 
-      // 4. Merge and Deduplicate by ID
+      // 4. Merge and Deduplicate by EMAIL
       final Map<String, AcademyMember> mergedMap = {};
+      
+      // Local SQLite members
       for (var m in sqliteMembers) {
-        mergedMap[m.id] = m;
+        mergedMap[m.email.trim().toLowerCase()] = m;
       }
+      
+      // Firestore members (override SQLite if same email found)
       for (var m in firestoreMembers) {
-        mergedMap[m.id] = m;
+        mergedMap[m.email.trim().toLowerCase()] = m;
       }
 
       _members = mergedMap.values.toList();
@@ -94,12 +98,18 @@ class MemberProvider extends ChangeNotifier {
     required String email,
     required String phone,
     required String role,
-    required String academyId, // NEW
+    required String academyId, 
     String extra = '',
   }) async {
+    // Duplicate check
+    final emailLower = email.trim().toLowerCase();
+    if (_members.any((m) => m.email.toLowerCase() == emailLower)) {
+      throw Exception("A member with this email already exists.");
+    }
+
     final member = AcademyMember(
       id: _uuid.v4(),
-      academyId: academyId, // NEW
+      academyId: academyId,
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim(),

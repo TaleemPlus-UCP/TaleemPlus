@@ -50,7 +50,10 @@ class AuthProvider extends ChangeNotifier {
     required String phoneNumber,
     required String password,
     required UserRole role,
-    String? academyName, // Added
+    String? academyName, 
+    String? academyId,
+    String? academyAddress,
+    String? academyPhone,
   }) async {
     _setLoading();
     try {
@@ -60,7 +63,10 @@ class AuthProvider extends ChangeNotifier {
         phoneNumber: phoneNumber,
         password: password,
         role: role,
-        academyName: academyName, // Added
+        academyName: academyName,
+        academyId: academyId,
+        academyAddress: academyAddress,
+        academyPhone: academyPhone,
       );
 
       if (!user.isApproved) {

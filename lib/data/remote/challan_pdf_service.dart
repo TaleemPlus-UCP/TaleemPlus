@@ -2,12 +2,31 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fee_challan_model.dart';
+import '../models/app_user.dart';
 
 class ChallanPdfService {
   static Future<void> generateAndPrint(FeeChallanModel challan) async {
     try {
+      // 1. Fetch Academy Details for Branding
+      final academyDoc = await FirebaseFirestore.instance.collection('users').doc(challan.academyId).get();
+      AppUser? academy;
+      if (academyDoc.exists && academyDoc.data() != null) {
+        academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
+      }
+
       final doc = pw.Document();
+
+      // Load network image if logo exists
+      pw.ImageProvider? logoImage;
+      if (academy?.academyLogo != null && academy!.academyLogo!.isNotEmpty) {
+        try {
+          logoImage = await networkImage(academy.academyLogo!);
+        } catch (e) {
+          print("Could not load academy logo for PDF: $e");
+        }
+      }
 
       doc.addPage(
         pw.Page(
@@ -16,13 +35,13 @@ class ChallanPdfService {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: [
-                _buildHeader(challan),
+                _buildHeader(challan, academy, logoImage),
                 pw.SizedBox(height: 20),
                 _buildStudentInfo(challan),
                 pw.SizedBox(height: 20),
                 _buildFeeTable(challan),
                 pw.SizedBox(height: 20),
-                _buildFooter(challan),
+                _buildFooter(challan, academy),
               ],
             );
           },
@@ -34,28 +53,42 @@ class ChallanPdfService {
         name: 'Challan_${challan.challanNumber}',
       );
     } catch (e) {
-      throw Exception("PDF Generation failed: $e");
+      print("PDF Error: $e");
+      rethrow;
     }
   }
 
-  static pw.Widget _buildHeader(FeeChallanModel challan) {
+  static pw.Widget _buildHeader(FeeChallanModel challan, AppUser? academy, pw.ImageProvider? logo) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+        pw.Row(
           children: [
-            pw.Text("TALEEMPLUS ACADEMY", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-            pw.Text("123 Education Lane, Learning City", style: const pw.TextStyle(fontSize: 10)),
-            pw.Text("Contact: +92 301 4334151", style: const pw.TextStyle(fontSize: 10)),
+            if (logo != null)
+              pw.Container(
+                width: 60,
+                height: 60,
+                margin: const pw.EdgeInsets.only(right: 12),
+                child: pw.Image(logo),
+              ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(academy?.academyName?.toUpperCase() ?? "TALEEMPLUS ACADEMY", 
+                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.Text(academy?.academyAddress ?? "Academy Address Not Set", style: const pw.TextStyle(fontSize: 9)),
+                pw.Text("Contact: ${academy?.academyPhone ?? 'N/A'}", style: const pw.TextStyle(fontSize: 9)),
+              ],
+            ),
           ],
         ),
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Text("FEE CHALLAN", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.cyan)),
-            pw.Text("No: ${challan.challanNumber}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Text("Date: ${DateFormat('dd-MMM-yyyy').format(challan.issueDate)}"),
+            pw.Text("FEE CHALLAN", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.cyan900)),
+            pw.Text("No: ${challan.challanNumber}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+            pw.Text("Date: ${DateFormat('dd-MMM-yyyy').format(challan.issueDate)}", style: const pw.TextStyle(fontSize: 9)),
           ],
         ),
       ],
@@ -146,7 +179,7 @@ class ChallanPdfService {
     );
   }
 
-  static pw.Widget _buildFooter(FeeChallanModel challan) {
+  static pw.Widget _buildFooter(FeeChallanModel challan, AppUser? academy) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       crossAxisAlignment: pw.CrossAxisAlignment.end,
@@ -155,8 +188,8 @@ class ChallanPdfService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text("PAYMENT INSTRUCTIONS:", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-            pw.Text("Account Title: Academy Management", style: const pw.TextStyle(fontSize: 9)),
-            pw.Text("Account Number: 03014334151", style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("Account Title: ${academy?.academyName ?? 'Academy Management'}", style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("Account Number: ${academy?.academyPhone ?? 'N/A'}", style: const pw.TextStyle(fontSize: 9)),
             pw.Text("Please share the screenshot of payment on WhatsApp.", style: const pw.TextStyle(fontSize: 9)),
           ],
         ),
