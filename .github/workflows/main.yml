@@ -22,27 +22,26 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.22.2' # Specifying a modern version to avoid Dart 3.0.0 mismatch
           channel: 'stable'
-          cache: false # Temporary disable cache to avoid corrupted data
+          cache: true
 
       - name: Create Config Files
         run: |
           mkdir -p android/app
-          # Only create if secrets are present to avoid malformed files
           if [ ! -z "${{ secrets.FIREBASE_OPTIONS }}" ]; then echo "${{ secrets.FIREBASE_OPTIONS }}" > lib/firebase_options.dart; fi
           if [ ! -z "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > android/app/google-services.json; fi
 
-      - name: Clean & Get Dependencies
+      - name: Install dependencies
         run: |
           rm -f pubspec.lock
-          flutter pub cache clean --force
-          flutter pub get --verbose
+          flutter pub get
 
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-pub
 
       - name: Build Web
-        run: flutter build web
+        run: flutter build web --no-pub
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
