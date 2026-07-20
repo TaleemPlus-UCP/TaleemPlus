@@ -1,53 +1,61 @@
-import '../local/db_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/academy_member.dart';
 
-/// Bridges the UI and the local SQLite `members` table.
+/// Bridges the UI and the Firestore `members` collection.
 class MemberRepository {
-  final DbHelper _dbHelper;
-  MemberRepository({DbHelper? dbHelper})
-      : _dbHelper = dbHelper ?? DbHelper.instance;
+  final FirebaseFirestore _db;
+  MemberRepository({FirebaseFirestore? db})
+      : _db = db ?? FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> get _col => _db.collection('academy_members');
 
   Future<List<AcademyMember>> getAll(String academyId) async {
-    final db = await _dbHelper.database;
-    final rows = await db.query(
-      'members', 
-      where: 'academy_id = ?',
-      whereArgs: [academyId],
-      orderBy: 'created_at DESC'
-    );
-    return rows.map(AcademyMember.fromMap).toList();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .get();
+    
+    final list = snap.docs
+        .map((d) => AcademyMember.fromMap(d.id, d.data()))
+        .toList();
+    
+    // Sort client-side
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   Future<List<AcademyMember>> getByRole(String role, String academyId) async {
-    final db = await _dbHelper.database;
-    final rows = await db.query(
-      'members',
-      where: 'role = ? AND academy_id = ?',
-      whereArgs: [role, academyId],
-      orderBy: 'created_at DESC',
-    );
-    return rows.map(AcademyMember.fromMap).toList();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('role', isEqualTo: role)
+        .get();
+
+    final list = snap.docs
+        .map((d) => AcademyMember.fromMap(d.id, d.data()))
+        .toList();
+
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   Future<void> add(AcademyMember member) async {
-    final db = await _dbHelper.database;
-    await db.insert('members', member.toMap());
+    await _col.doc(member.id).set(member.toMap());
   }
 
   Future<void> delete(String id) async {
-    final db = await _dbHelper.database;
-    await db.delete('members', where: 'id = ?', whereArgs: [id]);
+    await _col.doc(id).delete();
   }
 
-  Future<Map<String, int>> counts() async {
-    final db = await _dbHelper.database;
-    final rows = await db.rawQuery(
-      'SELECT role, COUNT(*) as c FROM members GROUP BY role',
-    );
+  Future<Map<String, int>> counts(String academyId) async {
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .get();
+    
     final result = <String, int>{'teacher': 0, 'student': 0, 'parent': 0};
-    for (final row in rows) {
-      final role = row['role'] as String;
-      result[role] = (row['c'] as int?) ?? 0;
+    for (final doc in snap.docs) {
+      final role = doc.data()['role'] as String?;
+      if (role != null && result.containsKey(role)) {
+        result[role] = (result[role] ?? 0) + 1;
+      }
     }
     return result;
   }

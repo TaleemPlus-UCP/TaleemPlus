@@ -35,16 +35,16 @@ class MemberProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Fetch SQLite local members for THIS academy
-      final sqliteMembers = await _repo.getAll(academyId);
+      // 1. Fetch Cloud members for THIS academy
+      final cloudMembers = await _repo.getAll(academyId);
 
-      // 2. Fetch Firestore approved users profiles for THIS academy
+      // 2. Fetch Firestore approved users profiles for THIS academy (Auth system)
       final firestoreTeachers = await _authService.getApprovedByRole(UserRole.teacher, academyId);
       final firestoreStudents = await _authService.getApprovedByRole(UserRole.student, academyId);
       final firestoreParents = await _authService.getApprovedByRole(UserRole.parent, academyId);
 
       // 3. Convert Firestore users to AcademyMember model for a unified list
-      final List<AcademyMember> firestoreMembers = [
+      final List<AcademyMember> authMembers = [
         ...firestoreTeachers.map((u) => _fromAppUser(u)),
         ...firestoreStudents.map((u) => _fromAppUser(u)),
         ...firestoreParents.map((u) => _fromAppUser(u)),
@@ -53,13 +53,13 @@ class MemberProvider extends ChangeNotifier {
       // 4. Merge and Deduplicate by EMAIL
       final Map<String, AcademyMember> mergedMap = {};
       
-      // Local SQLite members
-      for (var m in sqliteMembers) {
+      // Cloud members (manually added via Admin portal)
+      for (var m in cloudMembers) {
         mergedMap[m.email.trim().toLowerCase()] = m;
       }
       
-      // Firestore members (override SQLite if same email found)
-      for (var m in firestoreMembers) {
+      // Auth system members (signups/approvals)
+      for (var m in authMembers) {
         mergedMap[m.email.trim().toLowerCase()] = m;
       }
 
@@ -73,7 +73,7 @@ class MemberProvider extends ChangeNotifier {
         'parent': _members.where((m) => m.role == 'parent').length,
       };
     } catch (e) {
-      debugPrint("Error loading member counts: $e");
+      debugPrint("Error loading members: $e");
     } finally {
       _loading = false;
       notifyListeners();

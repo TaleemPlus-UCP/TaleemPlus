@@ -1,50 +1,49 @@
-import '../local/db_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fee_invoice.dart';
 
 class FeeRepository {
-  final DbHelper _dbHelper;
-  FeeRepository({DbHelper? dbHelper})
-      : _dbHelper = dbHelper ?? DbHelper.instance;
+  final FirebaseFirestore _db;
+  FeeRepository({FirebaseFirestore? db})
+      : _db = db ?? FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> get _col => _db.collection('fee_invoices');
 
   Future<List<FeeInvoice>> getAll(String academyId) async {
-    final db = await _dbHelper.database;
-    final rows = await db.query(
-      'fee_invoices',
-      where: 'academy_id = ?',
-      whereArgs: [academyId],
-      orderBy: 'created_at DESC'
-    );
-    return rows.map(FeeInvoice.fromMap).toList();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .get();
+    
+    final list = snap.docs
+        .map((d) => FeeInvoice.fromMap(d.id, d.data()))
+        .toList();
+    
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   Future<List<FeeInvoice>> getByStudent(String studentId, String academyId) async {
-    final db = await _dbHelper.database;
-    final rows = await db.query(
-      'fee_invoices',
-      where: 'student_id = ? AND academy_id = ?',
-      whereArgs: [studentId, academyId],
-      orderBy: 'due_date DESC',
-    );
-    return rows.map(FeeInvoice.fromMap).toList();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .get();
+
+    final list = snap.docs
+        .map((d) => FeeInvoice.fromMap(d.id, d.data()))
+        .toList();
+
+    list.sort((a, b) => b.dueDate.compareTo(a.dueDate));
+    return list;
   }
 
   Future<void> add(FeeInvoice invoice) async {
-    final db = await _dbHelper.database;
-    await db.insert('fee_invoices', invoice.toMap());
+    await _col.doc(invoice.id).set(invoice.toMap());
   }
 
   Future<void> update(FeeInvoice invoice) async {
-    final db = await _dbHelper.database;
-    await db.update(
-      'fee_invoices',
-      invoice.toMap(),
-      where: 'id = ?',
-      whereArgs: [invoice.id],
-    );
+    await _col.doc(invoice.id).update(invoice.toMap());
   }
 
   Future<void> delete(String id) async {
-    final db = await _dbHelper.database;
-    await db.delete('fee_invoices', where: 'id = ?', whereArgs: [id]);
+    await _col.doc(id).delete();
   }
 }
