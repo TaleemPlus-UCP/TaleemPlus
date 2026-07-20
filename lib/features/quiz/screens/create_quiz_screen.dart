@@ -525,6 +525,7 @@ class _AddQuestionSheet extends StatefulWidget {
 class _AddQuestionSheetState extends State<_AddQuestionSheet> {
   final _questionCtrl = TextEditingController();
   final _marksCtrl = TextEditingController(text: '1');
+  final _keywordsCtrl = TextEditingController();
   QuestionType _type = QuestionType.mcq;
   
   final List<TextEditingController> _optionCtrls = List.generate(4, (_) => TextEditingController());
@@ -552,6 +553,13 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
             const SizedBox(height: 20),
             LabeledField(label: 'Question Text', hint: 'Enter question', controller: _questionCtrl),
             LabeledField(label: 'Marks', hint: '1', controller: _marksCtrl, keyboardType: TextInputType.number),
+            
+            if (_type == QuestionType.short)
+              LabeledField(
+                label: 'Grading Keywords (Optional)', 
+                hint: 'e.g. Force, mass, acceleration (comma separated)', 
+                controller: _keywordsCtrl,
+              ),
             
             if (_type == QuestionType.mcq) ...[
               const Text('OPTIONS', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700)),
@@ -583,6 +591,12 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
               label: 'Add Question',
               onPressed: () {
                 if (_questionCtrl.text.isEmpty) return;
+                
+                final keywords = _keywordsCtrl.text.split(',')
+                    .map((e) => e.trim().toLowerCase())
+                    .where((e) => e.isNotEmpty)
+                    .toList();
+
                 final q = QuizQuestion(
                   id: const Uuid().v4(),
                   text: _questionCtrl.text.trim(),
@@ -590,6 +604,7 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                   marks: double.tryParse(_marksCtrl.text) ?? 1,
                   options: _type == QuestionType.mcq ? _optionCtrls.map((c) => c.text).toList() : null,
                   correctIndex: _type == QuestionType.mcq ? _correctIdx : null,
+                  gradingKeywords: keywords,
                 );
                 widget.onAdd(q);
                 Navigator.pop(context);

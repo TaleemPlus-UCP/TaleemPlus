@@ -6,6 +6,8 @@ import '../../data/models/class_entity.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
 import '../../widgets/gradient_background.dart';
+import '../quiz/screens/teacher_quiz_list_screen.dart';
+import 'screens/classroom_management_screen.dart';
 import 'attendance_marking_screen.dart';
 
 /// Streams the classes assigned to the logged-in teacher (matched by email
@@ -85,12 +87,7 @@ class TeacherClassesScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AttendanceMarkingScreen(classEntity: c),
-          ),
-        ),
+        onTap: () => _showOptions(context, c),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -131,6 +128,64 @@ class TeacherClassesScreen extends StatelessWidget {
               const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showOptions(BuildContext context, ClassEntity c) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(c.displayLabel,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading:
+                  const Icon(Icons.fact_check_rounded, color: AppColors.accent),
+              title: const Text("Mark Attendance"),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => AttendanceMarkingScreen(classEntity: c)));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.psychology_rounded, color: AppColors.accent),
+              title: const Text("AI Paper Grader"),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => TeacherQuizListScreen(
+                              isAiGen: false,
+                              initialClassId: c.id,
+                            )));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.door_sliding_rounded,
+                  color: AppColors.accent),
+              title: const Text("Manage Classroom (Resources & Queries)"),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => ClassroomManagementScreen(classEntity: c)));
+              },
+            ),
+          ],
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../data/remote/auth_service.dart';
 import '../../data/remote/notification_service.dart'; // NEW
+import 'screens/my_classroom_hub.dart';
 import '../../widgets/app_widgets.dart';
 import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
@@ -87,6 +88,17 @@ class StudentDashboard extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1)),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'My Classroom Hub',
+                'Teacher resources & discussions',
+                Icons.school_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyClassroomHub()),
+                ),
+              ),
               const SizedBox(height: 12),
               _actionTile(
                 context,

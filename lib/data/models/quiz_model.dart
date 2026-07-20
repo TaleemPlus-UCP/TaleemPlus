@@ -9,6 +9,7 @@ class QuizQuestion {
   final List<String>? options; // For MCQ
   final int? correctIndex;     // For MCQ (Teacher reference)
   final double marks;
+  final List<String> gradingKeywords; // NEW: For 100% Offline AI Checking
 
   QuizQuestion({
     required this.id,
@@ -17,6 +18,7 @@ class QuizQuestion {
     this.options,
     this.correctIndex,
     required this.marks,
+    this.gradingKeywords = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -27,6 +29,7 @@ class QuizQuestion {
       'options': options,
       'correct_index': correctIndex,
       'marks': marks,
+      'grading_keywords': gradingKeywords,
     };
   }
 
@@ -38,6 +41,7 @@ class QuizQuestion {
       options: map['options'] != null ? List<String>.from(map['options']) : null,
       correctIndex: map['correct_index'],
       marks: (map['marks'] ?? 0).toDouble(),
+      gradingKeywords: (map['grading_keywords'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 }

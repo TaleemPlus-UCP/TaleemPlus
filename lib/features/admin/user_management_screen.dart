@@ -13,7 +13,6 @@ import '../../logic/class_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 import '../../core/theme/theme_extensions.dart';
-import 'class_management_screen.dart'; // To reuse some logic or just for context
 
 class UserManagementScreen extends StatefulWidget {
   final int initialIndex;

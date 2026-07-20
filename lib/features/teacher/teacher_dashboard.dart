@@ -25,10 +25,9 @@ class TeacherDashboard extends StatelessWidget {
 
   Future<void> _logout(BuildContext context) async {
     await context.read<AuthProvider>().signOut();
-    if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-          context, AppRoutes.login, (r) => false);
-    }
+    if (!context.mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+        context, AppRoutes.login, (r) => false);
   }
 
   @override
@@ -151,8 +150,8 @@ class TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 12),
               _actionTile(
                 context,
-                'Grading & Marks Entry',
-                'Enter marks for conducted tests',
+                'Grading & AI Paper Grader',
+                'Enter marks or use AI to grade papers',
                 Icons.add_chart_rounded,
                     () => Navigator.push(
                   context,

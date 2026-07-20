@@ -33,7 +33,12 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   @override
   Widget build(BuildContext context) {
     final classProv = context.watch<ClassProvider>();
-    final cls = classProv.classes.firstWhere((c) => c.id == widget.quiz.classId);
+    final clsList = classProv.classes.where((c) => c.id == widget.quiz.classId).toList();
+
+    if (clsList.isEmpty) {
+      return Scaffold(appBar: AppBar(), body: const Center(child: Text("Class data not found.")));
+    }
+    final cls = clsList.first;
 
     return Scaffold(
       appBar: AppBar(

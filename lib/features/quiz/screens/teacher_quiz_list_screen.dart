@@ -9,10 +9,12 @@ import '../../../data/models/quiz_model.dart';
 import '../../../data/remote/pdf_generator_service.dart';
 import 'create_quiz_screen.dart';
 import 'mark_entry_screen.dart';
+import 'ai_paper_grader_screen.dart';
 
 class TeacherQuizListScreen extends StatefulWidget {
   final bool isAiGen;
-  const TeacherQuizListScreen({super.key, this.isAiGen = false});
+  final String? initialClassId;
+  const TeacherQuizListScreen({super.key, this.isAiGen = false, this.initialClassId});
 
   @override
   State<TeacherQuizListScreen> createState() => _TeacherQuizListScreenState();
@@ -25,6 +27,7 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedClassId = widget.initialClassId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthProvider>().currentUser;
       if (user != null) {
@@ -43,7 +46,7 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            widget.isAiGen ? 'AI Test Generator' : 'Grading & Marks Entry',
+            widget.isAiGen ? 'AI Test Generator' : 'Grading & AI Paper Grader',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -294,6 +297,27 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
           else
             Row(
               children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => AiPaperGraderScreen(quiz: quiz)),
+                    ),
+                    icon: const Icon(Icons.auto_awesome, size: 18),
+                    label: const Text("AI SMART GRADER"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                      foregroundColor: AppColors.accent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      side: const BorderSide(color: AppColors.accent),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.push(

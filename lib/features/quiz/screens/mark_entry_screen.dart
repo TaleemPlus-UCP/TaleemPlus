@@ -23,9 +23,14 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
   @override
   void initState() {
     super.initState();
-    final cls = context.read<ClassProvider>().classes.firstWhere((c) => c.id == widget.quiz.classId);
-    for (var studentId in cls.studentIds) {
-      _markControllers[studentId] = TextEditingController();
+    final classes = context.read<ClassProvider>().classes;
+    final clsList = classes.where((c) => c.id == widget.quiz.classId).toList();
+    
+    if (clsList.isNotEmpty) {
+      final cls = clsList.first;
+      for (var studentId in cls.studentIds) {
+        _markControllers[studentId] = TextEditingController();
+      }
     }
   }
 
@@ -71,7 +76,7 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
         return;
       }
 
-      await context.read<QuizProvider>().gradeBulk(marksList);
+      await context.read<QuizProvider>().uploadBulkMarks(marksList);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Marks saved successfully!")));
         Navigator.pop(context);
@@ -85,7 +90,13 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cls = context.watch<ClassProvider>().classes.firstWhere((c) => c.id == widget.quiz.classId);
+    final classes = context.watch<ClassProvider>().classes;
+    final clsList = classes.where((c) => c.id == widget.quiz.classId).toList();
+
+    if (clsList.isEmpty) {
+      return Scaffold(appBar: AppBar(), body: const Center(child: Text("Class data not found.")));
+    }
+    final cls = clsList.first;
 
     return Scaffold(
       appBar: AppBar(

@@ -9,7 +9,6 @@ import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../logic/session_provider.dart'; 
-import '../../logic/notification_provider.dart'; 
 import '../../data/remote/notification_service.dart';
 import '../../widgets/app_widgets.dart'; 
 import '../shared/notifications_screen.dart'; // NEW

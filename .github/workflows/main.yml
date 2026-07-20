@@ -22,7 +22,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.2' # Specifying a modern version to avoid Dart 3.0.0 mismatch
           channel: 'stable'
           cache: true
 
@@ -36,6 +35,12 @@ jobs:
         run: |
           rm -f pubspec.lock
           flutter pub get
+
+      - name: Static Analysis
+        run: flutter analyze
+
+      - name: Run Tests
+        run: flutter test
 
       - name: Build Android APK
         run: flutter build apk --release --no-pub

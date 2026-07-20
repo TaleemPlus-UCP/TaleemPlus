@@ -17,6 +17,17 @@ class MyClassroomHub extends StatefulWidget {
 
 class _MyClassroomHubState extends State<MyClassroomHub> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().currentUser;
+      if (user != null) {
+        context.read<ClassProvider>().listenAll(user.academyId ?? '');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
     final classProv = context.watch<ClassProvider>();

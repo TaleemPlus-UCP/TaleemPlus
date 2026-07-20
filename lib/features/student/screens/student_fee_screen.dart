@@ -5,7 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
-import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
 
 class StudentFeeScreen extends StatefulWidget {
