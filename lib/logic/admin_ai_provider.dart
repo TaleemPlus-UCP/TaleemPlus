@@ -15,7 +15,7 @@ class AdminAiProvider extends ChangeNotifier {
   String _weakestSubject = "No Data";
   double _academyAvgPerformance = 0.0;
   List<String> _atRiskStudentNames = [];
-  
+
   // Revenue Forecasting
   double _projectedRevenue = 0.0;
   double _collectionEfficiency = 0.0;
@@ -25,7 +25,7 @@ class AdminAiProvider extends ChangeNotifier {
   String get weakestSubject => _weakestSubject;
   double get academyAvgPerformance => _academyAvgPerformance;
   List<String> get atRiskStudentNames => _atRiskStudentNames;
-  
+
   double get projectedRevenue => _projectedRevenue;
   double get collectionEfficiency => _collectionEfficiency;
   int get pendingPaymentsCount => _pendingPaymentsCount;
@@ -68,12 +68,17 @@ class AdminAiProvider extends ChangeNotifier {
         _collectionEfficiency = 0;
         _pendingPaymentsCount = 0;
       } else {
-        final totalPayable = allChallans.map((c) => c.totalAmount).reduce((a, b) => a + b);
-        final totalPaid = allChallans.where((c) => c.isPaid).map((c) => c.totalAmount).fold(0.0, (a, b) => a + b);
-        
+        final totalPayable =
+            allChallans.map((c) => c.totalAmount).reduce((a, b) => a + b);
+        final totalPaid = allChallans
+            .where((c) => c.isPaid)
+            .map((c) => c.totalAmount)
+            .fold(0.0, (a, b) => a + b);
+
         _pendingPaymentsCount = allChallans.where((c) => !c.isPaid).length;
         _collectionEfficiency = (totalPaid / totalPayable) * 100;
-        _projectedRevenue = totalPayable; // Simple forecast: next month expected similar to current setup
+        _projectedRevenue =
+            totalPayable; // Simple forecast: next month expected similar to current setup
       }
     } catch (e) {
       debugPrint("Revenue Analysis Error: $e");
@@ -82,7 +87,8 @@ class AdminAiProvider extends ChangeNotifier {
 
   void _calculatePerformanceInsights(List<TestMarkModel> marks) {
     // 1. Average Academy Performance
-    _academyAvgPerformance = marks.map((m) => m.percentage).reduce((a, b) => a + b) / marks.length;
+    _academyAvgPerformance =
+        marks.map((m) => m.percentage).reduce((a, b) => a + b) / marks.length;
 
     // 2. Risk Analysis (Average Percentage < 50%)
     final Map<String, List<double>> studentScores = {};

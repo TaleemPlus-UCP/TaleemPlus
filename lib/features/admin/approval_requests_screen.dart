@@ -15,8 +15,7 @@ class ApprovalRequestsScreen extends StatefulWidget {
   const ApprovalRequestsScreen({super.key});
 
   @override
-  State<ApprovalRequestsScreen> createState() =>
-      _ApprovalRequestsScreenState();
+  State<ApprovalRequestsScreen> createState() => _ApprovalRequestsScreenState();
 }
 
 class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
@@ -67,23 +66,24 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
       academyId: admin.uid,
       recipientId: u.uid,
       title: "Account Approved ✅",
-      message: "Your account has been approved by ${admin.academyName ?? 'the administrator'}. You can now access all features.",
+      message:
+          "Your account has been approved by ${admin.academyName ?? 'the administrator'}. You can now access all features.",
       type: "approval",
     );
 
     // 3. Also mirror this user into the local User Management portal
     if (u.role != UserRole.admin) {
       if (!mounted) return;
-      final memberProvider = Provider.of<MemberProvider>(context, listen: false);
-      final alreadyPresent =
-      memberProvider.members.any((m) => m.id == u.uid);
+      final memberProvider =
+          Provider.of<MemberProvider>(context, listen: false);
+      final alreadyPresent = memberProvider.members.any((m) => m.id == u.uid);
       if (!alreadyPresent) {
         await memberProvider.addMember(
           fullName: u.fullName,
           email: u.email,
           phone: u.phoneNumber,
-          role: u.role.value, 
-          academyId: admin.uid, 
+          role: u.role.value,
+          academyId: admin.uid,
         );
       }
     }
@@ -111,7 +111,8 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
       academyId: admin.uid,
       recipientId: u.uid,
       title: "Account Rejected ❌",
-      message: "Your signup request for ${admin.academyName ?? 'this academy'} was not approved.",
+      message:
+          "Your signup request for ${admin.academyName ?? 'this academy'} was not approved.",
       type: "approval",
     );
 

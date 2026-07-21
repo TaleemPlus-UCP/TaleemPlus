@@ -19,18 +19,23 @@ class OcrHistoryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("OCR History", style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text("OCR History",
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       body: GradientBackground(
         child: user == null
-            ? const Center(child: Text("Please login to view history", style: TextStyle(color: AppColors.textSecondary)))
+            ? const Center(
+                child: Text("Please login to view history",
+                    style: TextStyle(color: AppColors.textSecondary)))
             : StreamBuilder<List<OcrDocumentModel>>(
                 stream: firestoreService.getDocuments(user.uid),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+                    return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent));
                   }
 
                   if (snapshot.hasError) {
@@ -53,11 +58,15 @@ class OcrHistoryScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.history_rounded, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
+                          Icon(Icons.history_rounded,
+                              size: 64,
+                              color:
+                                  AppColors.textMuted.withValues(alpha: 0.3)),
                           const SizedBox(height: 16),
                           const Text(
                             "No scanned documents yet.",
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 16),
                           ),
                         ],
                       ),
@@ -79,16 +88,18 @@ class OcrHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _documentTile(BuildContext context, OcrDocumentModel doc, OcrFirestoreService service) {
+  Widget _documentTile(
+      BuildContext context, OcrDocumentModel doc, OcrFirestoreService service) {
     final dateStr = DateFormat('MMM d, yyyy • h:mm a').format(doc.createdAt);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => OcrDocumentViewScreen(document: doc)),
+          MaterialPageRoute(
+              builder: (_) => OcrDocumentViewScreen(document: doc)),
         ),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -105,7 +116,8 @@ class OcrHistoryScreen extends StatelessWidget {
                   color: AppColors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.description_rounded, color: AppColors.accent, size: 24),
+                child: const Icon(Icons.description_rounded,
+                    color: AppColors.accent, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -125,12 +137,14 @@ class OcrHistoryScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       dateStr,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       doc.extractedText,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -138,7 +152,8 @@ class OcrHistoryScreen extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 20),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: AppColors.danger, size: 20),
                 onPressed: () => _confirmDelete(context, doc, service),
               ),
             ],
@@ -148,21 +163,27 @@ class OcrHistoryScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, OcrDocumentModel doc, OcrFirestoreService service) async {
+  Future<void> _confirmDelete(BuildContext context, OcrDocumentModel doc,
+      OcrFirestoreService service) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text("Delete Document?", style: TextStyle(color: AppColors.textPrimary)),
-        content: Text("Are you sure you want to delete '${doc.title}'?", style: const TextStyle(color: AppColors.textSecondary)),
+        title: const Text("Delete Document?",
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text("Are you sure you want to delete '${doc.title}'?",
+            style: const TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("CANCEL", style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text("CANCEL",
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("DELETE", style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+            child: const Text("DELETE",
+                style: TextStyle(
+                    color: AppColors.danger, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -173,13 +194,18 @@ class OcrHistoryScreen extends StatelessWidget {
         await service.deleteDocument(doc.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Document deleted successfully"), behavior: SnackBarBehavior.floating),
+            const SnackBar(
+                content: Text("Document deleted successfully"),
+                behavior: SnackBarBehavior.floating),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Delete failed: $e"), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+            SnackBar(
+                content: Text("Delete failed: $e"),
+                backgroundColor: AppColors.danger,
+                behavior: SnackBarBehavior.floating),
           );
         }
       }

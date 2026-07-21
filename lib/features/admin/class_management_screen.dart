@@ -25,7 +25,8 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final user =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<ClassProvider>().listenAll(user.uid);
       }
@@ -126,8 +127,8 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                           color: AppColors.textSecondary, fontSize: 12)),
                 Text(
                     '${c.enrollmentCount} student${c.enrollmentCount == 1 ? '' : 's'} enrolled',
-                    style: const TextStyle(
-                        color: AppColors.accent, fontSize: 12)),
+                    style:
+                        const TextStyle(color: AppColors.accent, fontSize: 12)),
               ],
             ),
           ),
@@ -140,8 +141,9 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
             icon: const Icon(Icons.payments_rounded, color: AppColors.accent),
             tooltip: 'Fee Status',
             onPressed: () => Navigator.push(
-              context, 
-              MaterialPageRoute(builder: (_) => ClassFeeStatusScreen(classEntity: c)),
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ClassFeeStatusScreen(classEntity: c)),
             ),
           ),
           IconButton(
@@ -176,8 +178,8 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.danger)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -191,16 +193,19 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+      builder: (_) => const Center(
+          child: CircularProgressIndicator(color: AppColors.accent)),
     );
 
     final auth = AuthService();
-    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
     List<AppUser> teachers = [];
     try {
       teachers = await auth.getApprovedByRole(UserRole.teacher, academyId);
     } catch (_) {}
-    
+
     if (mounted) Navigator.pop(context);
     if (!mounted) return;
 
@@ -208,7 +213,8 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _EditClassSheet(classEntity: c, teachers: teachers),
     );
   }
@@ -223,7 +229,9 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     );
 
     final auth = AuthService();
-    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
     List<AppUser> students = [];
     try {
       students = await auth.getApprovedByRole(UserRole.student, academyId);
@@ -264,7 +272,9 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     );
 
     final auth = AuthService();
-    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
     List<AppUser> teachers = [];
     List<AppUser> students = [];
     try {
@@ -274,9 +284,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       if (mounted) Navigator.pop(context);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Error loading users: $e')),
+          SnackBar(content: Text('Error loading users: $e')),
         );
       }
       return;
@@ -334,7 +342,8 @@ class _EditClassSheetState extends State<_EditClassSheet> {
     _sectionCtrl = TextEditingController(text: widget.classEntity.section);
     _subjectCtrl = TextEditingController(text: widget.classEntity.subject);
     try {
-      _selectedTeacher = widget.teachers.firstWhere((t) => t.uid == widget.classEntity.primaryTeacherId);
+      _selectedTeacher = widget.teachers
+          .firstWhere((t) => t.uid == widget.classEntity.primaryTeacherId);
     } catch (_) {
       _selectedTeacher = null;
     }
@@ -351,24 +360,26 @@ class _EditClassSheetState extends State<_EditClassSheet> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTeacher == null) return;
-    
+
     setState(() => _saving = true);
     try {
       await context.read<ClassProvider>().updateClass(
-        classId: widget.classEntity.id,
-        className: _nameCtrl.text,
-        section: _sectionCtrl.text,
-        subject: _subjectCtrl.text,
-        teacher: _selectedTeacher!,
-      );
+            classId: widget.classEntity.id,
+            className: _nameCtrl.text,
+            section: _sectionCtrl.text,
+            subject: _subjectCtrl.text,
+            teacher: _selectedTeacher!,
+          );
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Class details updated!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Class details updated!')));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed: $e'), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -384,29 +395,51 @@ class _EditClassSheetState extends State<_EditClassSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Edit Class Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const Text('Edit Class Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 24),
-            LabeledField(label: 'Class Name', hint: 'e.g. Class 10', controller: _nameCtrl, validator: Validators.fullName),
-            LabeledField(label: 'Section', hint: 'e.g. A', controller: _sectionCtrl),
-            LabeledField(label: 'Subject', hint: 'e.g. Maths', controller: _subjectCtrl),
-            const Text('ASSIGNED TEACHER', style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
+            LabeledField(
+                label: 'Class Name',
+                hint: 'e.g. Class 10',
+                controller: _nameCtrl,
+                validator: Validators.fullName),
+            LabeledField(
+                label: 'Section', hint: 'e.g. A', controller: _sectionCtrl),
+            LabeledField(
+                label: 'Subject', hint: 'e.g. Maths', controller: _subjectCtrl),
+            const Text('ASSIGNED TEACHER',
+                style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+              decoration: BoxDecoration(
+                  color: AppColors.inputFill,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border)),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<AppUser>(
                   value: _selectedTeacher,
                   isExpanded: true,
                   dropdownColor: AppColors.surfaceAlt,
                   hint: const Text('Select a teacher'),
-                  items: widget.teachers.map((t) => DropdownMenuItem(value: t, child: Text(t.fullName))).toList(),
+                  items: widget.teachers
+                      .map((t) =>
+                          DropdownMenuItem(value: t, child: Text(t.fullName)))
+                      .toList(),
                   onChanged: (t) => setState(() => _selectedTeacher = t),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            PrimaryButton(label: 'SAVE CHANGES', icon: Icons.check_rounded, loading: _saving, onPressed: _selectedTeacher == null ? null : _save),
+            PrimaryButton(
+                label: 'SAVE CHANGES',
+                icon: Icons.check_rounded,
+                loading: _saving,
+                onPressed: _selectedTeacher == null ? null : _save),
           ],
         ),
       ),
@@ -417,7 +450,8 @@ class _EditClassSheetState extends State<_EditClassSheet> {
 class _EditEnrollmentSheet extends StatefulWidget {
   final ClassEntity classEntity;
   final List<AppUser> allStudents;
-  const _EditEnrollmentSheet({required this.classEntity, required this.allStudents});
+  const _EditEnrollmentSheet(
+      {required this.classEntity, required this.allStudents});
 
   @override
   State<_EditEnrollmentSheet> createState() => _EditEnrollmentSheetState();
@@ -441,9 +475,9 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
     setState(() => _saving = true);
     try {
       await context.read<ClassProvider>().updateEnrollment(
-        classId: widget.classEntity.id,
-        students: chosen,
-      );
+            classId: widget.classEntity.id,
+            students: chosen,
+          );
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -458,7 +492,7 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content:
-              Text('Could not update enrollment. Check your connection.')),
+                  Text('Could not update enrollment. Check your connection.')),
         );
       }
     }
@@ -549,8 +583,7 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
               }
             }),
             child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
@@ -564,9 +597,7 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
                     selected
                         ? Icons.check_box_rounded
                         : Icons.check_box_outline_blank_rounded,
-                    color: selected
-                        ? AppColors.accent
-                        : AppColors.textMuted,
+                    color: selected ? AppColors.accent : AppColors.textMuted,
                     size: 22,
                   ),
                   const SizedBox(width: 12),
@@ -580,8 +611,7 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
                                 fontWeight: FontWeight.w600)),
                         Text(s.email,
                             style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11)),
+                                color: AppColors.textMuted, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -636,15 +666,17 @@ class _AddClassSheetState extends State<_AddClassSheet> {
 
     setState(() => _saving = true);
     try {
-      final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+      final academyId =
+          Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+              '';
       await context.read<ClassProvider>().createClassWithStudents(
-        className: _nameCtrl.text,
-        section: _sectionCtrl.text,
-        subject: _subjectCtrl.text,
-        teacher: _selectedTeacher!,
-        students: chosen,
-        academyId: academyId,
-      );
+            className: _nameCtrl.text,
+            section: _sectionCtrl.text,
+            subject: _subjectCtrl.text,
+            teacher: _selectedTeacher!,
+            students: chosen,
+            academyId: academyId,
+          );
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -658,8 +690,7 @@ class _AddClassSheetState extends State<_AddClassSheet> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-              Text('Could not create class. Check your connection.')),
+              content: Text('Could not create class. Check your connection.')),
         );
       }
     }
@@ -740,9 +771,9 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                     style: const TextStyle(color: AppColors.textPrimary),
                     items: widget.teachers
                         .map((t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(t.fullName),
-                    ))
+                              value: t,
+                              child: Text(t.fullName),
+                            ))
                         .toList(),
                     onChanged: (t) => setState(() => _selectedTeacher = t),
                   ),
@@ -804,8 +835,7 @@ class _AddClassSheetState extends State<_AddClassSheet> {
               }
             }),
             child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
@@ -819,9 +849,7 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                     selected
                         ? Icons.check_box_rounded
                         : Icons.check_box_outline_blank_rounded,
-                    color: selected
-                        ? AppColors.accent
-                        : AppColors.textMuted,
+                    color: selected ? AppColors.accent : AppColors.textMuted,
                     size: 22,
                   ),
                   const SizedBox(width: 12),
@@ -835,8 +863,7 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                                 fontWeight: FontWeight.w600)),
                         Text(s.email,
                             style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11)),
+                                color: AppColors.textMuted, fontSize: 11)),
                       ],
                     ),
                   ),

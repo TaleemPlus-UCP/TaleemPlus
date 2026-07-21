@@ -28,7 +28,8 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.document.extractedText);
+    _textController =
+        TextEditingController(text: widget.document.extractedText);
     _titleController = TextEditingController(text: widget.document.title);
   }
 
@@ -82,11 +83,13 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
+    final dateStr =
+        DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? "Edit Document" : "View Document", style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(_isEditing ? "Edit Document" : "View Document",
+            style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -131,12 +134,16 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                         const SizedBox(height: 4),
                         Text(
                           "Scanned on $dateStr",
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                          style: const TextStyle(
+                              color: AppColors.textMuted, fontSize: 13),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           "By ${widget.document.createdByName}",
-                          style: const TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                              color: AppColors.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
                         ),
                       ] else ...[
                         const Text(
@@ -151,16 +158,21 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _titleController,
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700),
                           decoration: InputDecoration(
                             hintText: "Enter title...",
                             filled: true,
                             fillColor: AppColors.inputFill,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none),
                           ),
                         ),
                       ],
-                      
+
                       const SizedBox(height: 24),
                       const Divider(color: AppColors.border, thickness: 1),
                       const SizedBox(height: 24),
@@ -176,14 +188,15 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: AppColors.surface.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.5)),
                         ),
                         child: TextField(
                           controller: _textController,
@@ -226,8 +239,10 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
                                 side: const BorderSide(color: AppColors.border),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
                               ),
                             ),
                           ),

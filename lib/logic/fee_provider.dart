@@ -80,7 +80,8 @@ class FeeProvider extends ChangeNotifier {
   }
 
   /// NEW: Fetches fee history for a specific student in an academy.
-  Future<List<FeeInvoice>> getStudentFees(String studentId, String academyId) async {
+  Future<List<FeeInvoice>> getStudentFees(
+      String studentId, String academyId) async {
     return await _repo.getByStudent(studentId, academyId);
   }
 }

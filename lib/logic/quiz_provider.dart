@@ -46,32 +46,38 @@ class QuizProvider extends ChangeNotifier {
   // --- Streams (Real-time data) ---
 
   /// Watch all tests created for a specific class in an academy
-  Stream<List<QuizModel>> watchTeacherQuizzes(String classId, String academyId) {
+  Stream<List<QuizModel>> watchTeacherQuizzes(
+      String classId, String academyId) {
     return _service.watchQuizzesByClass(classId, academyId);
   }
 
   /// Watch marks for a specific test (for Teacher/Admin review)
-  Stream<List<TestMarkModel>> watchQuizResults(String quizId, String academyId) {
+  Stream<List<TestMarkModel>> watchQuizResults(
+      String quizId, String academyId) {
     return _service.watchMarksByQuiz(quizId, academyId);
   }
 
   /// Watch all test results for a specific student (for Report Card)
-  Stream<List<TestMarkModel>> watchStudentResults(String uid, String academyId) {
+  Stream<List<TestMarkModel>> watchStudentResults(
+      String uid, String academyId) {
     return _service.watchStudentMarks(uid, academyId);
   }
 
   /// Watch all marks for a class (for Admin Analytics)
-  Stream<List<TestMarkModel>> watchClassResults(String classId, String academyId) {
+  Stream<List<TestMarkModel>> watchClassResults(
+      String classId, String academyId) {
     return _service.watchClassMarks(classId, academyId);
   }
 
   /// NEW: Compiles monthly report data for a class
-  Stream<Map<String, dynamic>> watchMonthlyClassReport(String classId, String month, String academyId) {
+  Stream<Map<String, dynamic>> watchMonthlyClassReport(
+      String classId, String month, String academyId) {
     return watchClassResults(classId, academyId).asyncMap((marks) async {
       // 1. Get all quizzes for this class and month to know total possible marks
-      final quizzes = await _service.watchQuizzesByClass(classId, academyId).first;
+      final quizzes =
+          await _service.watchQuizzesByClass(classId, academyId).first;
       final monthlyQuizzes = quizzes.where((q) => q.month == month).toList();
-      
+
       if (monthlyQuizzes.isEmpty) {
         return {
           'quizCount': 0,
@@ -93,17 +99,20 @@ class QuizProvider extends ChangeNotifier {
               'subjects': <String, Map<String, double>>{},
             };
           }
-          
+
           final stats = studentStats[m.studentId]!;
           stats['obtained'] = (stats['obtained'] as double) + m.marksObtained;
           stats['total'] = (stats['total'] as double) + m.totalMarks;
 
-          final subjects = stats['subjects'] as Map<String, Map<String, double>>;
+          final subjects =
+              stats['subjects'] as Map<String, Map<String, double>>;
           if (!subjects.containsKey(q.subject)) {
             subjects[q.subject] = {'obtained': 0.0, 'total': 0.0};
           }
-          subjects[q.subject]!['obtained'] = subjects[q.subject]!['obtained']! + m.marksObtained;
-          subjects[q.subject]!['total'] = subjects[q.subject]!['total']! + m.totalMarks;
+          subjects[q.subject]!['obtained'] =
+              subjects[q.subject]!['obtained']! + m.marksObtained;
+          subjects[q.subject]!['total'] =
+              subjects[q.subject]!['total']! + m.totalMarks;
         }
       }
 

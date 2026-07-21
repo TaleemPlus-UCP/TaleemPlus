@@ -32,7 +32,8 @@ class ThemeToggle extends StatelessWidget {
           value: ThemeMode.dark,
           child: Row(
             children: [
-              Icon(Icons.dark_mode_rounded, color: Colors.indigoAccent, size: 20),
+              Icon(Icons.dark_mode_rounded,
+                  color: Colors.indigoAccent, size: 20),
               SizedBox(width: 10),
               Text('Dark Mode'),
             ],
@@ -42,7 +43,8 @@ class ThemeToggle extends StatelessWidget {
           value: ThemeMode.system,
           child: Row(
             children: [
-              Icon(Icons.brightness_auto_rounded, color: Colors.blueGrey, size: 20),
+              Icon(Icons.brightness_auto_rounded,
+                  color: Colors.blueGrey, size: 20),
               SizedBox(width: 10),
               Text('System Default'),
             ],

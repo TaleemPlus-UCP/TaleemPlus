@@ -14,10 +14,12 @@ class TeacherAnnouncementsScreen extends StatefulWidget {
   const TeacherAnnouncementsScreen({super.key});
 
   @override
-  State<TeacherAnnouncementsScreen> createState() => _TeacherAnnouncementsScreenState();
+  State<TeacherAnnouncementsScreen> createState() =>
+      _TeacherAnnouncementsScreenState();
 }
 
-class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen> {
+class _TeacherAnnouncementsScreenState
+    extends State<TeacherAnnouncementsScreen> {
   final _service = AnnouncementService();
 
   @override
@@ -32,41 +34,45 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
         title: const Text('My Announcements',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      floatingActionButton: academyId.isEmpty ? null : FloatingActionButton.extended(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.textOnAccent,
-        icon: const Icon(Icons.add_comment_rounded),
-        label: const Text('New Announcement'),
-        onPressed: () => _openComposeSheet(academyId),
-      ),
+      floatingActionButton: academyId.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.textOnAccent,
+              icon: const Icon(Icons.add_comment_rounded),
+              label: const Text('New Announcement'),
+              onPressed: () => _openComposeSheet(academyId),
+            ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty 
+          child: academyId.isEmpty
               ? const Center(child: Text("Invalid session"))
               : StreamBuilder<List<Announcement>>(
-            stream: _service.watchAll(academyId),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                );
-              }
-              
-              // Teachers only see announcements THEY created here
-              final list = (snap.data ?? const [])
-                  .where((a) => a.createdByUid == user?.uid)
-                  .toList();
+                  stream: _service.watchAll(academyId),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent),
+                      );
+                    }
 
-              if (list.isEmpty) return _emptyState();
+                    // Teachers only see announcements THEY created here
+                    final list = (snap.data ?? const [])
+                        .where((a) => a.createdByUid == user?.uid)
+                        .toList();
 
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _announcementTile(list[i], academyId),
-              );
-            },
-          ),
+                    if (list.isEmpty) return _emptyState();
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) =>
+                          _announcementTile(list[i], academyId),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -77,8 +83,7 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.campaign_outlined,
-              size: 56, color: AppColors.textMuted),
+          Icon(Icons.campaign_outlined, size: 56, color: AppColors.textMuted),
           SizedBox(height: 12),
           Text('No announcements sent yet',
               style: TextStyle(color: AppColors.textSecondary)),
@@ -96,7 +101,8 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,15 +135,16 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               IconButton(
                 iconSize: 20,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: const Icon(Icons.delete_outline,
-                    color: AppColors.danger),
+                icon: const Icon(Icons.delete_outline, color: AppColors.danger),
                 onPressed: () => _confirmDelete(a),
               ),
             ],
@@ -169,10 +176,16 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceAlt,
         title: const Text('Delete announcement?'),
-        content: const Text('This will remove the message for all students and parents.'),
+        content: const Text(
+            'This will remove the message for all students and parents.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.danger))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete',
+                  style: TextStyle(color: AppColors.danger))),
         ],
       ),
     );
@@ -186,8 +199,10 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _TeacherComposeSheet(service: _service, academyId: academyId),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) =>
+          _TeacherComposeSheet(service: _service, academyId: academyId),
     );
   }
 }
@@ -212,7 +227,7 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final auth = context.read<AuthProvider>().currentUser;
     if (auth == null) return;
 
@@ -232,12 +247,15 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
       );
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Announcement sent successfully!'), backgroundColor: AppColors.success));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Announcement sent successfully!'),
+            backgroundColor: AppColors.success));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -254,31 +272,55 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('New Announcement', style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+              const Text('New Announcement',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
-              LabeledField(label: 'Title', hint: 'e.g. Tomorrow\'s Class Timing', controller: _titleCtrl),
-              const Text('Message', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              LabeledField(
+                  label: 'Title',
+                  hint: 'e.g. Tomorrow\'s Class Timing',
+                  controller: _titleCtrl),
+              const Text('Message',
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _messageCtrl,
                 minLines: 3,
                 maxLines: 5,
                 style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(hintText: 'Enter your message...'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Message is required' : null,
+                decoration:
+                    const InputDecoration(hintText: 'Enter your message...'),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Message is required' : null,
               ),
               const SizedBox(height: 20),
-              const Text('RECIPIENTS', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              const Text('RECIPIENTS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _targetToggle('Students', _students, (v) => setState(() => _students = v)),
+                  _targetToggle('Students', _students,
+                      (v) => setState(() => _students = v)),
                   const SizedBox(width: 12),
-                  _targetToggle('Parents', _parents, (v) => setState(() => _parents = v)),
+                  _targetToggle(
+                      'Parents', _parents, (v) => setState(() => _parents = v)),
                 ],
               ),
               const SizedBox(height: 24),
-              PrimaryButton(label: 'BROADCAST', icon: Icons.send_rounded, loading: _saving, onPressed: _save),
+              PrimaryButton(
+                  label: 'BROADCAST',
+                  icon: Icons.send_rounded,
+                  loading: _saving,
+                  onPressed: _save),
             ],
           ),
         ),
@@ -293,7 +335,9 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
       onSelected: onChanged,
       selectedColor: AppColors.accent.withValues(alpha: 0.2),
       checkmarkColor: AppColors.accent,
-      labelStyle: TextStyle(color: value ? AppColors.accent : AppColors.textSecondary, fontWeight: value ? FontWeight.bold : FontWeight.normal),
+      labelStyle: TextStyle(
+          color: value ? AppColors.accent : AppColors.textSecondary,
+          fontWeight: value ? FontWeight.bold : FontWeight.normal),
     );
   }
 }

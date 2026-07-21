@@ -77,7 +77,7 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// A professional logo widget that handles the splash image with a 
+/// A professional logo widget that handles the splash image with a
 /// high-quality code-based fallback if the asset is missing.
 class TaleemLogo extends StatelessWidget {
   final double size;
@@ -110,11 +110,13 @@ class TaleemLogo extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(Icons.school_rounded, size: size * 0.45, color: AppColors.accent),
+                  Icon(Icons.school_rounded,
+                      size: size * 0.45, color: AppColors.accent),
                   Positioned(
                     right: 0,
                     bottom: 2,
-                    child: Icon(Icons.add_circle_rounded, size: size * 0.22, color: AppColors.accent),
+                    child: Icon(Icons.add_circle_rounded,
+                        size: size * 0.22, color: AppColors.accent),
                   ),
                 ],
               ),

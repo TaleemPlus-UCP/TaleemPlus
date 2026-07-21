@@ -15,7 +15,7 @@ class AiSummarizerScreen extends StatefulWidget {
 class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
   final TextRecognizer _textRecognizer = TextRecognizer();
   final ImagePicker _picker = ImagePicker();
-  
+
   File? _image;
   String _summary = "";
   bool _isProcessing = false;
@@ -43,8 +43,9 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
 
     try {
       final inputImage = InputImage.fromFile(_image!);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
-      
+      final RecognizedText recognizedText =
+          await _textRecognizer.processImage(inputImage);
+
       setState(() {
         _summary = _generateLocalSummary(recognizedText.text);
         _isProcessing = false;
@@ -60,7 +61,11 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
   String _generateLocalSummary(String text) {
     if (text.isEmpty) return "No text detected to summarize.";
 
-    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final lines = text
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
     final List<String> keyPoints = [];
     final List<String> definitions = [];
 
@@ -70,14 +75,15 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
         definitions.add(line);
       }
       // Logic for key headers or short impactful lines
-      else if (line.length < 50 && (line.toUpperCase() == line || line.endsWith('.'))) {
+      else if (line.length < 50 &&
+          (line.toUpperCase() == line || line.endsWith('.'))) {
         keyPoints.add(line);
       }
     }
 
     final StringBuffer sb = StringBuffer();
     sb.writeln("📌 QUICK SUMMARY (OFFLINE AI)\n");
-    
+
     if (definitions.isNotEmpty) {
       sb.writeln("📖 KEY DEFINITIONS:");
       for (var d in definitions.take(5)) {
@@ -93,14 +99,17 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
       }
     }
 
-    if (sb.length < 50) return "Detected text is too short for a structured summary:\n\n$text";
-    
+    if (sb.length < 50)
+      return "Detected text is too short for a structured summary:\n\n$text";
+
     return sb.toString();
   }
 
   void _showSnackBar(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: isError ? AppColors.danger : AppColors.success),
+      SnackBar(
+          content: Text(msg),
+          backgroundColor: isError ? AppColors.danger : AppColors.success),
     );
   }
 
@@ -108,7 +117,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Notes Summarizer', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('AI Notes Summarizer',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -122,7 +132,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
                 _buildActionButtons(),
                 const SizedBox(height: 20),
                 if (_isProcessing)
-                  const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                  const Center(
+                      child: CircularProgressIndicator(color: AppColors.accent))
                 else if (_summary.isNotEmpty)
                   _buildSummaryCard()
                 else
@@ -147,7 +158,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
               backgroundColor: AppColors.accent,
               foregroundColor: AppColors.textOnAccent,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ),
@@ -161,7 +173,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
               foregroundColor: AppColors.accent,
               side: const BorderSide(color: AppColors.accent),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ),
@@ -184,19 +197,26 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
             children: [
               const Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
               const SizedBox(width: 8),
-              const Text("AI INSIGHTS", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              const Text("AI INSIGHTS",
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.copy_rounded, color: AppColors.textMuted, size: 20),
+                icon: const Icon(Icons.copy_rounded,
+                    color: AppColors.textMuted, size: 20),
                 onPressed: () {
-                   // Copy to clipboard logic
-                   _showSnackBar("Summary copied to clipboard!");
+                  // Copy to clipboard logic
+                  _showSnackBar("Summary copied to clipboard!");
                 },
               ),
             ],
           ),
           const Divider(color: AppColors.border, height: 32),
-          Text(_summary, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.6)),
+          Text(_summary,
+              style: const TextStyle(
+                  color: AppColors.textPrimary, fontSize: 14, height: 1.6)),
         ],
       ),
     );
@@ -207,7 +227,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
       child: Column(
         children: [
           const SizedBox(height: 60),
-          Icon(Icons.description_outlined, size: 80, color: AppColors.textMuted.withValues(alpha: 0.2)),
+          Icon(Icons.description_outlined,
+              size: 80, color: AppColors.textMuted.withValues(alpha: 0.2)),
           const SizedBox(height: 20),
           const Text(
             "Scan your handwritten or printed\nnotes to get an instant AI summary.",
@@ -217,7 +238,11 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
           const SizedBox(height: 8),
           const Text(
             "100% OFFLINE. NO INTERNET REQUIRED.",
-            style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+            style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1),
           ),
         ],
       ),

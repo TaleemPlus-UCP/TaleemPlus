@@ -31,45 +31,50 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         title: const Text('Announcements',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      floatingActionButton: academyId.isEmpty ? null : FloatingActionButton.extended(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.textOnAccent,
-        icon: const Icon(Icons.campaign_rounded),
-        label: const Text('New Announcement'),
-        onPressed: () => _openComposeSheet(academyId),
-      ),
+      floatingActionButton: academyId.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.textOnAccent,
+              icon: const Icon(Icons.campaign_rounded),
+              label: const Text('New Announcement'),
+              onPressed: () => _openComposeSheet(academyId),
+            ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty 
+          child: academyId.isEmpty
               ? const Center(child: Text("Invalid session"))
               : StreamBuilder<List<Announcement>>(
-            stream: _service.watchAll(academyId),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                );
-              }
-              if (snap.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('Error loading announcements: ${snap.error}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.danger)),
-                  ),
-                );
-              }
-              final list = snap.data ?? const [];
-              if (list.isEmpty) return _emptyState();
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _announcementTile(list[i], academyId),
-              );
-            },
-          ),
+                  stream: _service.watchAll(academyId),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent),
+                      );
+                    }
+                    if (snap.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                              'Error loading announcements: ${snap.error}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.danger)),
+                        ),
+                      );
+                    }
+                    final list = snap.data ?? const [];
+                    if (list.isEmpty) return _emptyState();
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) =>
+                          _announcementTile(list[i], academyId),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -80,8 +85,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.campaign_outlined,
-              size: 56, color: AppColors.textMuted),
+          Icon(Icons.campaign_outlined, size: 56, color: AppColors.textMuted),
           SizedBox(height: 12),
           Text('No announcements yet',
               style: TextStyle(color: AppColors.textSecondary)),
@@ -138,7 +142,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   size: 14, color: AppColors.textMuted),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(DateFormat('EEEE, d MMM yyyy, h:mm a').format(a.createdAt),
+                child: Text(
+                    DateFormat('EEEE, d MMM yyyy, h:mm a').format(a.createdAt),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -158,8 +163,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 iconSize: 20,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: const Icon(Icons.delete_outline,
-                    color: AppColors.danger),
+                icon: const Icon(Icons.delete_outline, color: AppColors.danger),
                 onPressed: () => _confirmDelete(a),
               ),
             ],
@@ -202,8 +206,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.danger)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -240,7 +244,8 @@ class _ComposeSheet extends StatefulWidget {
   final Announcement? existing;
   final AnnouncementService service;
   final String academyId;
-  const _ComposeSheet({this.existing, required this.service, required this.academyId});
+  const _ComposeSheet(
+      {this.existing, required this.service, required this.academyId});
 
   @override
   State<_ComposeSheet> createState() => _ComposeSheetState();
@@ -534,8 +539,8 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               ? AppColors.accent.withValues(alpha: 0.18)
               : AppColors.inputFill,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: selected ? AppColors.accent : AppColors.border),
+          border:
+              Border.all(color: selected ? AppColors.accent : AppColors.border),
         ),
         child: Text(label,
             style: TextStyle(

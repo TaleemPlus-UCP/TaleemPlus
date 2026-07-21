@@ -8,7 +8,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const int _timeoutSeconds = 5 * 60; // 5 minutes
   static const String _biometricKey = 'biometric_enabled';
   static const String _savedPassKey = 'saved_pass_v1';
-  
+
   final LocalAuthentication _localAuth = LocalAuthentication();
   Timer? _timer;
   bool _isLocked = false;
@@ -35,7 +35,8 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
       // Auto-logout when app goes to background as requested
       if (_auth != null && _auth!.isAuthenticated) {
         _auth!.signOut();
@@ -53,13 +54,13 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     _biometricEnabled = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, value);
-    
+
     if (value && password != null) {
       await prefs.setString(_savedPassKey, password);
     } else if (!value) {
       await prefs.remove(_savedPassKey);
     }
-    
+
     notifyListeners();
   }
 
@@ -86,8 +87,10 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<bool> authenticateWithBiometrics() async {
     try {
-      final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
-      final bool canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
+      final bool canAuthenticateWithBiometrics =
+          await _localAuth.canCheckBiometrics;
+      final bool canAuthenticate =
+          canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
 
       if (!canAuthenticate) return false;
 

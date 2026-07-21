@@ -41,7 +41,8 @@ class FeeChallanModel {
     required this.updatedAt,
   });
 
-  double get totalAmount => monthlyFee + admissionFee + examFee + transportFee + fine;
+  double get totalAmount =>
+      monthlyFee + admissionFee + examFee + transportFee + fine;
 
   bool get isPaid => status == 'paid';
   bool get isOverdue => !isPaid && DateTime.now().isAfter(dueDate);

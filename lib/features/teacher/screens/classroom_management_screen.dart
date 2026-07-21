@@ -15,10 +15,12 @@ class ClassroomManagementScreen extends StatefulWidget {
   const ClassroomManagementScreen({super.key, required this.classEntity});
 
   @override
-  State<ClassroomManagementScreen> createState() => _ClassroomManagementScreenState();
+  State<ClassroomManagementScreen> createState() =>
+      _ClassroomManagementScreenState();
 }
 
-class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> with SingleTickerProviderStateMixin {
+class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _classroomService = ClassroomService();
 
@@ -32,7 +34,8 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.classEntity.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(widget.classEntity.displayLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
@@ -65,7 +68,9 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
       stream: _classroomService.watchQueriesForClass(widget.classEntity.id),
       builder: (context, snap) {
         final list = snap.data ?? [];
-        if (list.isEmpty) return _emptyState(Icons.question_answer_outlined, "No pending student queries.");
+        if (list.isEmpty)
+          return _emptyState(
+              Icons.question_answer_outlined, "No pending student queries.");
 
         return ListView.separated(
           padding: const EdgeInsets.all(20),
@@ -83,30 +88,46 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: q.isResolved ? AppColors.success.withValues(alpha: 0.3) : AppColors.warning.withValues(alpha: 0.3)),
+        border: Border.all(
+            color: q.isResolved
+                ? AppColors.success.withValues(alpha: 0.3)
+                : AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(radius: 12, child: Text(q.studentName[0], style: const TextStyle(fontSize: 10))),
+              CircleAvatar(
+                  radius: 12,
+                  child: Text(q.studentName[0],
+                      style: const TextStyle(fontSize: 10))),
               const SizedBox(width: 8),
-              Text(q.studentName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(q.studentName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13)),
               const Spacer(),
-              if (q.isResolved) const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+              if (q.isResolved)
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.success, size: 16),
             ],
           ),
           const SizedBox(height: 12),
-          Text(q.question, style: TextStyle(color: context.appColors.textPrimary, fontSize: 14)),
+          Text(q.question,
+              style: TextStyle(
+                  color: context.appColors.textPrimary, fontSize: 14)),
           if (q.answer != null) ...[
             const Divider(height: 24),
-            Text("My Response: ${q.answer}", style: const TextStyle(color: AppColors.success, fontSize: 13, fontStyle: FontStyle.italic)),
+            Text("My Response: ${q.answer}",
+                style: const TextStyle(
+                    color: AppColors.success,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic)),
           ] else
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: PrimaryButton(
-                label: "REPLY", 
+                label: "REPLY",
                 onPressed: () => _showReplyDialog(q),
                 icon: Icons.reply_rounded,
               ),
@@ -122,14 +143,21 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Reply to Student"),
-        content: TextField(controller: ctrl, maxLines: 3, decoration: const InputDecoration(hintText: "Enter your answer...")),
+        content: TextField(
+            controller: ctrl,
+            maxLines: 3,
+            decoration:
+                const InputDecoration(hintText: "Enter your answer...")),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
-          TextButton(onPressed: () async {
-            if (ctrl.text.isEmpty) return;
-            await _classroomService.answerQuery(q.id, ctrl.text);
-            if (mounted) Navigator.pop(ctx);
-          }, child: const Text("SEND")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+              onPressed: () async {
+                if (ctrl.text.isEmpty) return;
+                await _classroomService.answerQuery(q.id, ctrl.text);
+                if (mounted) Navigator.pop(ctx);
+              },
+              child: const Text("SEND")),
         ],
       ),
     );
@@ -141,7 +169,7 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
         Padding(
           padding: const EdgeInsets.all(20),
           child: PrimaryButton(
-            label: "UPLOAD NEW RESOURCE", 
+            label: "UPLOAD NEW RESOURCE",
             icon: Icons.upload_file_rounded,
             onPressed: _showUploadSheet,
           ),
@@ -151,17 +179,23 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
             stream: _classroomService.watchResources(widget.classEntity.id),
             builder: (context, snap) {
               final list = snap.data ?? [];
-              if (list.isEmpty) return _emptyState(Icons.folder_open_rounded, "You haven't shared any content yet.");
+              if (list.isEmpty)
+                return _emptyState(Icons.folder_open_rounded,
+                    "You haven't shared any content yet.");
               return ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: list.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, i) => ListTile(
                   tileColor: context.appColors.surface.withValues(alpha: 0.4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  title: Text(list[i].title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(list[i].description, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.description_rounded, color: AppColors.accent),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  title: Text(list[i].title,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(list[i].description,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: const Icon(Icons.description_rounded,
+                      color: AppColors.accent),
                 ),
               );
             },
@@ -179,30 +213,40 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
       context: context,
       isScrollControlled: true,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        padding: EdgeInsets.fromLTRB(
+            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Share Study Material", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Share Study Material",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            LabeledField(label: "Title", hint: "e.g. Physics Chapter 1 Notes", controller: titleCtrl),
-            LabeledField(label: "Description", hint: "Summary or instructions...", controller: descCtrl),
+            LabeledField(
+                label: "Title",
+                hint: "e.g. Physics Chapter 1 Notes",
+                controller: titleCtrl),
+            LabeledField(
+                label: "Description",
+                hint: "Summary or instructions...",
+                controller: descCtrl),
             const SizedBox(height: 20),
-            PrimaryButton(label: "POST TO CLASS", onPressed: () async {
-              final user = context.read<AuthProvider>().currentUser;
-              final res = SharedResource(
-                id: '', 
-                academyId: user!.academyId!,
-                classId: widget.classEntity.id,
-                teacherId: user.uid,
-                teacherName: user.fullName,
-                title: titleCtrl.text,
-                description: descCtrl.text,
-                createdAt: DateTime.now(),
-              );
-              await _classroomService.uploadResource(res);
-              if (mounted) Navigator.pop(ctx);
-            }),
+            PrimaryButton(
+                label: "POST TO CLASS",
+                onPressed: () async {
+                  final user = context.read<AuthProvider>().currentUser;
+                  final res = SharedResource(
+                    id: '',
+                    academyId: user!.academyId!,
+                    classId: widget.classEntity.id,
+                    teacherId: user.uid,
+                    teacherName: user.fullName,
+                    title: titleCtrl.text,
+                    description: descCtrl.text,
+                    createdAt: DateTime.now(),
+                  );
+                  await _classroomService.uploadResource(res);
+                  if (mounted) Navigator.pop(ctx);
+                }),
           ],
         ),
       ),
@@ -214,7 +258,9 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen> w
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 48, color: context.appColors.textMuted.withValues(alpha: 0.3)),
+          Icon(icon,
+              size: 48,
+              color: context.appColors.textMuted.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text(msg, style: TextStyle(color: context.appColors.textSecondary)),
         ],

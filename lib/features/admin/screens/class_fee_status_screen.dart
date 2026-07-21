@@ -19,20 +19,32 @@ class ClassFeeStatusScreen extends StatefulWidget {
 class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
   final _repo = FeeChallanRepository();
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
-  
+
   final List<String> _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
 
   @override
   Widget build(BuildContext context) {
-    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
     final studentIds = widget.classEntity.studentIds;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.classEntity.className} - Fee Status', 
+        title: Text('${widget.classEntity.className} - Fee Status',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
       ),
@@ -42,18 +54,19 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
             children: [
               _buildMonthFilter(),
               Expanded(
-                child: studentIds.isEmpty 
-                  ? _buildEmptyState("No students enrolled in this class.")
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: studentIds.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final sid = studentIds[index];
-                        final sname = widget.classEntity.studentNames[sid] ?? 'Student';
-                        return _studentFeeTile(sid, sname, academyId);
-                      },
-                    ),
+                child: studentIds.isEmpty
+                    ? _buildEmptyState("No students enrolled in this class.")
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: studentIds.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final sid = studentIds[index];
+                          final sname =
+                              widget.classEntity.studentNames[sid] ?? 'Student';
+                          return _studentFeeTile(sid, sname, academyId);
+                        },
+                      ),
               ),
             ],
           ),
@@ -68,22 +81,33 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("FILTER BY BILLING MONTH", 
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const Text("FILTER BY BILLING MONTH",
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1)),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: AppColors.surface.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+              border:
+                  Border.all(color: AppColors.border.withValues(alpha: 0.5)),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _selectedMonth,
                 isExpanded: true,
                 dropdownColor: AppColors.surfaceAlt,
-                items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+                items: _months
+                    .map((m) => DropdownMenuItem(
+                        value: m,
+                        child: Text(m,
+                            style:
+                                const TextStyle(color: AppColors.textPrimary))))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedMonth = v!),
               ),
             ),
@@ -99,10 +123,10 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
       builder: (context, snapshot) {
         final challan = snapshot.data;
         final loading = snapshot.connectionState == ConnectionState.waiting;
-        
+
         Color statusColor = AppColors.textMuted;
         String statusText = loading ? "Loading..." : "No Challan";
-        
+
         if (challan != null) {
           if (challan.isPaid) {
             statusColor = AppColors.success;
@@ -127,33 +151,44 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
             children: [
               CircleAvatar(
                 backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                child: Text(sname[0].toUpperCase(), 
-                    style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+                child: Text(sname[0].toUpperCase(),
+                    style: const TextStyle(
+                        color: AppColors.accent, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(sname, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                    Text(sname,
+                        style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold)),
                     if (challan != null)
-                      Text("Amount: Rs. ${challan.totalAmount.toStringAsFixed(0)}", 
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      Text(
+                          "Amount: Rs. ${challan.totalAmount.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                              color: AppColors.textMuted, fontSize: 11)),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(statusText, 
-                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text(statusText,
+                    style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
               ),
               if (challan != null && !challan.isPaid)
                 IconButton(
-                  icon: const Icon(Icons.check_circle_outline, color: AppColors.accent, size: 20),
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: AppColors.accent, size: 20),
                   onPressed: () => _markPaid(challan),
                   tooltip: "Mark as Paid",
                 ),
@@ -170,10 +205,16 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceAlt,
         title: const Text("Confirm Payment"),
-        content: Text("Mark Rs. ${challan.totalAmount.toStringAsFixed(0)} as paid for ${challan.studentName}?"),
+        content: Text(
+            "Mark Rs. ${challan.totalAmount.toStringAsFixed(0)} as paid for ${challan.studentName}?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Confirm", style: TextStyle(color: AppColors.success))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Confirm",
+                  style: TextStyle(color: AppColors.success))),
         ],
       ),
     );
@@ -189,7 +230,8 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.textMuted),
+          const Icon(Icons.receipt_long_outlined,
+              size: 48, color: AppColors.textMuted),
           const SizedBox(height: 12),
           Text(msg, style: const TextStyle(color: AppColors.textSecondary)),
         ],

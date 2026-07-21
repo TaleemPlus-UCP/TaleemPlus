@@ -18,20 +18,23 @@ class NotificationsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Notifications',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         actions: [
           if (notifProv.unreadCount > 0)
             TextButton(
-              onPressed: () => notifProv.markAllAsRead(user!.uid, user.academyId ?? ''),
-              child: const Text("Mark all as read", style: TextStyle(color: AppColors.accent)),
+              onPressed: () =>
+                  notifProv.markAllAsRead(user!.uid, user.academyId ?? ''),
+              child: const Text("Mark all as read",
+                  style: TextStyle(color: AppColors.accent)),
             ),
         ],
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: list.isEmpty 
-              ? _buildEmptyState() 
+          child: list.isEmpty
+              ? _buildEmptyState()
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: list.length,
@@ -51,23 +54,31 @@ class NotificationsScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_rounded, size: 64, color: AppColors.textMuted),
+          Icon(Icons.notifications_none_rounded,
+              size: 64, color: AppColors.textMuted),
           SizedBox(height: 16),
-          Text("No notifications yet", style: TextStyle(color: AppColors.textSecondary)),
+          Text("No notifications yet",
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
   }
 
-  Widget _notifTile(BuildContext context, dynamic n, NotificationProvider prov) {
+  Widget _notifTile(
+      BuildContext context, dynamic n, NotificationProvider prov) {
     return InkWell(
       onTap: () => prov.markAsRead(n.id),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: n.isRead ? Colors.transparent : AppColors.accent.withValues(alpha: 0.05),
+          color: n.isRead
+              ? Colors.transparent
+              : AppColors.accent.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: n.isRead ? AppColors.border.withValues(alpha: 0.5) : AppColors.accent.withValues(alpha: 0.3)),
+          border: Border.all(
+              color: n.isRead
+                  ? AppColors.border.withValues(alpha: 0.5)
+                  : AppColors.accent.withValues(alpha: 0.3)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,12 +96,23 @@ class NotificationsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(n.title, style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(n.title,
+                      style: TextStyle(
+                          color: context.appColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15)),
                   const SizedBox(height: 4),
-                  Text(n.message, style: TextStyle(color: context.appColors.textSecondary, fontSize: 13, height: 1.4)),
+                  Text(n.message,
+                      style: TextStyle(
+                          color: context.appColors.textSecondary,
+                          fontSize: 13,
+                          height: 1.4)),
                   const SizedBox(height: 8),
-                  Text(DateFormat('d MMM, h:mm a').format(n.createdAt), 
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text(DateFormat('d MMM, h:mm a').format(n.createdAt),
+                      style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -104,21 +126,31 @@ class NotificationsScreen extends StatelessWidget {
 
   IconData _iconFor(String type) {
     switch (type) {
-      case 'approval': return Icons.verified_user_rounded;
-      case 'fee': return Icons.payments_rounded;
-      case 'attendance': return Icons.fact_check_rounded;
-      case 'result': return Icons.analytics_rounded;
-      default: return Icons.notifications_rounded;
+      case 'approval':
+        return Icons.verified_user_rounded;
+      case 'fee':
+        return Icons.payments_rounded;
+      case 'attendance':
+        return Icons.fact_check_rounded;
+      case 'result':
+        return Icons.analytics_rounded;
+      default:
+        return Icons.notifications_rounded;
     }
   }
 
   Color _colorFor(String type) {
     switch (type) {
-      case 'approval': return AppColors.success;
-      case 'fee': return Colors.orange;
-      case 'attendance': return AppColors.accent;
-      case 'result': return Colors.purple;
-      default: return AppColors.textSecondary;
+      case 'approval':
+        return AppColors.success;
+      case 'fee':
+        return Colors.orange;
+      case 'attendance':
+        return AppColors.accent;
+      case 'result':
+        return Colors.purple;
+      default:
+        return AppColors.textSecondary;
     }
   }
 }

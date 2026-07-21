@@ -17,7 +17,7 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> markAsRead(String id) => _service.markAsRead(id);
-  
-  Future<void> markAllAsRead(String userId, String academyId) => 
+
+  Future<void> markAllAsRead(String userId, String academyId) =>
       _service.markAllAsRead(userId, academyId);
 }

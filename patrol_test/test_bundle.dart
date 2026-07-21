@@ -9,7 +9,8 @@ import 'package:patrol/src/platform/contracts/contracts.dart';
 import 'package:test_api/src/backend/invoker.dart';
 
 // START: GENERATED TEST IMPORTS
-import '../integration_test/example_test.dart' as integration_test__example_test;
+import '../integration_test/example_test.dart'
+    as integration_test__example_test;
 // END: GENERATED TEST IMPORTS
 
 Future<void> main() async {

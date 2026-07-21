@@ -12,8 +12,7 @@ class MemberProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final _uuid = const Uuid();
 
-  MemberProvider({MemberRepository? repo})
-      : _repo = repo ?? MemberRepository();
+  MemberProvider({MemberRepository? repo}) : _repo = repo ?? MemberRepository();
 
   List<AcademyMember> _members = [];
   Map<String, int> _counts = {'teacher': 0, 'student': 0, 'parent': 0};
@@ -39,9 +38,12 @@ class MemberProvider extends ChangeNotifier {
       final sqliteMembers = await _repo.getAll(academyId);
 
       // 2. Fetch Firestore approved users profiles for THIS academy
-      final firestoreTeachers = await _authService.getApprovedByRole(UserRole.teacher, academyId);
-      final firestoreStudents = await _authService.getApprovedByRole(UserRole.student, academyId);
-      final firestoreParents = await _authService.getApprovedByRole(UserRole.parent, academyId);
+      final firestoreTeachers =
+          await _authService.getApprovedByRole(UserRole.teacher, academyId);
+      final firestoreStudents =
+          await _authService.getApprovedByRole(UserRole.student, academyId);
+      final firestoreParents =
+          await _authService.getApprovedByRole(UserRole.parent, academyId);
 
       // 3. Convert Firestore users to AcademyMember model for a unified list
       final List<AcademyMember> firestoreMembers = [
@@ -52,12 +54,12 @@ class MemberProvider extends ChangeNotifier {
 
       // 4. Merge and Deduplicate by EMAIL
       final Map<String, AcademyMember> mergedMap = {};
-      
+
       // Local SQLite members
       for (var m in sqliteMembers) {
         mergedMap[m.email.trim().toLowerCase()] = m;
       }
-      
+
       // Firestore members (override SQLite if same email found)
       for (var m in firestoreMembers) {
         mergedMap[m.email.trim().toLowerCase()] = m;
@@ -98,7 +100,7 @@ class MemberProvider extends ChangeNotifier {
     required String email,
     required String phone,
     required String role,
-    required String academyId, 
+    required String academyId,
     String extra = '',
   }) async {
     // Duplicate check
@@ -129,9 +131,9 @@ class MemberProvider extends ChangeNotifier {
       // 2. Attempt to delete from Firestore (if it exists there)
       final doc = await _authService.getProfile(id);
       if (doc != null) {
-        await _authService.rejectUser(id); 
+        await _authService.rejectUser(id);
       }
-      
+
       await load(academyId);
     } catch (e) {
       debugPrint("Error removing member: $e");

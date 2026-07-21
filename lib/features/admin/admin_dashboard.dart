@@ -8,21 +8,21 @@ import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
-import '../../logic/session_provider.dart'; 
+import '../../logic/session_provider.dart';
 import '../../data/remote/notification_service.dart';
-import '../../widgets/app_widgets.dart'; 
+import '../../widgets/app_widgets.dart';
 import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
-import '../../widgets/theme_toggle_widget.dart'; 
-import '../../core/theme/theme_extensions.dart'; 
+import '../../widgets/theme_toggle_widget.dart';
+import '../../core/theme/theme_extensions.dart';
 import 'user_management_screen.dart';
 import 'approval_requests_screen.dart';
 import 'fee_ledger_screen.dart';
 import 'announcements_screen.dart';
 import 'class_management_screen.dart';
-import 'admin_quiz_list_screen.dart'; 
-import 'admin_ai_prediction_screen.dart'; 
-import 'screens/challan_generation_screen.dart'; 
+import 'admin_quiz_list_screen.dart';
+import 'admin_ai_prediction_screen.dart';
+import 'screens/challan_generation_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -59,7 +59,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         phone: user.academyPhone ?? user.phoneNumber,
       );
       // Update firestore directly for the missing fields
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'academy_code': newCode,
         'academy_id': user.uid,
         'joining_date': user.createdAt ?? FieldValue.serverTimestamp(),
@@ -74,8 +77,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _logout() async {
     await context.read<AuthProvider>().signOut();
     if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-          context, AppRoutes.login, (r) => false);
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
     }
   }
 
@@ -84,32 +86,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: context.appColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("Security Settings", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Security Settings",
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            const Text("Enhance your account security with biometric authentication.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text(
+                "Enhance your account security with biometric authentication.",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 24),
             StatefulBuilder(
               builder: (context, setInternalState) {
                 final session = context.watch<SessionProvider>();
                 return SwitchListTile(
-                  title: const Text("Biometric / Face Unlock", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                  subtitle: const Text("Use fingerprints or face ID to log in.", style: TextStyle(fontSize: 12)),
+                  title: const Text("Biometric / Face Unlock",
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  subtitle: const Text("Use fingerprints or face ID to log in.",
+                      style: TextStyle(fontSize: 12)),
                   value: session.biometricEnabled,
                   activeThumbColor: AppColors.accent,
                   onChanged: (val) async {
                     if (val) {
-                      final authenticated = await session.authenticateWithBiometrics();
+                      final authenticated =
+                          await session.authenticateWithBiometrics();
                       if (authenticated) {
                         final pass = await _promptForPassword(context);
                         if (pass != null) {
-                          await session.setBiometricEnabled(true, password: pass);
+                          await session.setBiometricEnabled(true,
+                              password: pass);
                         }
                       }
                     } else {
@@ -129,7 +144,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 foregroundColor: AppColors.accent,
                 elevation: 0,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.accent)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.accent)),
               ),
             ),
             const SizedBox(height: 24),
@@ -154,37 +171,53 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Enter a new password for your account.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              const Text("Enter a new password for your account.",
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 20),
-              LabeledField(label: "New Password", hint: "Min 6 chars", controller: passCtrl, obscure: true),
-              LabeledField(label: "Confirm Password", hint: "Re-enter", controller: confirmCtrl, obscure: true),
+              LabeledField(
+                  label: "New Password",
+                  hint: "Min 6 chars",
+                  controller: passCtrl,
+                  obscure: true),
+              LabeledField(
+                  label: "Confirm Password",
+                  hint: "Re-enter",
+                  controller: confirmCtrl,
+                  obscure: true),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
           TextButton(
             onPressed: () async {
               if (passCtrl.text != confirmCtrl.text) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match!")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
               if (passCtrl.text.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Minimum 6 characters required!")));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Minimum 6 characters required!")));
                 return;
               }
-              
+
               try {
                 await AuthService().directUpdatePassword(passCtrl.text);
                 if (ctx.mounted) {
-                   Navigator.pop(ctx);
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password updated successfully!")));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Password updated successfully!")));
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text("Error: $e")));
               }
-            }, 
-            child: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+            },
+            child: const Text("UPDATE",
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -201,16 +234,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const Text("Enter your account password to enable biometric login.",
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             const SizedBox(height: 16),
-            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+            LabeledField(
+                label: "Current Password",
+                hint: "Required",
+                controller: ctrl,
+                obscure: true),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text), 
-            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text("VERIFY",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppColors.accent)),
           ),
         ],
       ),
@@ -219,38 +260,64 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _showAcademyInfoSettings(BuildContext context, AppUser? user) {
     if (user == null) return;
-    
-    final nameCtrl = TextEditingController(text: user.academyName ?? "SRS Tech Matrix");
-    final addressCtrl = TextEditingController(text: user.academyAddress ?? "123 Education Lane, Lahore");
-    final phoneCtrl = TextEditingController(text: user.academyPhone ?? "03014334151");
+
+    final nameCtrl =
+        TextEditingController(text: user.academyName ?? "SRS Tech Matrix");
+    final addressCtrl = TextEditingController(
+        text: user.academyAddress ?? "123 Education Lane, Lahore");
+    final phoneCtrl =
+        TextEditingController(text: user.academyPhone ?? "03014334151");
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.appColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        padding: EdgeInsets.fromLTRB(
+            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("Academy Information", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Academy Information",
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text("Update details for official reports and parents support section.", style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            const Text(
+                "Update details for official reports and parents support section.",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             const SizedBox(height: 24),
             Center(
               child: CircleAvatar(
                 radius: 40,
                 backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                backgroundImage: user.academyLogo != null ? NetworkImage(user.academyLogo!) : null,
-                child: user.academyLogo == null ? const Icon(Icons.business_rounded, color: AppColors.accent, size: 32) : null,
+                backgroundImage: user.academyLogo != null
+                    ? NetworkImage(user.academyLogo!)
+                    : null,
+                child: user.academyLogo == null
+                    ? const Icon(Icons.business_rounded,
+                        color: AppColors.accent, size: 32)
+                    : null,
               ),
             ),
             const SizedBox(height: 24),
-            LabeledField(label: "Academy Name", hint: "SRS Tech Matrix", controller: nameCtrl),
-            LabeledField(label: "Address", hint: "Enter full address", controller: addressCtrl),
-            LabeledField(label: "Contact Number", hint: "+92...", controller: phoneCtrl, keyboardType: TextInputType.phone),
+            LabeledField(
+                label: "Academy Name",
+                hint: "SRS Tech Matrix",
+                controller: nameCtrl),
+            LabeledField(
+                label: "Address",
+                hint: "Enter full address",
+                controller: addressCtrl),
+            LabeledField(
+                label: "Contact Number",
+                hint: "+92...",
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone),
             const SizedBox(height: 16),
             PrimaryButton(
               label: "SAVE CHANGES",
@@ -262,8 +329,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   phone: phoneCtrl.text,
                 );
                 if (ctx.mounted) {
-                   Navigator.pop(ctx);
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Info updated successfully!")));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Info updated successfully!")));
                 }
               },
             ),
@@ -306,7 +374,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: const Icon(Icons.security_rounded, color: AppColors.accent),
             onPressed: () => _showSecuritySettings(context),
           ),
-          const ThemeToggle(), 
+          const ThemeToggle(),
           IconButton(
             icon: const Icon(Icons.logout_rounded,
                 color: AppColors.textSecondary),
@@ -343,7 +411,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Text('Academy overview',
                     style: TextStyle(color: context.appColors.textSecondary)),
                 const SizedBox(height: 16),
-                
+
                 // NEW: Display Academy Code for easy sharing
                 if (user?.academyCode != null)
                   _buildAcademyCodeCard(user!.academyCode!),
@@ -358,7 +426,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const UserManagementScreen(initialIndex: 0),
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 0),
                         ),
                       ),
                     ),
@@ -370,7 +439,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const UserManagementScreen(initialIndex: 1),
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 1),
                         ),
                       ),
                     ),
@@ -382,7 +452,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const UserManagementScreen(initialIndex: 2),
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 2),
                         ),
                       ),
                     ),
@@ -400,7 +471,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'User Management',
                   'Add or remove teachers, students, parents',
                   Icons.group_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const UserManagementScreen()),
@@ -411,7 +482,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Class Management',
                   'Create classes, assign teachers, enroll students',
                   Icons.class_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ClassManagementScreen()),
@@ -422,7 +493,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Approval Requests',
                   'Approve or reject new signups',
                   Icons.how_to_reg_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ApprovalRequestsScreen()),
@@ -433,10 +504,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Fee Ledger',
                   'Track fees and defaulters',
                   Icons.receipt_long_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const FeeLedgerScreen()),
+                    MaterialPageRoute(builder: (_) => const FeeLedgerScreen()),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -444,7 +514,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Bulk Fee Challans',
                   'Generate monthly invoices for classes',
                   Icons.request_quote_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ChallanGenerationScreen()),
@@ -455,7 +525,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Announcements',
                   'Broadcast to teachers, students, parents',
                   Icons.campaign_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const AnnouncementsScreen()),
@@ -466,7 +536,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Test Reports & Grading',
                   'Monitor student performance and results',
                   Icons.analytics_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const AdminQuizListScreen()),
@@ -477,7 +547,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'AI Prediction & Insights',
                   'Predict student risk and revenue trends',
                   Icons.auto_awesome_rounded,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const AdminAiPredictionScreen()),
@@ -493,17 +563,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _notificationBell(BuildContext context, AppUser? user) {
     if (user == null) return const SizedBox();
-    
+
     return StreamBuilder<List<dynamic>>(
-      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      stream:
+          NotificationService().watchForUser(user.uid, user.academyId ?? ''),
       builder: (context, snap) {
-        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        final count =
+            snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
         return Stack(
           alignment: Alignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+              icon: const Icon(Icons.notifications_rounded,
+                  color: AppColors.accent),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen())),
             ),
             if (count > 0)
               Positioned(
@@ -511,8 +587,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 top: 8,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                  decoration: const BoxDecoration(
+                      color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
           ],
@@ -533,7 +614,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             decoration: BoxDecoration(
               color: context.appColors.surface.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+              border: Border.all(
+                  color: context.appColors.border.withValues(alpha: 0.5)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -553,7 +635,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   fit: BoxFit.scaleDown,
                   child: Text(label,
                       style: TextStyle(
-                          color: context.appColors.textSecondary, fontSize: 11)),
+                          color: context.appColors.textSecondary,
+                          fontSize: 11)),
                 ),
               ],
             ),
@@ -579,16 +662,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("ACADEMY JOINING CODE", style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                Text(code, style: const TextStyle(color: AppColors.accent, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                const Text("ACADEMY JOINING CODE",
+                    style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
+                Text(code,
+                    style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.copy_all_rounded, color: AppColors.accent, size: 20),
+            icon: const Icon(Icons.copy_all_rounded,
+                color: AppColors.accent, size: 20),
             onPressed: () {
-               // Copy logic here
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Academy Code copied to clipboard!")));
+              // Copy logic here
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text("Academy Code copied to clipboard!")));
             },
           ),
         ],
@@ -611,8 +706,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             decoration: BoxDecoration(
               color: context.appColors.surface.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(14),
-              border:
-              Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+              border: Border.all(
+                  color: context.appColors.border.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -629,13 +724,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 2),
                       Text(subtitle,
                           style: TextStyle(
-                              color: context.appColors.textMuted, fontSize: 12)),
+                              color: context.appColors.textMuted,
+                              fontSize: 12)),
                     ],
                   ),
                 ),
                 if (enabled)
-                  const Icon(Icons.chevron_right,
-                      color: AppColors.textMuted),
+                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
               ],
             ),
           ),

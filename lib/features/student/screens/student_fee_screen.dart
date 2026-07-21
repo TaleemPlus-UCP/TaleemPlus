@@ -22,7 +22,8 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fee Status', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Fee Status',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -31,11 +32,13 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
           child: FutureBuilder<List<FeeChallanModel>>(
             future: () {
               final user = context.read<AuthProvider>().currentUser;
-              return _repo.getForStudent(widget.studentUid, user?.academyId ?? '');
+              return _repo.getForStudent(
+                  widget.studentUid, user?.academyId ?? '');
             }(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
               }
 
               final challans = snapshot.data ?? [];
@@ -52,7 +55,8 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
                       padding: const EdgeInsets.all(20),
                       itemCount: challans.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) => _feeTile(challans[index]),
+                      itemBuilder: (context, index) =>
+                          _feeTile(challans[index]),
                     ),
                   ),
                 ],
@@ -65,8 +69,10 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
   }
 
   Widget _buildSummaryHeader(List<FeeChallanModel> challans) {
-    final pending = challans.where((i) => !i.isPaid).fold(0.0, (sum, i) => sum + i.totalAmount);
-    
+    final pending = challans
+        .where((i) => !i.isPaid)
+        .fold(0.0, (sum, i) => sum + i.totalAmount);
+
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
@@ -108,7 +114,8 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
               color: AppColors.accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.accent, size: 32),
+            child: const Icon(Icons.account_balance_wallet_rounded,
+                color: AppColors.accent, size: 32),
           ),
         ],
       ),
@@ -117,7 +124,9 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
 
   Widget _feeTile(FeeChallanModel c) {
     final bool isOverdue = c.isOverdue && !c.isPaid;
-    final Color statusColor = c.isPaid ? AppColors.success : (isOverdue ? AppColors.danger : AppColors.warning);
+    final Color statusColor = c.isPaid
+        ? AppColors.success
+        : (isOverdue ? AppColors.danger : AppColors.warning);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -134,14 +143,18 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
               children: [
                 Text(
                   c.challanNumber,
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  c.isPaid 
-                    ? "Paid"
-                    : "Due Date: ${DateFormat('MMM d, yyyy').format(c.dueDate)}",
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  c.isPaid
+                      ? "Paid"
+                      : "Due Date: ${DateFormat('MMM d, yyyy').format(c.dueDate)}",
+                  style:
+                      const TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ],
             ),
@@ -151,7 +164,10 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
             children: [
               Text(
                 "Rs. ${c.totalAmount.toStringAsFixed(0)}",
-                style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 16),
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16),
               ),
               const SizedBox(height: 4),
               Container(
@@ -162,7 +178,11 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
                 ),
                 child: Text(
                   c.status.toUpperCase(),
-                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
                 ),
               ),
             ],
@@ -179,7 +199,8 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
         children: [
           Icon(Icons.receipt_outlined, size: 64, color: AppColors.textMuted),
           SizedBox(height: 16),
-          Text("No fee records found.", style: TextStyle(color: AppColors.textSecondary)),
+          Text("No fee records found.",
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );

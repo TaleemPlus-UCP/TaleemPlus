@@ -7,7 +7,7 @@ class QuizQuestion {
   final String text;
   final QuestionType type;
   final List<String>? options; // For MCQ
-  final int? correctIndex;     // For MCQ (Teacher reference)
+  final int? correctIndex; // For MCQ (Teacher reference)
   final double marks;
   final List<String> gradingKeywords; // NEW: For 100% Offline AI Checking
 
@@ -38,24 +38,28 @@ class QuizQuestion {
       id: map['id'] ?? '',
       text: map['text'] ?? '',
       type: map['type'] == 'mcq' ? QuestionType.mcq : QuestionType.short,
-      options: map['options'] != null ? List<String>.from(map['options']) : null,
+      options:
+          map['options'] != null ? List<String>.from(map['options']) : null,
       correctIndex: map['correct_index'],
       marks: (map['marks'] ?? 0).toDouble(),
-      gradingKeywords: (map['grading_keywords'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      gradingKeywords: (map['grading_keywords'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }
 
 class QuizModel {
   final String id;
-  final String academyId; 
+  final String academyId;
   final String classId;
   final String classLabel;
   final String title;
   final String subject;
-  final String month;     
-  final String session;   
-  final String chapter;   
+  final String month;
+  final String session;
+  final String chapter;
   final String difficulty;
   final double totalMarks;
   final DateTime testDate;
@@ -67,7 +71,7 @@ class QuizModel {
 
   QuizModel({
     required this.id,
-    required this.academyId, 
+    required this.academyId,
     required this.classId,
     required this.classLabel,
     required this.title,
@@ -101,7 +105,9 @@ class QuizModel {
       'instructions': instructions,
       'created_by_uid': createdByUid,
       'created_by_name': createdByName,
-      'created_at': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'created_at': createdAt != null
+          ? Timestamp.fromDate(createdAt!)
+          : FieldValue.serverTimestamp(),
       'questions': questions.map((q) => q.toMap()).toList(),
     };
   }
@@ -123,7 +129,9 @@ class QuizModel {
       instructions: map['instructions'] ?? '',
       createdByUid: map['created_by_uid'] ?? '',
       createdByName: map['created_by_name'] ?? '',
-      createdAt: map['created_at'] != null ? (map['created_at'] as Timestamp).toDate() : null,
+      createdAt: map['created_at'] != null
+          ? (map['created_at'] as Timestamp).toDate()
+          : null,
       questions: (map['questions'] as List? ?? [])
           .map((q) => QuizQuestion.fromMap(q as Map<String, dynamic>))
           .toList(),

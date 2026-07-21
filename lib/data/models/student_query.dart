@@ -28,17 +28,18 @@ class StudentQuery {
   });
 
   Map<String, dynamic> toMap() => {
-    'academy_id': academyId,
-    'class_id': classId,
-    'student_id': studentId,
-    'student_name': studentName,
-    'teacher_id': teacherId,
-    'question': question.trim(),
-    'answer': answer,
-    'is_resolved': isResolved,
-    'created_at': FieldValue.serverTimestamp(),
-    'answered_at': answeredAt != null ? Timestamp.fromDate(answeredAt!) : null,
-  };
+        'academy_id': academyId,
+        'class_id': classId,
+        'student_id': studentId,
+        'student_name': studentName,
+        'teacher_id': teacherId,
+        'question': question.trim(),
+        'answer': answer,
+        'is_resolved': isResolved,
+        'created_at': FieldValue.serverTimestamp(),
+        'answered_at':
+            answeredAt != null ? Timestamp.fromDate(answeredAt!) : null,
+      };
 
   factory StudentQuery.fromMap(String id, Map<String, dynamic> map) {
     return StudentQuery(

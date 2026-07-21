@@ -70,10 +70,10 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _bootstrap() async {
     try {
       final auth = context.read<AuthProvider>();
-      
+
       // Perform session restoration
       final user = await auth.tryRestoreSession();
-      
+
       // Minimum splash time to ensure animation completes
       await Future.delayed(const Duration(milliseconds: 2500));
 
@@ -225,7 +225,7 @@ class _SplashScreenState extends State<SplashScreen>
                       minHeight: 3,
                       backgroundColor: Color(0x33FFFFFF),
                       valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.accent),
+                          AlwaysStoppedAnimation<Color>(AppColors.accent),
                     ),
                   ),
                 ),

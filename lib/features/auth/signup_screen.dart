@@ -16,21 +16,22 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
+class _SignupScreenState extends State<SignupScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  
+
   // Admin only
   final _academyNameCtrl = TextEditingController();
   final _academyAddressCtrl = TextEditingController();
-  
+
   // Member only
   final _academyCodeCtrl = TextEditingController();
   UserRole _selectedRole = UserRole.student;
@@ -70,9 +71,10 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
   Future<void> _verifyCode() async {
     if (_academyCodeCtrl.text.isEmpty) return;
     setState(() => _isSearchingAcademy = true);
-    
+
     try {
-      final academy = await AuthService().findAcademyByCode(_academyCodeCtrl.text);
+      final academy =
+          await AuthService().findAcademyByCode(_academyCodeCtrl.text);
       if (mounted) {
         setState(() {
           _isSearchingAcademy = false;
@@ -82,7 +84,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           } else {
             _linkedAcademyId = null;
             _linkedAcademyName = null;
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid Academy Code!"), backgroundColor: AppColors.danger));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Invalid Academy Code!"),
+                backgroundColor: AppColors.danger));
           }
         });
       }
@@ -95,15 +99,18 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     if (!_formKey.currentState!.validate()) return;
 
     final isAdminFlow = _tabController.index == 0;
-    
+
     // Auto-verify code if not already verified for Members
     if (!isAdminFlow && _linkedAcademyId == null) {
       if (_academyCodeCtrl.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Academy Code is required."), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Academy Code is required."),
+            backgroundColor: AppColors.danger));
         return;
       }
       await _verifyCode();
-      if (_linkedAcademyId == null) return; // _verifyCode will show its own snackbar
+      if (_linkedAcademyId == null)
+        return; // _verifyCode will show its own snackbar
     }
 
     final auth = context.read<AuthProvider>();
@@ -127,7 +134,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         await _showPendingDialog();
       }
     } else if (auth.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.errorMessage!), backgroundColor: AppColors.danger));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(auth.errorMessage!),
+          backgroundColor: AppColors.danger));
     }
   }
 
@@ -137,21 +146,36 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text("Academy Registered!", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+        title: const Text("Academy Registered!",
+            style: TextStyle(
+                color: AppColors.accent, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Your academy is ready. Share this code with your teachers and students to join:", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text(
+                "Your academy is ready. Share this code with your teachers and students to join:",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.accent)),
-              child: Text(code, style: const TextStyle(color: AppColors.accent, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.accent)),
+              child: Text(code,
+                  style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2)),
             ),
           ],
         ),
         actions: [
-          PrimaryButton(label: "ENTER DASHBOARD", onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard)),
+          PrimaryButton(
+              label: "ENTER DASHBOARD",
+              onPressed: () => Navigator.pushReplacementNamed(
+                  context, AppRoutes.adminDashboard)),
         ],
       ),
     );
@@ -164,8 +188,12 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text("Request Sent"),
-        content: const Text("Your account is pending approval from the Academy Admin. You can login once they approve you."),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("OK"))],
+        content: const Text(
+            "Your account is pending approval from the Academy Admin. You can login once they approve you."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("OK"))
+        ],
       ),
     );
     if (mounted) Navigator.pop(context);
@@ -194,7 +222,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                         _buildFormFields(),
                         const SizedBox(height: 32),
                         PrimaryButton(
-                          label: _tabController.index == 0 ? "REGISTER ACADEMY" : "JOIN AS ${_selectedRole.name.toUpperCase()}",
+                          label: _tabController.index == 0
+                              ? "REGISTER ACADEMY"
+                              : "JOIN AS ${_selectedRole.name.toUpperCase()}",
                           icon: Icons.arrow_forward_rounded,
                           loading: loading,
                           onPressed: loading ? null : _submit,
@@ -218,7 +248,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         children: [
-          IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
+          IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              onPressed: () => Navigator.pop(context)),
           const Spacer(),
           const SizedBox(width: 40),
         ],
@@ -252,8 +284,10 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         ),
         labelColor: AppColors.textOnAccent,
         unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 0.5),
+        labelStyle: const TextStyle(
+            fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.5),
+        unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 0.5),
         tabs: const [
           Tab(text: "REGISTER ACADEMY"),
           Tab(text: "JOIN ACADEMY"),
@@ -266,22 +300,53 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     final isAdmin = _tabController.index == 0;
     return Column(
       children: [
-        LabeledField(label: "Full Name", hint: "Enter your name", controller: _nameCtrl, validator: Validators.fullName),
-        LabeledField(label: "Email Address", hint: "Enter email", controller: _emailCtrl, validator: Validators.email, keyboardType: TextInputType.emailAddress),
-        LabeledField(label: "Phone Number", hint: "+92...", controller: _phoneCtrl, validator: Validators.phone, keyboardType: TextInputType.phone),
-        
+        LabeledField(
+            label: "Full Name",
+            hint: "Enter your name",
+            controller: _nameCtrl,
+            validator: Validators.fullName),
+        LabeledField(
+            label: "Email Address",
+            hint: "Enter email",
+            controller: _emailCtrl,
+            validator: Validators.email,
+            keyboardType: TextInputType.emailAddress),
+        LabeledField(
+            label: "Phone Number",
+            hint: "+92...",
+            controller: _phoneCtrl,
+            validator: Validators.phone,
+            keyboardType: TextInputType.phone),
         if (isAdmin) ...[
-          LabeledField(label: "Academy Name", hint: "e.g. SRS Tech Matrix", controller: _academyNameCtrl, validator: (v) => v!.isEmpty ? "Required" : null),
-          LabeledField(label: "Academy Address", hint: "Full location", controller: _academyAddressCtrl),
+          LabeledField(
+              label: "Academy Name",
+              hint: "e.g. SRS Tech Matrix",
+              controller: _academyNameCtrl,
+              validator: (v) => v!.isEmpty ? "Required" : null),
+          LabeledField(
+              label: "Academy Address",
+              hint: "Full location",
+              controller: _academyAddressCtrl),
         ] else ...[
-          const Align(alignment: Alignment.centerLeft, child: Text("I AM A:", style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1))),
+          const Align(
+              alignment: Alignment.centerLeft,
+              child: Text("I AM A:",
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1))),
           const SizedBox(height: 12),
           _buildRolePicker(),
           const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(child: LabeledField(label: "Academy Code", hint: "TP-XXXXX", controller: _academyCodeCtrl)),
+              Expanded(
+                  child: LabeledField(
+                      label: "Academy Code",
+                      hint: "TP-XXXXX",
+                      controller: _academyCodeCtrl)),
               const SizedBox(width: 12),
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -290,13 +355,30 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                   child: OutlinedButton(
                     onPressed: _isSearchingAcademy ? null : _verifyCode,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: _linkedAcademyId != null ? AppColors.success : AppColors.accent, width: 1.2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      backgroundColor: _linkedAcademyId != null ? AppColors.success.withValues(alpha: 0.05) : Colors.transparent,
+                      side: BorderSide(
+                          color: _linkedAcademyId != null
+                              ? AppColors.success
+                              : AppColors.accent,
+                          width: 1.2),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      backgroundColor: _linkedAcademyId != null
+                          ? AppColors.success.withValues(alpha: 0.05)
+                          : Colors.transparent,
                     ),
-                    child: _isSearchingAcademy 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
-                        : Icon(_linkedAcademyId != null ? Icons.verified_user_rounded : Icons.vpn_key_rounded, color: _linkedAcademyId != null ? AppColors.success : AppColors.accent),
+                    child: _isSearchingAcademy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.accent))
+                        : Icon(
+                            _linkedAcademyId != null
+                                ? Icons.verified_user_rounded
+                                : Icons.vpn_key_rounded,
+                            color: _linkedAcademyId != null
+                                ? AppColors.success
+                                : AppColors.accent),
                   ),
                 ),
               ),
@@ -305,19 +387,30 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           if (_linkedAcademyName != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: Text("Joining: $_linkedAcademyName", style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Text("Joining: $_linkedAcademyName",
+                  style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
             ),
         ],
-
         LabeledField(
-          label: "Password", 
-          hint: "Min 6 chars", 
-          controller: _passCtrl, 
-          obscure: _obscure, 
+          label: "Password",
+          hint: "Min 6 chars",
+          controller: _passCtrl,
+          obscure: _obscure,
           validator: Validators.password,
-          suffix: IconButton(icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off, color: AppColors.textMuted), onPressed: () => setState(() => _obscure = !_obscure)),
+          suffix: IconButton(
+              icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off,
+                  color: AppColors.textMuted),
+              onPressed: () => setState(() => _obscure = !_obscure)),
         ),
-        LabeledField(label: "Confirm Password", hint: "Re-enter password", controller: _confirmCtrl, obscure: _obscure, validator: (v) => Validators.confirmPassword(v, _passCtrl.text)),
+        LabeledField(
+            label: "Confirm Password",
+            hint: "Re-enter password",
+            controller: _confirmCtrl,
+            obscure: _obscure,
+            validator: (v) => Validators.confirmPassword(v, _passCtrl.text)),
       ],
     );
   }
@@ -337,17 +430,30 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 gradient: selected ? AppColors.accentButton : null,
-                color: selected ? null : AppColors.surface.withValues(alpha: 0.5),
+                color:
+                    selected ? null : AppColors.surface.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: selected ? Colors.transparent : AppColors.border.withValues(alpha: 0.5)),
-                boxShadow: selected ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))] : null,
+                border: Border.all(
+                    color: selected
+                        ? Colors.transparent
+                        : AppColors.border.withValues(alpha: 0.5)),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                            color: AppColors.accent.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4))
+                      ]
+                    : null,
               ),
               child: Center(
                 child: Text(
-                  role.name.toUpperCase(), 
+                  role.name.toUpperCase(),
                   style: TextStyle(
-                    color: selected ? AppColors.textOnAccent : AppColors.textSecondary, 
-                    fontSize: 10, 
+                    color: selected
+                        ? AppColors.textOnAccent
+                        : AppColors.textSecondary,
+                    fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                   ),
@@ -364,10 +470,13 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("Already have an account? ", style: TextStyle(color: AppColors.textSecondary)),
+        const Text("Already have an account? ",
+            style: TextStyle(color: AppColors.textSecondary)),
         GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Text("Log In", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
+          child: const Text("Log In",
+              style: TextStyle(
+                  color: AppColors.accent, fontWeight: FontWeight.w700)),
         ),
       ],
     );

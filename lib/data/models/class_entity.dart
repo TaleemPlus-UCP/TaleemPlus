@@ -11,7 +11,7 @@ class ClassEntity {
   final String className;
   final String section;
   final String subject;
-  final String primaryTeacherId;    // teacher's Firebase uid
+  final String primaryTeacherId; // teacher's Firebase uid
   final String primaryTeacherName;
   final String primaryTeacherEmail;
   final List<String> studentIds;
@@ -43,20 +43,20 @@ class ClassEntity {
   }
 
   Map<String, dynamic> toMap() => {
-    'academy_id': academyId,
-    'class_name': className,
-    'section': section,
-    'subject': subject,
-    'primary_teacher_id': primaryTeacherId,
-    'primary_teacher_name': primaryTeacherName,
-    'primary_teacher_email': primaryTeacherEmail,
-    'student_ids': studentIds,
-    'student_names': studentNames,
-    'created_at': createdAt.millisecondsSinceEpoch == 0
-        ? FieldValue.serverTimestamp()
-        : Timestamp.fromDate(createdAt),
-    'updated_at': FieldValue.serverTimestamp(),
-  };
+        'academy_id': academyId,
+        'class_name': className,
+        'section': section,
+        'subject': subject,
+        'primary_teacher_id': primaryTeacherId,
+        'primary_teacher_name': primaryTeacherName,
+        'primary_teacher_email': primaryTeacherEmail,
+        'student_ids': studentIds,
+        'student_names': studentNames,
+        'created_at': createdAt.millisecondsSinceEpoch == 0
+            ? FieldValue.serverTimestamp()
+            : Timestamp.fromDate(createdAt),
+        'updated_at': FieldValue.serverTimestamp(),
+      };
 
   factory ClassEntity.fromMap(String id, Map<String, dynamic> map) {
     final rawIds = map['student_ids'];

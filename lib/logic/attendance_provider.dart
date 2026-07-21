@@ -25,8 +25,7 @@ class AttendanceProvider extends ChangeNotifier {
 
   String statusFor(String studentId) => _statuses[studentId] ?? 'absent';
 
-  int get presentCount =>
-      _statuses.values.where((s) => s == 'present').length;
+  int get presentCount => _statuses.values.where((s) => s == 'present').length;
   int get absentCount => _statuses.values.where((s) => s == 'absent').length;
   int get lateCount => _statuses.values.where((s) => s == 'late').length;
 
@@ -59,8 +58,8 @@ class AttendanceProvider extends ChangeNotifier {
       _statuses[id] = 'absent'; // default
     }
     try {
-      final existing =
-      await _repo.forClassOnDate(classId: classId, date: date, academyId: academyId);
+      final existing = await _repo.forClassOnDate(
+          classId: classId, date: date, academyId: academyId);
       for (final r in existing) {
         _statuses[r.studentId] = r.status;
       }
@@ -117,7 +116,8 @@ class AttendanceProvider extends ChangeNotifier {
   }
 
   /// Watch attendance for a specific student (Real-time).
-  Stream<List<AttendanceRecord>> watchStudentAttendance(String studentId, String academyId) {
+  Stream<List<AttendanceRecord>> watchStudentAttendance(
+      String studentId, String academyId) {
     return _repo.watchForStudent(studentId, academyId);
   }
 }

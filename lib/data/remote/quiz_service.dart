@@ -15,15 +15,16 @@ class QuizService {
   }
 
   /// Get tests for a specific class (Safe query)
-  Stream<List<QuizModel>> watchQuizzesByClass(String classId, String academyId) {
+  Stream<List<QuizModel>> watchQuizzesByClass(
+      String classId, String academyId) {
     return _quizzes
         .where('class_id', isEqualTo: classId)
         .snapshots()
         .map((snap) {
       final list = snap.docs
           .map((doc) =>
-          QuizModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((q) => q.academyId == academyId) 
+              QuizModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .where((q) => q.academyId == academyId)
           .toList();
       list.sort((a, b) {
         final dateA = a.createdAt ?? DateTime(2000);
@@ -54,26 +55,27 @@ class QuizService {
   }
 
   /// Watch marks for a specific quiz (Safe query)
-  Stream<List<TestMarkModel>> watchMarksByQuiz(String quizId, String academyId) {
-    return _marks
-        .where('quiz_id', isEqualTo: quizId)
-        .snapshots()
-        .map((snap) => snap.docs
-        .map((doc) => TestMarkModel.fromMap(
-        doc.id, doc.data() as Map<String, dynamic>))
-        .where((m) => m.academyId == academyId)
-        .toList());
+  Stream<List<TestMarkModel>> watchMarksByQuiz(
+      String quizId, String academyId) {
+    return _marks.where('quiz_id', isEqualTo: quizId).snapshots().map((snap) =>
+        snap
+            .docs
+            .map((doc) => TestMarkModel.fromMap(
+                doc.id, doc.data() as Map<String, dynamic>))
+            .where((m) => m.academyId == academyId)
+            .toList());
   }
 
   /// Watch marks for a specific student (Safe query)
-  Stream<List<TestMarkModel>> watchStudentMarks(String studentUid, String academyId) {
+  Stream<List<TestMarkModel>> watchStudentMarks(
+      String studentUid, String academyId) {
     return _marks
         .where('student_id', isEqualTo: studentUid)
         .snapshots()
         .map((snap) {
       final list = snap.docs
-          .map((doc) => TestMarkModel.fromMap(
-          doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+              TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
           .where((m) => m.academyId == academyId)
           .toList();
       list.sort((a, b) {
@@ -84,15 +86,14 @@ class QuizService {
   }
 
   /// Get all marks for a class (Safe query)
-  Stream<List<TestMarkModel>> watchClassMarks(String classId, String academyId) {
-    return _marks
-        .where('class_id', isEqualTo: classId)
-        .snapshots()
-        .map((snap) => snap.docs
-        .map((doc) => TestMarkModel.fromMap(
-        doc.id, doc.data() as Map<String, dynamic>))
-        .where((m) => m.academyId == academyId)
-        .toList());
+  Stream<List<TestMarkModel>> watchClassMarks(
+      String classId, String academyId) {
+    return _marks.where('class_id', isEqualTo: classId).snapshots().map(
+        (snap) => snap.docs
+            .map((doc) => TestMarkModel.fromMap(
+                doc.id, doc.data() as Map<String, dynamic>))
+            .where((m) => m.academyId == academyId)
+            .toList());
   }
 
   /// NEW: Fetch ALL marks across the academy (for AI Predictions)
@@ -100,7 +101,8 @@ class QuizService {
     try {
       final snap = await _marks.get();
       return snap.docs
-          .map((doc) => TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+              TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
           .where((m) => m.academyId == academyId)
           .toList();
     } catch (e) {

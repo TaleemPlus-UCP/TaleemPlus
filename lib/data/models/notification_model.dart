@@ -6,7 +6,8 @@ class NotificationModel {
   final String recipientId; // UID of the user who should see this
   final String title;
   final String message;
-  final String type; // 'approval', 'fee', 'attendance', 'result', 'announcement'
+  final String
+      type; // 'approval', 'fee', 'attendance', 'result', 'announcement'
   final bool isRead;
   final DateTime createdAt;
 

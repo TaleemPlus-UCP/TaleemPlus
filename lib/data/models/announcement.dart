@@ -55,22 +55,22 @@ class Announcement {
   }
 
   Map<String, dynamic> toMap() => {
-    'academy_id': academyId,
-    'title': title,
-    'message': message,
-    'target_roles': targetRoles,
-    'created_by_uid': createdByUid,
-    'created_by_name': createdByName,
-    'created_at': createdAt.millisecondsSinceEpoch == 0
-        ? FieldValue.serverTimestamp()
-        : Timestamp.fromDate(createdAt),
-    'updated_at': FieldValue.serverTimestamp(),
-  };
+        'academy_id': academyId,
+        'title': title,
+        'message': message,
+        'target_roles': targetRoles,
+        'created_by_uid': createdByUid,
+        'created_by_name': createdByName,
+        'created_at': createdAt.millisecondsSinceEpoch == 0
+            ? FieldValue.serverTimestamp()
+            : Timestamp.fromDate(createdAt),
+        'updated_at': FieldValue.serverTimestamp(),
+      };
 
   factory Announcement.fromMap(String id, Map<String, dynamic> map) {
     final rolesRaw = map['target_roles'];
     final roles =
-    (rolesRaw is List) ? rolesRaw.cast<String>() : <String>['all'];
+        (rolesRaw is List) ? rolesRaw.cast<String>() : <String>['all'];
     final ts = map['created_at'];
     final ts2 = map['updated_at'];
     return Announcement(

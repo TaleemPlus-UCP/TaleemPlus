@@ -7,8 +7,8 @@ class TestMarkModel {
   final String studentId;
   final String studentName;
   final String classId;
-  final String subject;   // NEW: Denormalized for AI
-  final String month;     // NEW: Denormalized for AI
+  final String subject; // NEW: Denormalized for AI
+  final String month; // NEW: Denormalized for AI
   final double marksObtained;
   final double totalMarks;
   final double percentage;

@@ -18,68 +18,77 @@ class StudentAttendanceScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Attendance', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('My Attendance',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty 
+          child: academyId.isEmpty
               ? const Center(child: Text("Academy session error"))
               : StreamBuilder<List<AttendanceRecord>>(
-            stream: context.read<AttendanceProvider>().watchStudentAttendance(studentUid, academyId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.accent));
-              }
+                  stream: context
+                      .read<AttendanceProvider>()
+                      .watchStudentAttendance(studentUid, academyId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent));
+                    }
 
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 48),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Error loading records: ${snapshot.error}",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.danger),
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline_rounded,
+                                  color: AppColors.danger, size: 48),
+                              const SizedBox(height: 16),
+                              Text(
+                                "Error loading records: ${snapshot.error}",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: AppColors.danger),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: AppColors.textMuted, fontSize: 12),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      );
+                    }
+
+                    final records = snapshot.data ?? [];
+
+                    if (records.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return Column(
+                      children: [
+                        _buildStatsHeader(records),
+                        Expanded(
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: records.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) =>
+                                _attendanceTile(records[index]),
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                );
-              }
-
-              final records = snapshot.data ?? [];
-
-              if (records.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return Column(
-                children: [
-                  _buildStatsHeader(records),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: records.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) => _attendanceTile(records[index]),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -102,7 +111,8 @@ class StudentAttendanceScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem("Overall", "${percentage.toStringAsFixed(1)}%", AppColors.accent),
+          _statItem(
+              "Overall", "${percentage.toStringAsFixed(1)}%", AppColors.accent),
           _statItem("Present", "$present", AppColors.success),
           _statItem("Absent", "${total - present - late}", AppColors.danger),
         ],
@@ -113,9 +123,15 @@ class StudentAttendanceScreen extends StatelessWidget {
   Widget _statItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900)),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 24, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700)),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -123,7 +139,7 @@ class StudentAttendanceScreen extends StatelessWidget {
   Widget _attendanceTile(AttendanceRecord r) {
     Color statusColor;
     IconData icon;
-    
+
     switch (r.status) {
       case 'present':
         statusColor = AppColors.success;
@@ -162,18 +178,25 @@ class StudentAttendanceScreen extends StatelessWidget {
               children: [
                 Text(
                   DateFormat('EEEE, MMMM d, yyyy').format(r.logDate),
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600),
                 ),
                 Text(
                   "Marked on ${DateFormat('h:mm a').format(r.recordedAt)}",
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ],
             ),
           ),
           Text(
             r.status.toUpperCase(),
-            style: TextStyle(color: statusColor, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
+            style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 1),
           ),
         ],
       ),
@@ -187,7 +210,8 @@ class StudentAttendanceScreen extends StatelessWidget {
         children: [
           Icon(Icons.event_busy_rounded, size: 64, color: AppColors.textMuted),
           SizedBox(height: 16),
-          Text("No attendance records found.", style: TextStyle(color: AppColors.textSecondary)),
+          Text("No attendance records found.",
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );

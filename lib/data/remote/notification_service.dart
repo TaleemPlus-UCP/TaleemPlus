@@ -27,7 +27,8 @@ class NotificationService {
   }
 
   /// Watch notifications for a specific user (Real-time)
-  Stream<List<NotificationModel>> watchForUser(String userId, String academyId) {
+  Stream<List<NotificationModel>> watchForUser(
+      String userId, String academyId) {
     return _col
         .where('academy_id', isEqualTo: academyId)
         .where('recipient_id', isEqualTo: userId)
@@ -35,7 +36,8 @@ class NotificationService {
         .limit(50)
         .snapshots()
         .map((snap) => snap.docs
-            .map((d) => NotificationModel.fromMap(d.id, d.data() as Map<String, dynamic>))
+            .map((d) => NotificationModel.fromMap(
+                d.id, d.data() as Map<String, dynamic>))
             .toList());
   }
 
@@ -50,7 +52,7 @@ class NotificationService {
         .where('recipient_id', isEqualTo: userId)
         .where('is_read', isEqualTo: false)
         .get();
-    
+
     for (var doc in snap.docs) {
       batch.update(doc.reference, {'is_read': true});
     }

@@ -9,7 +9,7 @@ class AttendanceRecord {
   final String studentId;
   final String studentName;
   final DateTime logDate;
-  final String status;      // 'present' | 'absent' | 'late'
+  final String status; // 'present' | 'absent' | 'late'
   final String markedByUid;
   final DateTime recordedAt;
 
@@ -41,15 +41,15 @@ class AttendanceRecord {
   }
 
   Map<String, dynamic> toMap() => {
-    'academy_id': academyId,
-    'class_id': classId,
-    'student_id': studentId,
-    'student_name': studentName,
-    'log_date': _dateOnly(logDate),
-    'status': status,
-    'marked_by_uid': markedByUid,
-    'recorded_at': FieldValue.serverTimestamp(),
-  };
+        'academy_id': academyId,
+        'class_id': classId,
+        'student_id': studentId,
+        'student_name': studentName,
+        'log_date': _dateOnly(logDate),
+        'status': status,
+        'marked_by_uid': markedByUid,
+        'recorded_at': FieldValue.serverTimestamp(),
+      };
 
   factory AttendanceRecord.fromMap(String id, Map<String, dynamic> map) {
     final ts = map['recorded_at'];

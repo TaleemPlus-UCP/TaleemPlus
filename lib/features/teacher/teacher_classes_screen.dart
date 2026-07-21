@@ -31,30 +31,30 @@ class TeacherClassesScreen extends StatelessWidget {
           child: user == null
               ? const _EmptyMessage(text: 'Please log in again.')
               : StreamBuilder<List<ClassEntity>>(
-            stream: context
-                .read<ClassProvider>()
-                .streamForTeacher(user.uid, user.academyId ?? ''),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.accent),
-                );
-              }
-              if (snap.hasError) {
-                return const _EmptyMessage(
-                    text: 'Could not load classes.');
-              }
-              final list = snap.data ?? const [];
-              if (list.isEmpty) return _emptyState();
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _classTile(context, list[i]),
-              );
-            },
-          ),
+                  stream: context
+                      .read<ClassProvider>()
+                      .streamForTeacher(user.uid, user.academyId ?? ''),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent),
+                      );
+                    }
+                    if (snap.hasError) {
+                      return const _EmptyMessage(
+                          text: 'Could not load classes.');
+                    }
+                    final list = snap.data ?? const [];
+                    if (list.isEmpty) return _emptyState();
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) => _classTile(context, list[i]),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -67,8 +67,7 @@ class TeacherClassesScreen extends StatelessWidget {
         Center(
           child: Column(
             children: [
-              Icon(Icons.class_outlined,
-                  size: 56, color: AppColors.textMuted),
+              Icon(Icons.class_outlined, size: 56, color: AppColors.textMuted),
               SizedBox(height: 12),
               Text('No classes assigned yet',
                   style: TextStyle(color: AppColors.textSecondary)),
@@ -104,8 +103,7 @@ class TeacherClassesScreen extends StatelessWidget {
                   color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.class_rounded,
-                    color: AppColors.accent),
+                child: const Icon(Icons.class_rounded, color: AppColors.accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -145,7 +143,8 @@ class TeacherClassesScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(c.displayLabel,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading:
@@ -156,11 +155,13 @@ class TeacherClassesScreen extends StatelessWidget {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => AttendanceMarkingScreen(classEntity: c)));
+                        builder: (_) =>
+                            AttendanceMarkingScreen(classEntity: c)));
               },
             ),
             ListTile(
-              leading: const Icon(Icons.psychology_rounded, color: AppColors.accent),
+              leading:
+                  const Icon(Icons.psychology_rounded, color: AppColors.accent),
               title: const Text("AI Paper Grader"),
               onTap: () {
                 Navigator.pop(ctx);
@@ -182,7 +183,8 @@ class TeacherClassesScreen extends StatelessWidget {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => ClassroomManagementScreen(classEntity: c)));
+                        builder: (_) =>
+                            ClassroomManagementScreen(classEntity: c)));
               },
             ),
           ],
@@ -199,8 +201,7 @@ class _EmptyMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(text,
-          style: const TextStyle(color: AppColors.textSecondary)),
+      child: Text(text, style: const TextStyle(color: AppColors.textSecondary)),
     );
   }
 }

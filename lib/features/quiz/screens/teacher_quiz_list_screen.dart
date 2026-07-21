@@ -14,7 +14,8 @@ import 'ai_paper_grader_screen.dart';
 class TeacherQuizListScreen extends StatefulWidget {
   final bool isAiGen;
   final String? initialClassId;
-  const TeacherQuizListScreen({super.key, this.isAiGen = false, this.initialClassId});
+  const TeacherQuizListScreen(
+      {super.key, this.isAiGen = false, this.initialClassId});
 
   @override
   State<TeacherQuizListScreen> createState() => _TeacherQuizListScreenState();
@@ -39,7 +40,9 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final classes = context.watch<ClassProvider>().classes
+    final classes = context
+        .watch<ClassProvider>()
+        .classes
         .where((c) => c.primaryTeacherId == user?.uid)
         .toList();
 
@@ -53,20 +56,20 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
       ),
       floatingActionButton: (widget.isAiGen && _selectedClassId != null)
           ? FloatingActionButton.extended(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.textOnAccent,
-        icon: const Icon(Icons.auto_awesome),
-        label: const Text('Generate AI Test'),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CreateQuizScreen(
-              classId: _selectedClassId!,
-              isAiGen: true,
-            ),
-          ),
-        ),
-      )
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.textOnAccent,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Generate AI Test'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateQuizScreen(
+                    classId: _selectedClassId!,
+                    isAiGen: true,
+                  ),
+                ),
+              ),
+            )
           : null,
       body: GradientBackground(
         child: SafeArea(
@@ -96,8 +99,7 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
                         child: DropdownButton<String>(
                           value: _selectedClassId,
                           hint: const Text('Choose a class',
-                              style:
-                              TextStyle(color: AppColors.textSecondary)),
+                              style: TextStyle(color: AppColors.textSecondary)),
                           dropdownColor: AppColors.surface,
                           isExpanded: true,
                           icon: const Icon(Icons.keyboard_arrow_down,
@@ -148,7 +150,9 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
   Widget _buildQuizList(String classId) {
     final user = context.read<AuthProvider>().currentUser;
     return StreamBuilder<List<QuizModel>>(
-      stream: context.read<QuizProvider>().watchTeacherQuizzes(classId, user?.academyId ?? ''),
+      stream: context
+          .read<QuizProvider>()
+          .watchTeacherQuizzes(classId, user?.academyId ?? ''),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -257,9 +261,9 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
                     onPressed: _pdfBusy
                         ? null
                         : () => _runPdfAction(
-                          () => PdfGeneratorService.printTestPaper(quiz),
-                      'Could not open print preview',
-                    ),
+                              () => PdfGeneratorService.printTestPaper(quiz),
+                              'Could not open print preview',
+                            ),
                     icon: const Icon(Icons.print_rounded, size: 18),
                     label: const Text("PRINT"),
                     style: OutlinedButton.styleFrom(
@@ -277,9 +281,9 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
                     onPressed: _pdfBusy
                         ? null
                         : () => _runPdfAction(
-                          () => PdfGeneratorService.shareTestPaper(quiz),
-                      'Could not share PDF',
-                    ),
+                              () => PdfGeneratorService.shareTestPaper(quiz),
+                              'Could not share PDF',
+                            ),
                     icon: const Icon(Icons.share_rounded, size: 18),
                     label: const Text("SHARE PDF"),
                     style: ElevatedButton.styleFrom(

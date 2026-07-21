@@ -15,7 +15,8 @@ class AllChallansScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fee Challans', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Fee Challans',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -43,7 +44,8 @@ class AllChallansScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,8 +55,11 @@ class AllChallansScreen extends StatelessWidget {
               CircleAvatar(
                 backgroundColor: AppColors.accent.withValues(alpha: 0.1),
                 child: Text(
-                  child.fullName.isNotEmpty ? child.fullName[0].toUpperCase() : '?',
-                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                  child.fullName.isNotEmpty
+                      ? child.fullName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                      color: AppColors.accent, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 14),
@@ -62,8 +67,14 @@ class AllChallansScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(child.fullName, style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-                    const Text("Student Profile", style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    Text(child.fullName,
+                        style: TextStyle(
+                            color: context.appColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                    const Text("Student Profile",
+                        style: TextStyle(
+                            color: AppColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
@@ -73,7 +84,8 @@ class AllChallansScreen extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => StudentChallanScreen(studentUid: child.uid)),
+              MaterialPageRoute(
+                  builder: (_) => StudentChallanScreen(studentUid: child.uid)),
             ),
             icon: const Icon(Icons.receipt_long_rounded, size: 18),
             label: const Text("VIEW CHALLAN"),
@@ -81,7 +93,8 @@ class AllChallansScreen extends StatelessWidget {
               backgroundColor: AppColors.accent,
               foregroundColor: AppColors.textOnAccent,
               minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
           ),
@@ -97,10 +110,16 @@ class AllChallansScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.child_care_rounded, size: 64, color: AppColors.textMuted),
+            Icon(Icons.child_care_rounded,
+                size: 64, color: AppColors.textMuted),
             SizedBox(height: 16),
-            Text("No children linked", style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-            Text("Please link a child first to see their fee challans.", textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            Text("No children linked",
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.bold)),
+            Text("Please link a child first to see their fee challans.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
           ],
         ),
       ),

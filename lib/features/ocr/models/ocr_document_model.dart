@@ -18,7 +18,8 @@ class OcrDocumentModel {
   });
 
   // Firestore se data map mein convert karne ke liye helper
-  factory OcrDocumentModel.fromMap(Map<String, dynamic> map, String documentId) {
+  factory OcrDocumentModel.fromMap(
+      Map<String, dynamic> map, String documentId) {
     return OcrDocumentModel(
       id: documentId,
       title: map['title'] ?? '',

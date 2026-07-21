@@ -59,8 +59,7 @@ class AcademyMember {
       role: (map['role'] ?? 'student') as String,
       extra: (map['extra'] ?? '') as String,
       status: (map['status'] ?? 'active') as String,
-      createdAt:
-      DateTime.tryParse((map['created_at'] ?? '') as String) ??
+      createdAt: DateTime.tryParse((map['created_at'] ?? '') as String) ??
           DateTime.now(),
     );
   }

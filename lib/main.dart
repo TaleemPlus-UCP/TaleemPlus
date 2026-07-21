@@ -13,7 +13,7 @@ import 'logic/quiz_provider.dart';
 import 'logic/theme_provider.dart';
 import 'logic/admin_ai_provider.dart';
 import 'logic/parent_provider.dart';
-import 'logic/session_provider.dart'; 
+import 'logic/session_provider.dart';
 import 'logic/notification_provider.dart'; // NEW
 import 'features/auth/splash_screen.dart';
 import 'features/auth/login_screen.dart';

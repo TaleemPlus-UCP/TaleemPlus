@@ -25,7 +25,7 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
     super.initState();
     final classes = context.read<ClassProvider>().classes;
     final clsList = classes.where((c) => c.id == widget.quiz.classId).toList();
-    
+
     if (clsList.isNotEmpty) {
       final cls = clsList.first;
       for (var studentId in cls.studentIds) {
@@ -45,14 +45,17 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
   Future<void> _saveMarks() async {
     setState(() => _isSaving = true);
     try {
-      final cls = context.read<ClassProvider>().classes.firstWhere((c) => c.id == widget.quiz.classId);
+      final cls = context
+          .read<ClassProvider>()
+          .classes
+          .firstWhere((c) => c.id == widget.quiz.classId);
       final List<TestMarkModel> marksList = [];
 
       _markControllers.forEach((uid, ctrl) {
         if (ctrl.text.trim().isNotEmpty) {
           final obtained = double.tryParse(ctrl.text.trim()) ?? 0;
           final percentage = (obtained / widget.quiz.totalMarks) * 100;
-          
+
           marksList.add(TestMarkModel(
             id: "${widget.quiz.id}_$uid",
             academyId: widget.quiz.academyId,
@@ -72,17 +75,21 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
       });
 
       if (marksList.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No marks entered!")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("No marks entered!")));
         return;
       }
 
       await context.read<QuizProvider>().uploadBulkMarks(marksList);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Marks saved successfully!")));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Marks saved successfully!")));
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving marks: $e")));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error saving marks: $e")));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -94,13 +101,16 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
     final clsList = classes.where((c) => c.id == widget.quiz.classId).toList();
 
     if (clsList.isEmpty) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text("Class data not found.")));
+      return Scaffold(
+          appBar: AppBar(),
+          body: const Center(child: Text("Class data not found.")));
     }
     final cls = clsList.first;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Enter Test Marks', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Enter Test Marks',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
       ),
       body: GradientBackground(
@@ -148,8 +158,14 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.quiz.title, style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 16)),
-          Text("${widget.quiz.subject} • Total: ${widget.quiz.totalMarks}", style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(widget.quiz.title,
+              style: const TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          Text("${widget.quiz.subject} • Total: ${widget.quiz.totalMarks}",
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 12)),
         ],
       ),
     );
@@ -165,14 +181,19 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: Text(name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600))),
+          Expanded(
+              child: Text(name,
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600))),
           SizedBox(
             width: 80,
             child: TextField(
               controller: _markControllers[uid],
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: AppColors.accent, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
                 hintText: "0.0",
                 contentPadding: EdgeInsets.zero,

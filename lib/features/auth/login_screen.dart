@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _biometricSignIn() async {
     final session = context.read<SessionProvider>();
     final auth = context.read<AuthProvider>();
-    
+
     if (!session.biometricEnabled) {
       _showError("Biometric login is not enabled in settings.");
       return;
@@ -92,7 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
           rememberMe: true,
         );
         if (mounted && ok && auth.currentUser != null) {
-          Navigator.pushReplacementNamed(context, auth.currentUser!.role.dashboardRoute);
+          Navigator.pushReplacementNamed(
+              context, auth.currentUser!.role.dashboardRoute);
         } else if (auth.errorMessage != null) {
           _showError(auth.errorMessage!);
         }
@@ -178,7 +179,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: loading ? null : _submit,
                         ),
                       ),
-                      if (context.watch<SessionProvider>().biometricEnabled) ...[
+                      if (context
+                          .watch<SessionProvider>()
+                          .biometricEnabled) ...[
                         const SizedBox(width: 12),
                         IconButton.filled(
                           onPressed: loading ? null : _biometricSignIn,
@@ -186,7 +189,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             backgroundColor: AppColors.accent,
                             foregroundColor: AppColors.textOnAccent,
                             fixedSize: const Size(56, 56),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
                           ),
                           icon: const Icon(Icons.fingerprint_rounded, size: 28),
                         ),
@@ -225,7 +229,8 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
@@ -264,19 +269,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       value: _rememberMe,
                       activeColor: AppColors.accent,
                       checkColor: AppColors.textOnAccent,
-                      onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                      onChanged: (v) =>
+                          setState(() => _rememberMe = v ?? false),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text('Remember Me',
-                      style: TextStyle(color: context.appColors.textSecondary, fontSize: 13)),
+                      style: TextStyle(
+                          color: context.appColors.textSecondary,
+                          fontSize: 13)),
                 ],
               ),
               TextButton(
                 onPressed: _forgotPassword,
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 child: Text('Forgot Password?',
-                    style: TextStyle(color: context.appColors.textSecondary, fontSize: 13)),
+                    style: TextStyle(
+                        color: context.appColors.textSecondary, fontSize: 13)),
               ),
             ],
           ),
@@ -295,8 +307,8 @@ class _LoginScreenState extends State<LoginScreen> {
           onTap: () => Navigator.pushNamed(context, AppRoutes.signup),
           child: const Text(
             'Sign Up',
-            style: TextStyle(
-                color: AppColors.accent, fontWeight: FontWeight.w700),
+            style:
+                TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700),
           ),
         ),
       ],

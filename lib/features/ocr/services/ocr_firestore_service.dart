@@ -72,7 +72,7 @@ class OcrFirestoreService {
   Future<OcrDocumentModel?> getDocumentById(String documentId) async {
     try {
       final doc =
-      await _firestore.collection(_collection).doc(documentId).get();
+          await _firestore.collection(_collection).doc(documentId).get();
       if (!doc.exists) return null;
       return OcrDocumentModel.fromMap(doc.data()!, doc.id);
     } catch (e) {

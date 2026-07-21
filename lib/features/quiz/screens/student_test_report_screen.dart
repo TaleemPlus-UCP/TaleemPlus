@@ -31,52 +31,57 @@ class StudentTestReportScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty 
+          child: academyId.isEmpty
               ? const Center(child: Text("Academy session error"))
               : StreamBuilder<List<TestMarkModel>>(
-            stream: context.read<QuizProvider>().watchStudentResults(studentUid, academyId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent));
-              }
+                  stream: context
+                      .read<QuizProvider>()
+                      .watchStudentResults(studentUid, academyId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent));
+                    }
 
-              final results = snapshot.data ?? [];
+                    final results = snapshot.data ?? [];
 
-              if (results.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.analytics_outlined,
-                          size: 64,
-                          color: AppColors.textMuted.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "No test records found for this student.",
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                );
-              }
+                    if (results.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.analytics_outlined,
+                                size: 64,
+                                color:
+                                    AppColors.textMuted.withValues(alpha: 0.3)),
+                            const SizedBox(height: 16),
+                            const Text(
+                              "No test records found for this student.",
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-              return Column(
-                children: [
-                  _buildSummaryHeader(results),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      itemCount: results.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) =>
-                          _resultTile(results[index]),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                    return Column(
+                      children: [
+                        _buildSummaryHeader(results),
+                        Expanded(
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            itemCount: results.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) =>
+                                _resultTile(results[index]),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -208,7 +213,10 @@ class StudentTestReportScreen extends StatelessWidget {
               ),
               Text(
                 "${res.percentage.toStringAsFixed(0)}%",
-                style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold),
               ),
             ],
           ),

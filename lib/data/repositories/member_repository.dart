@@ -9,12 +9,10 @@ class MemberRepository {
 
   Future<List<AcademyMember>> getAll(String academyId) async {
     final db = await _dbHelper.database;
-    final rows = await db.query(
-      'members', 
-      where: 'academy_id = ?',
-      whereArgs: [academyId],
-      orderBy: 'created_at DESC'
-    );
+    final rows = await db.query('members',
+        where: 'academy_id = ?',
+        whereArgs: [academyId],
+        orderBy: 'created_at DESC');
     return rows.map(AcademyMember.fromMap).toList();
   }
 

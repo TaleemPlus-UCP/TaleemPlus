@@ -11,7 +11,7 @@ void main() {
 
       // Example: Finding a widget and interacting with it
       // await $(#loginButton).tap();
-      
+
       expect($('Taleem Plus'), findsOneWidget);
     },
   );

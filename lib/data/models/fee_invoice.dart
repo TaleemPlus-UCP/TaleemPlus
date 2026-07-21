@@ -37,18 +37,18 @@ class FeeInvoice {
   bool get isOverdue => !isPaid && DateTime.now().isAfter(dueDate);
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'academy_id': academyId, // NEW
-    'student_id': studentId,
-    'student_name': studentName,
-    'gross_amount_due': grossAmountDue,
-    'accumulated_amount_paid': accumulatedAmountPaid,
-    'billing_month': billingMonth,
-    'due_date': dueDate.toIso8601String(),
-    'paid_on': paidOn?.toIso8601String(),
-    'status': status,
-    'created_at': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'academy_id': academyId, // NEW
+        'student_id': studentId,
+        'student_name': studentName,
+        'gross_amount_due': grossAmountDue,
+        'accumulated_amount_paid': accumulatedAmountPaid,
+        'billing_month': billingMonth,
+        'due_date': dueDate.toIso8601String(),
+        'paid_on': paidOn?.toIso8601String(),
+        'status': status,
+        'created_at': createdAt.toIso8601String(),
+      };
 
   factory FeeInvoice.fromMap(Map<String, dynamic> map) {
     return FeeInvoice(
@@ -58,7 +58,7 @@ class FeeInvoice {
       studentName: (map['student_name'] ?? '') as String,
       grossAmountDue: (map['gross_amount_due'] as num?)?.toDouble() ?? 0,
       accumulatedAmountPaid:
-      (map['accumulated_amount_paid'] as num?)?.toDouble() ?? 0,
+          (map['accumulated_amount_paid'] as num?)?.toDouble() ?? 0,
       billingMonth: (map['billing_month'] ?? '') as String,
       dueDate: DateTime.tryParse((map['due_date'] ?? '') as String) ??
           DateTime.now(),
@@ -83,7 +83,7 @@ class FeeInvoice {
       studentName: studentName,
       grossAmountDue: grossAmountDue,
       accumulatedAmountPaid:
-      accumulatedAmountPaid ?? this.accumulatedAmountPaid,
+          accumulatedAmountPaid ?? this.accumulatedAmountPaid,
       billingMonth: billingMonth,
       dueDate: dueDate,
       paidOn: paidOn ?? this.paidOn,

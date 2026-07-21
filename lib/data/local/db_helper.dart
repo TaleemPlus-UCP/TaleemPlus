@@ -18,7 +18,8 @@ class DbHelper {
 
   Future<Database> _open() async {
     final dir = await getDatabasesPath();
-    final path = p.join(dir, 'taleemplus_v2.db'); // New DB name for fresh start with multi-tenancy
+    final path = p.join(dir,
+        'taleemplus_v2.db'); // New DB name for fresh start with multi-tenancy
     return openDatabase(
       path,
       version: 6,

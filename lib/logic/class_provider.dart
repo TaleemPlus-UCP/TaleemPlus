@@ -17,14 +17,13 @@ class ClassProvider extends ChangeNotifier {
   List<ClassEntity> get classes => _classes;
   bool get loading => _loading;
 
-  int countFor(String classId) =>
-      _classes
-          .firstWhere(
-            (c) => c.id == classId,
+  int countFor(String classId) => _classes
+      .firstWhere(
+        (c) => c.id == classId,
         orElse: () => ClassEntity(
             id: '', className: '', academyId: '', createdAt: DateTime.now()),
       )
-          .enrollmentCount;
+      .enrollmentCount;
 
   /// Start streaming all classes for a specific academy.
   void listenAll(String academyId) {
@@ -46,11 +45,13 @@ class ClassProvider extends ChangeNotifier {
     );
   }
 
-  Future<List<ClassEntity>> fetchForTeacher(String teacherUid, String academyId) {
+  Future<List<ClassEntity>> fetchForTeacher(
+      String teacherUid, String academyId) {
     return _repo.watchForTeacher(teacherUid, academyId).first;
   }
 
-  Stream<List<ClassEntity>> streamForTeacher(String teacherUid, String academyId) =>
+  Stream<List<ClassEntity>> streamForTeacher(
+          String teacherUid, String academyId) =>
       _repo.watchForTeacher(teacherUid, academyId);
 
   Future<void> createClassWithStudents({

@@ -26,8 +26,18 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
 
   final List<String> _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
 
   @override
@@ -43,11 +53,15 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     });
 
     try {
-      final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.academyId ?? '';
-      
+      final academyId = Provider.of<AuthProvider>(context, listen: false)
+              .currentUser
+              ?.academyId ??
+          '';
+
       // Passing the month and academyId to filter specifically
-      final c = await _repo.getLatestForStudent(widget.studentUid, academyId, month: _selectedMonth);
-      
+      final c = await _repo.getLatestForStudent(widget.studentUid, academyId,
+          month: _selectedMonth);
+
       if (mounted) {
         setState(() {
           _latestChallan = c;
@@ -68,7 +82,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fee Challan', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Fee Challan',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -78,11 +93,13 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
             children: [
               _buildMonthFilter(),
               Expanded(
-                child: _loading 
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                child: _loading
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent))
                     : _errorMessage != null
                         ? _buildErrorState()
-                        : _latestChallan == null 
+                        : _latestChallan == null
                             ? _buildEmptyState()
                             : _buildChallanDetails(),
               ),
@@ -100,7 +117,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 48),
+            const Icon(Icons.error_outline_rounded,
+                color: AppColors.danger, size: 48),
             const SizedBox(height: 16),
             Text(
               "Error loading challan: $_errorMessage",
@@ -126,14 +144,21 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
         decoration: BoxDecoration(
           color: context.appColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+          border: Border.all(
+              color: context.appColors.border.withValues(alpha: 0.5)),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedMonth,
             isExpanded: true,
             dropdownColor: context.appColors.surfaceAlt,
-            items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(color: context.appColors.textPrimary)))).toList(),
+            items: _months
+                .map((m) => DropdownMenuItem(
+                    value: m,
+                    child: Text(m,
+                        style:
+                            TextStyle(color: context.appColors.textPrimary))))
+                .toList(),
             onChanged: (v) {
               setState(() => _selectedMonth = v!);
               _loadChallan();
@@ -148,7 +173,9 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     if (_latestChallan == null) return _buildEmptyState();
     final c = _latestChallan!;
     final bool isOverdue = c.isOverdue;
-    final statusColor = c.isPaid ? AppColors.success : (isOverdue ? AppColors.danger : AppColors.warning);
+    final statusColor = c.isPaid
+        ? AppColors.success
+        : (isOverdue ? AppColors.danger : AppColors.warning);
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -175,17 +202,31 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: Icon(c.isPaid ? Icons.check_circle_rounded : Icons.pending_actions_rounded, color: color),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(
+                c.isPaid
+                    ? Icons.check_circle_rounded
+                    : Icons.pending_actions_rounded,
+                color: color),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 16)),
-                Text(c.isPaid ? "Payment received" : "Due Date: ${DateFormat('dd MMM yyyy').format(c.dueDate)}", 
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                Text(c.status.toUpperCase(),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        fontSize: 16)),
+                Text(
+                    c.isPaid
+                        ? "Payment received"
+                        : "Due Date: ${DateFormat('dd MMM yyyy').format(c.dueDate)}",
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 13)),
               ],
             ),
           ),
@@ -200,29 +241,40 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("TOTAL PAYABLE", style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
+          const Text("TOTAL PAYABLE",
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1)),
           const SizedBox(height: 4),
-          Text("Rs. ${c.totalAmount.toStringAsFixed(0)}", style: const TextStyle(color: AppColors.accent, fontSize: 32, fontWeight: FontWeight.w900)),
+          Text("Rs. ${c.totalAmount.toStringAsFixed(0)}",
+              style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900)),
           const Divider(height: 32, color: AppColors.border),
-          
           _previewRow("Student", c.studentName),
           _previewRow("Challan #", c.challanNumber),
           _previewRow("Monthly Fee", "Rs. ${c.monthlyFee}"),
           if (c.fine > 0) _previewRow("Fine", "Rs. ${c.fine}", isDanger: true),
-          
           const SizedBox(height: 24),
           Center(
             child: QrImageView(
               data: "Challan:${c.challanNumber}|Student:${c.studentId}",
               version: QrVersions.auto,
               size: 100.0,
-              eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.textPrimary),
-              dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.textPrimary),
+              eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square, color: AppColors.textPrimary),
+              dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -236,8 +288,14 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-          Text(val, style: TextStyle(color: isDanger ? AppColors.danger : AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 14)),
+          Text(val,
+              style: TextStyle(
+                  color: isDanger ? AppColors.danger : AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14)),
         ],
       ),
     );
@@ -249,7 +307,9 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Print Error: $e"), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text("Print Error: $e"),
+              backgroundColor: AppColors.danger),
         );
       }
     }
@@ -261,12 +321,14 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
         ElevatedButton.icon(
           onPressed: () => _showPaymentInstructions(c),
           icon: const Icon(Icons.payment_rounded),
-          label: const Text("PAY NOW", style: TextStyle(fontWeight: FontWeight.bold)),
+          label: const Text("PAY NOW",
+              style: TextStyle(fontWeight: FontWeight.bold)),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.accent,
             foregroundColor: AppColors.textOnAccent,
             minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         const SizedBox(height: 12),
@@ -281,7 +343,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
                   foregroundColor: AppColors.accent,
                   side: const BorderSide(color: AppColors.accent),
                   minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
@@ -295,7 +358,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
                   foregroundColor: AppColors.accent,
                   side: const BorderSide(color: AppColors.accent),
                   minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
@@ -309,25 +373,42 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: context.appColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("Payment Instructions", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Payment Instructions",
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _instructionRow(Icons.account_balance_rounded, "Account Title", "Academy Management"),
-            _instructionRow(Icons.numbers_rounded, "Account Number", "03014334151"),
+            _instructionRow(Icons.account_balance_rounded, "Account Title",
+                "Academy Management"),
+            _instructionRow(
+                Icons.numbers_rounded, "Account Number", "03014334151"),
             const SizedBox(height: 24),
-            const Text("Future Support:", style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+            const Text("Future Support:",
+                style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Opacity(opacity: 0.5, child: Text("JazzCash", style: TextStyle(color: AppColors.textMuted))),
-                Opacity(opacity: 0.5, child: Text("EasyPaisa", style: TextStyle(color: AppColors.textMuted))),
+                Opacity(
+                    opacity: 0.5,
+                    child: Text("JazzCash",
+                        style: TextStyle(color: AppColors.textMuted))),
+                Opacity(
+                    opacity: 0.5,
+                    child: Text("EasyPaisa",
+                        style: TextStyle(color: AppColors.textMuted))),
               ],
             ),
             const SizedBox(height: 24),
@@ -347,8 +428,14 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-              Text(val, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
+              Text(label,
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 11)),
+              Text(val,
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15)),
             ],
           ),
         ],
@@ -361,9 +448,11 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.receipt_long_rounded, size: 64, color: AppColors.textMuted),
+          Icon(Icons.receipt_long_rounded,
+              size: 64, color: AppColors.textMuted),
           SizedBox(height: 16),
-          const Text("No challans available for this month.", style: TextStyle(color: AppColors.textSecondary)),
+          const Text("No challans available for this month.",
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );

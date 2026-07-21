@@ -31,13 +31,16 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
     final classProv = context.watch<ClassProvider>();
-    
+
     // Find all classes where this student is enrolled
-    final enrolledClasses = classProv.classes.where((c) => c.studentIds.contains(user?.uid)).toList();
+    final enrolledClasses = classProv.classes
+        .where((c) => c.studentIds.contains(user?.uid))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Classroom Hub', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('My Classroom Hub',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -52,7 +55,8 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
                       padding: const EdgeInsets.all(24),
                       itemCount: enrolledClasses.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) => _teacherTile(enrolledClasses[index]),
+                      itemBuilder: (context, index) =>
+                          _teacherTile(enrolledClasses[index]),
                     ),
             ),
           ),
@@ -66,24 +70,33 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(20),
         leading: CircleAvatar(
           radius: 28,
           backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-          child: Text(cls.primaryTeacherName[0].toUpperCase(), 
-              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20)),
+          child: Text(cls.primaryTeacherName[0].toUpperCase(),
+              style: const TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20)),
         ),
-        title: Text(cls.primaryTeacherName, 
-            style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text(cls.primaryTeacherName,
+            style: TextStyle(
+                color: context.appColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 18)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text("${cls.subject} • ${cls.className} (${cls.section})", 
-                style: TextStyle(color: context.appColors.textSecondary, fontWeight: FontWeight.w600)),
+            Text("${cls.subject} • ${cls.className} (${cls.section})",
+                style: TextStyle(
+                    color: context.appColors.textSecondary,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -94,10 +107,12 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
             ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.accent),
+        trailing:
+            const Icon(Icons.chevron_right_rounded, color: AppColors.accent),
         onTap: () => Navigator.push(
-          context, 
-          MaterialPageRoute(builder: (_) => TeacherDetailsScreen(classEntity: cls)),
+          context,
+          MaterialPageRoute(
+              builder: (_) => TeacherDetailsScreen(classEntity: cls)),
         ),
       ),
     );
@@ -115,7 +130,11 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
         children: [
           Icon(icon, size: 12, color: AppColors.accent),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -125,12 +144,17 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.school_outlined, size: 80, color: context.appColors.textMuted.withValues(alpha: 0.3)),
+        Icon(Icons.school_outlined,
+            size: 80,
+            color: context.appColors.textMuted.withValues(alpha: 0.3)),
         const SizedBox(height: 20),
-        Text("No teachers assigned yet", 
-            style: TextStyle(color: context.appColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text("No teachers assigned yet",
+            style: TextStyle(
+                color: context.appColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Text("Contact your admin to enroll in classes.", 
+        Text("Contact your admin to enroll in classes.",
             style: TextStyle(color: context.appColors.textSecondary)),
       ],
     );

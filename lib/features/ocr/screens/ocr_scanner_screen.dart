@@ -53,7 +53,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
         });
 
         final String recognizedText = await _ocrService.recognizeText(image);
-        
+
         setState(() {
           _textController.text = recognizedText;
           _isProcessing = false;
@@ -107,7 +107,8 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text("Document Title", style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text("Document Title",
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -130,11 +131,14 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL", style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text("CANCEL",
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, _titleController.text),
-            child: const Text("SAVE", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+            child: const Text("SAVE",
+                style: TextStyle(
+                    color: AppColors.accent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -162,7 +166,8 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("OCR Scanner", style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text("OCR Scanner",
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -227,7 +232,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -239,13 +244,15 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                       ? const Center(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 40),
-                            child: CircularProgressIndicator(color: AppColors.accent),
-                        ),
+                            child: CircularProgressIndicator(
+                                color: AppColors.accent),
+                          ),
                         )
                       : TextField(
                           controller: _textController,
                           maxLines: 12,
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                          style: const TextStyle(
+                              color: AppColors.textPrimary, fontSize: 14),
                           decoration: const InputDecoration(
                             hintText: "Extracted text will appear here...",
                             border: InputBorder.none,
@@ -267,7 +274,8 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                           foregroundColor: AppColors.textSecondary,
                           side: const BorderSide(color: AppColors.border),
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ),
@@ -334,7 +342,8 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: AppColors.accent, size: 20),
+          Icon(Icons.lightbulb_outline_rounded,
+              color: AppColors.accent, size: 20),
           SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -342,12 +351,17 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
               children: [
                 Text(
                   "TIPS FOR BETTER SCAN",
-                  style: TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5),
                 ),
                 SizedBox(height: 4),
                 Text(
                   "1. Use dark blue/black ink.\n2. Ensure good lighting (no shadows).\n3. Keep the paper flat and camera steady.",
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.5),
+                  style: TextStyle(
+                      color: AppColors.textMuted, fontSize: 11, height: 1.5),
                 ),
               ],
             ),

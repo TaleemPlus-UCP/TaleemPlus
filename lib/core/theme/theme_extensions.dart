@@ -77,5 +77,6 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 }
 
 extension AppThemeX on BuildContext {
-  AppColorsExtension get appColors => Theme.of(this).extension<AppColorsExtension>()!;
+  AppColorsExtension get appColors =>
+      Theme.of(this).extension<AppColorsExtension>()!;
 }

@@ -13,7 +13,8 @@ class AdminAiPredictionScreen extends StatefulWidget {
   const AdminAiPredictionScreen({super.key});
 
   @override
-  State<AdminAiPredictionScreen> createState() => _AdminAiPredictionScreenState();
+  State<AdminAiPredictionScreen> createState() =>
+      _AdminAiPredictionScreenState();
 }
 
 class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
@@ -21,7 +22,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final user =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<MemberProvider>().load(user.uid);
         context.read<FeeProvider>().load(user.uid);
@@ -34,7 +36,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Insights & Predictions', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('AI Insights & Predictions',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -43,7 +46,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
           child: Consumer<AdminAiProvider>(
             builder: (context, ai, _) {
               if (ai.loading) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
               }
 
               return ListView(
@@ -81,7 +85,11 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
           Expanded(
             child: Text(
               "OFFLINE INTELLIGENCE ACTIVE",
-              style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1),
+              style: TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  letterSpacing: 1),
             ),
           ),
           Icon(Icons.bolt_rounded, color: AppColors.success, size: 16),
@@ -94,8 +102,10 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     final bool hasRisk = ai.atRiskCount > 0;
     return _predictionCard(
       title: "Student Success Risk",
-      prediction: hasRisk ? "${ai.atRiskCount} Students at Risk" : "All Students Performing Well",
-      insight: hasRisk 
+      prediction: hasRisk
+          ? "${ai.atRiskCount} Students at Risk"
+          : "All Students Performing Well",
+      insight: hasRisk
           ? "The following students need attention: ${ai.atRiskStudentNames.join(', ')}."
           : "Average academy performance is at ${ai.academyAvgPerformance.toStringAsFixed(1)}%. No major risks detected.",
       icon: Icons.person_search_rounded,
@@ -110,21 +120,26 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text("At-Risk Students", style: TextStyle(color: AppColors.textPrimary)),
+        title: const Text("At-Risk Students",
+            style: TextStyle(color: AppColors.textPrimary)),
         content: ai.atRiskCount > 0
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: ai.atRiskStudentNames
                     .map((name) => ListTile(
-                          leading: const Icon(Icons.person, color: AppColors.warning),
-                          title: Text(name, style: const TextStyle(color: AppColors.textPrimary)),
+                          leading: const Icon(Icons.person,
+                              color: AppColors.warning),
+                          title: Text(name,
+                              style: const TextStyle(
+                                  color: AppColors.textPrimary)),
                         ))
                     .toList(),
               )
             : const Text("All students are performing above the 50% threshold.",
                 style: TextStyle(color: AppColors.textSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
         ],
       ),
     );
@@ -134,16 +149,19 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     return Consumer<FeeProvider>(
       builder: (context, feeProvider, _) {
         final double pending = feeProvider.totalPending;
-        final double predicted = pending * 0.85; // Heuristic: 85% usually pay on time
-        
+        final double predicted =
+            pending * 0.85; // Heuristic: 85% usually pay on time
+
         return _predictionCard(
           title: "Revenue Forecast",
           prediction: "Predicted Rs. ${predicted.toStringAsFixed(0)}",
-          insight: "Expected collection for this month based on Rs. ${pending.toStringAsFixed(0)} total pending fees.",
+          insight:
+              "Expected collection for this month based on Rs. ${pending.toStringAsFixed(0)} total pending fees.",
           icon: Icons.payments_rounded,
           color: AppColors.success,
           actionLabel: "LEDGER",
-          onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+          onAction: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
         );
       },
     );
@@ -153,11 +171,13 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     return _predictionCard(
       title: "Subject Strength Analysis",
       prediction: "Weakest Area: ${ai.weakestSubject}",
-      insight: "Academy-wide average marks in ${ai.weakestSubject} are currently the lowest across all subjects.",
+      insight:
+          "Academy-wide average marks in ${ai.weakestSubject} are currently the lowest across all subjects.",
       icon: Icons.analytics_rounded,
       color: AppColors.accent,
       actionLabel: "REPORTS",
-      onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminQuizListScreen())),
+      onAction: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AdminQuizListScreen())),
     );
   }
 
@@ -185,23 +205,32 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
               Icon(icon, color: color, size: 22),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(title, 
+                child: Text(title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(prediction, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(prediction,
+              style: TextStyle(
+                  color: color, fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(insight, style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4)),
+          Text(insight,
+              style: const TextStyle(
+                  color: AppColors.textMuted, fontSize: 13, height: 1.4)),
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: onAction,
-              child: Text(actionLabel, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Text(actionLabel,
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.bold, fontSize: 12)),
             ),
           ),
         ],

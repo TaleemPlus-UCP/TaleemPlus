@@ -50,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
     required String phoneNumber,
     required String password,
     required UserRole role,
-    String? academyName, 
+    String? academyName,
     String? academyId,
     String? academyAddress,
     String? academyPhone,
@@ -95,7 +95,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading();
     try {
       _currentUser =
-      await _authService.signIn(email: email, password: password);
+          await _authService.signIn(email: email, password: password);
       _status = AuthStatus.authenticated;
       await _persistRememberMe(rememberMe, email);
       notifyListeners();

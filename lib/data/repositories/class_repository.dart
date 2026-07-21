@@ -18,28 +18,27 @@ class ClassRepository {
   Stream<List<ClassEntity>> watchAll(String academyId) {
     // Removed orderBy from query to avoid index requirement.
     // Sorting is handled in the map function.
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .snapshots().map(
-          (snap) {
-            final list = snap.docs
-              .map((d) => ClassEntity.fromMap(d.id, d.data()))
-              .toList();
-            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return list;
-          },
+    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
+      (snap) {
+        final list =
+            snap.docs.map((d) => ClassEntity.fromMap(d.id, d.data())).toList();
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      },
     );
   }
 
-  Stream<List<ClassEntity>> watchForTeacher(String teacherUid, String academyId) {
+  Stream<List<ClassEntity>> watchForTeacher(
+      String teacherUid, String academyId) {
     return _col
         .where('academy_id', isEqualTo: academyId)
         .where('primary_teacher_id', isEqualTo: teacherUid)
-        .snapshots().map(
+        .snapshots()
+        .map(
           (snap) => snap.docs
-          .map((d) => ClassEntity.fromMap(d.id, d.data()))
-          .toList(),
-    );
+              .map((d) => ClassEntity.fromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   Future<ClassEntity?> getById(String id) async {
@@ -56,18 +55,19 @@ class ClassRepository {
     required String subject,
     required AppUser teacher,
     required List<AppUser> students,
-    required String academyId, 
+    required String academyId,
   }) async {
     final docRef = _col.doc();
     final entity = ClassEntity(
       id: docRef.id,
-      academyId: academyId, 
+      academyId: academyId,
       className: className.trim(),
       section: section.trim(),
       subject: subject.trim(),
       primaryTeacherId: teacher.uid,
       primaryTeacherName: teacher.fullName,
-      primaryTeacherEmail: teacher.email.trim().toLowerCase(), // LOWERCASE FOR CONSISTENCY
+      primaryTeacherEmail:
+          teacher.email.trim().toLowerCase(), // LOWERCASE FOR CONSISTENCY
       studentIds: students.map((s) => s.uid).toList(),
       studentNames: {for (final s in students) s.uid: s.fullName},
       createdAt: DateTime.now(),

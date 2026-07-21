@@ -39,8 +39,7 @@ class ParentProvider extends ChangeNotifier {
       } else {
         // Fetch all profiles in parallel
         final profiles = await Future.wait(
-          childUids.map((uid) => _authService.getProfile(uid))
-        );
+            childUids.map((uid) => _authService.getProfile(uid)));
         _children = profiles.whereType<AppUser>().toList();
       }
     } catch (e) {
@@ -52,8 +51,9 @@ class ParentProvider extends ChangeNotifier {
   }
 
   Future<String?> linkChild(String email) async {
-    if (_parentUid == null || _academyId == null) return "User session expired.";
-    
+    if (_parentUid == null || _academyId == null)
+      return "User session expired.";
+
     _loading = true;
     notifyListeners();
 
@@ -69,8 +69,8 @@ class ParentProvider extends ChangeNotifier {
 
       final updatedUids = [..._children.map((c) => c.uid), student.uid];
       await _authService.updateParentChildren(_parentUid!, updatedUids);
-      
-      _children = [..._children, student]; 
+
+      _children = [..._children, student];
       return null; // Success
     } catch (e) {
       return "Linking failed: $e";
@@ -83,7 +83,7 @@ class ParentProvider extends ChangeNotifier {
   Future<void> addChild(AppUser student) async {
     if (_parentUid == null) return;
     if (_children.any((c) => c.uid == student.uid)) return;
-    
+
     try {
       final updatedUids = [..._children.map((c) => c.uid), student.uid];
       await _authService.updateParentChildren(_parentUid!, updatedUids);
@@ -97,7 +97,8 @@ class ParentProvider extends ChangeNotifier {
   Future<void> unlinkChild(String uid) async {
     if (_parentUid == null) return;
     try {
-      final updatedUids = _children.where((c) => c.uid != uid).map((c) => c.uid).toList();
+      final updatedUids =
+          _children.where((c) => c.uid != uid).map((c) => c.uid).toList();
       await _authService.updateParentChildren(_parentUid!, updatedUids);
       _children = _children.where((c) => c.uid != uid).toList();
       notifyListeners();

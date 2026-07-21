@@ -44,7 +44,7 @@ class OcrService {
 
     try {
       final RecognizedText recognizedText =
-      await textRecognizer.processImage(inputImage);
+          await textRecognizer.processImage(inputImage);
 
       return recognizedText.text.trim();
     } finally {

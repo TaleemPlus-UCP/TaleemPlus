@@ -18,7 +18,8 @@ class ChildOverviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(child.fullName, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(child.fullName,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -30,14 +31,22 @@ class ChildOverviewScreen extends StatelessWidget {
               _childProfileHeader(context),
               const SizedBox(height: 24),
               const Text('LEARNING PROGRESS',
-                  style: TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2)),
               const SizedBox(height: 12),
               _actionTile(
                 context,
                 'Attendance History',
                 'View daily presence records',
                 Icons.fact_check_rounded,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentAttendanceScreen(studentUid: child.uid))),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            StudentAttendanceScreen(studentUid: child.uid))),
               ),
               const SizedBox(height: 12),
               _actionTile(
@@ -45,7 +54,11 @@ class ChildOverviewScreen extends StatelessWidget {
                 'Important Alerts',
                 'Absence and performance notifications',
                 Icons.notifications_active_rounded,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChildAlertsScreen(childName: child.fullName, childUid: child.uid))),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => ChildAlertsScreen(
+                            childName: child.fullName, childUid: child.uid))),
               ),
               const SizedBox(height: 12),
               _actionTile(
@@ -53,7 +66,12 @@ class ChildOverviewScreen extends StatelessWidget {
                 'Test Reports',
                 'Check marks and subject grades',
                 Icons.analytics_rounded,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentTestReportScreen(studentUid: child.uid, studentName: child.fullName))),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => StudentTestReportScreen(
+                            studentUid: child.uid,
+                            studentName: child.fullName))),
               ),
               const SizedBox(height: 12),
               _actionTile(
@@ -61,18 +79,30 @@ class ChildOverviewScreen extends StatelessWidget {
                 'Performance Analytics',
                 'Growth charts and trends',
                 Icons.insights_rounded,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentProgressChartScreen(studentUid: child.uid))),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            StudentProgressChartScreen(studentUid: child.uid))),
               ),
               const SizedBox(height: 24),
               const Text('FINANCE',
-                  style: TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2)),
               const SizedBox(height: 12),
               _actionTile(
                 context,
                 'Fee Statements',
                 'Payment history and pending dues',
                 Icons.receipt_long_rounded,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentChallanScreen(studentUid: child.uid))),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            StudentChallanScreen(studentUid: child.uid))),
               ),
             ],
           ),
@@ -87,22 +117,33 @@ class ChildOverviewScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 30,
             backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-            child: Text(child.fullName[0].toUpperCase(), style: const TextStyle(color: AppColors.accent, fontSize: 24, fontWeight: FontWeight.bold)),
+            child: Text(child.fullName[0].toUpperCase(),
+                style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(child.fullName, style: TextStyle(color: context.appColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                Text(child.email, style: TextStyle(color: context.appColors.textSecondary, fontSize: 13)),
+                Text(child.fullName,
+                    style: TextStyle(
+                        color: context.appColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800)),
+                Text(child.email,
+                    style: TextStyle(
+                        color: context.appColors.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -111,7 +152,8 @@ class ChildOverviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _actionTile(BuildContext context, String title, String subtitle, IconData icon, VoidCallback onTap) {
+  Widget _actionTile(BuildContext context, String title, String subtitle,
+      IconData icon, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -122,7 +164,8 @@ class ChildOverviewScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: context.appColors.surface.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+            border: Border.all(
+                color: context.appColors.border.withValues(alpha: 0.5)),
           ),
           child: Row(
             children: [
@@ -132,8 +175,13 @@ class ChildOverviewScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(color: context.appColors.textPrimary, fontWeight: FontWeight.w600)),
-                    Text(subtitle, style: TextStyle(color: context.appColors.textMuted, fontSize: 12)),
+                    Text(title,
+                        style: TextStyle(
+                            color: context.appColors.textPrimary,
+                            fontWeight: FontWeight.w600)),
+                    Text(subtitle,
+                        style: TextStyle(
+                            color: context.appColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),

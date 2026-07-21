@@ -10,7 +10,10 @@ class ChallanPdfService {
   static Future<void> generateAndPrint(FeeChallanModel challan) async {
     try {
       // 1. Fetch Academy Details for Branding
-      final academyDoc = await FirebaseFirestore.instance.collection('users').doc(challan.academyId).get();
+      final academyDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(challan.academyId)
+          .get();
       AppUser? academy;
       if (academyDoc.exists && academyDoc.data() != null) {
         academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
@@ -58,7 +61,8 @@ class ChallanPdfService {
     }
   }
 
-  static pw.Widget _buildHeader(FeeChallanModel challan, AppUser? academy, pw.ImageProvider? logo) {
+  static pw.Widget _buildHeader(
+      FeeChallanModel challan, AppUser? academy, pw.ImageProvider? logo) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -75,10 +79,14 @@ class ChallanPdfService {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(academy?.academyName?.toUpperCase() ?? "TALEEMPLUS ACADEMY", 
-                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                pw.Text(academy?.academyAddress ?? "Academy Address Not Set", style: const pw.TextStyle(fontSize: 9)),
-                pw.Text("Contact: ${academy?.academyPhone ?? 'N/A'}", style: const pw.TextStyle(fontSize: 9)),
+                pw.Text(
+                    academy?.academyName?.toUpperCase() ?? "TALEEMPLUS ACADEMY",
+                    style: pw.TextStyle(
+                        fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.Text(academy?.academyAddress ?? "Academy Address Not Set",
+                    style: const pw.TextStyle(fontSize: 9)),
+                pw.Text("Contact: ${academy?.academyPhone ?? 'N/A'}",
+                    style: const pw.TextStyle(fontSize: 9)),
               ],
             ),
           ],
@@ -86,9 +94,17 @@ class ChallanPdfService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Text("FEE CHALLAN", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.cyan900)),
-            pw.Text("No: ${challan.challanNumber}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-            pw.Text("Date: ${DateFormat('dd-MMM-yyyy').format(challan.issueDate)}", style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("FEE CHALLAN",
+                style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.cyan900)),
+            pw.Text("No: ${challan.challanNumber}",
+                style:
+                    pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+            pw.Text(
+                "Date: ${DateFormat('dd-MMM-yyyy').format(challan.issueDate)}",
+                style: const pw.TextStyle(fontSize: 9)),
           ],
         ),
       ],
@@ -120,7 +136,8 @@ class ChallanPdfService {
               children: [
                 _infoRow("Class", challan.classLabel),
                 _infoRow("Roll No", challan.rollNumber),
-                _infoRow("Due Date", DateFormat('dd-MMM-yyyy').format(challan.dueDate)),
+                _infoRow("Due Date",
+                    DateFormat('dd-MMM-yyyy').format(challan.dueDate)),
               ],
             ),
           ),
@@ -135,7 +152,10 @@ class ChallanPdfService {
       child: pw.RichText(
         text: pw.TextSpan(
           children: [
-            pw.TextSpan(text: "$label: ", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+            pw.TextSpan(
+                text: "$label: ",
+                style:
+                    pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
             pw.TextSpan(text: value, style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
@@ -150,8 +170,15 @@ class ChallanPdfService {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey100),
           children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text("Description", style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text("Amount (PKR)", textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text("Description",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text("Amount (PKR)",
+                    textAlign: pw.TextAlign.right,
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
           ],
         ),
         _tableRow("Monthly Tuition Fee", challan.monthlyFee),
@@ -162,8 +189,17 @@ class ChallanPdfService {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey50),
           children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text("Total Payable", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14))),
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text("Rs. ${challan.totalAmount.toStringAsFixed(0)}", textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14))),
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text("Total Payable",
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 14))),
+            pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text("Rs. ${challan.totalAmount.toStringAsFixed(0)}",
+                    textAlign: pw.TextAlign.right,
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 14))),
           ],
         ),
       ],
@@ -173,8 +209,14 @@ class ChallanPdfService {
   static pw.TableRow _tableRow(String desc, double amount) {
     return pw.TableRow(
       children: [
-        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(desc, style: const pw.TextStyle(fontSize: 10))),
-        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(amount.toStringAsFixed(0), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 10))),
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(desc, style: const pw.TextStyle(fontSize: 10))),
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(amount.toStringAsFixed(0),
+                textAlign: pw.TextAlign.right,
+                style: const pw.TextStyle(fontSize: 10))),
       ],
     );
   }
@@ -187,15 +229,22 @@ class ChallanPdfService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text("PAYMENT INSTRUCTIONS:", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-            pw.Text("Account Title: ${academy?.academyName ?? 'Academy Management'}", style: const pw.TextStyle(fontSize: 9)),
-            pw.Text("Account Number: ${academy?.academyPhone ?? 'N/A'}", style: const pw.TextStyle(fontSize: 9)),
-            pw.Text("Please share the screenshot of payment on WhatsApp.", style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("PAYMENT INSTRUCTIONS:",
+                style:
+                    pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+            pw.Text(
+                "Account Title: ${academy?.academyName ?? 'Academy Management'}",
+                style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("Account Number: ${academy?.academyPhone ?? 'N/A'}",
+                style: const pw.TextStyle(fontSize: 9)),
+            pw.Text("Please share the screenshot of payment on WhatsApp.",
+                style: const pw.TextStyle(fontSize: 9)),
           ],
         ),
         pw.BarcodeWidget(
           barcode: pw.Barcode.qrCode(),
-          data: "Challan:${challan.challanNumber}|Student:${challan.studentId}|Amount:${challan.totalAmount}",
+          data:
+              "Challan:${challan.challanNumber}|Student:${challan.studentId}|Amount:${challan.totalAmount}",
           width: 60,
           height: 60,
         ),

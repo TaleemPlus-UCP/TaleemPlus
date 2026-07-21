@@ -33,8 +33,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       final name = widget.classEntity.studentNames[uid] ?? uid;
       return MapEntry(uid, name);
     }).toList();
-    entries.sort(
-            (a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    entries
+        .sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
     return entries;
   }
 
@@ -50,11 +50,11 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
   Future<void> _loadForDate() async {
     final academyId = context.read<AuthProvider>().currentUser?.academyId ?? '';
     await context.read<AttendanceProvider>().loadForClassDate(
-      classId: widget.classEntity.id,
-      date: _selectedDate,
-      allStudentIds: widget.classEntity.studentIds,
-      academyId: academyId,
-    );
+          classId: widget.classEntity.id,
+          date: _selectedDate,
+          allStudentIds: widget.classEntity.studentIds,
+          academyId: academyId,
+        );
   }
 
   Future<void> _pickDate() async {
@@ -66,7 +66,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
     );
     if (picked != null) {
       setState(() =>
-      _selectedDate = DateTime(picked.year, picked.month, picked.day));
+          _selectedDate = DateTime(picked.year, picked.month, picked.day));
       await _loadForDate();
     }
   }
@@ -76,10 +76,10 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
     if (auth == null) return;
 
     final ok = await context.read<AttendanceProvider>().save(
-      classEntity: widget.classEntity,
-      date: _selectedDate,
-      markedByUid: auth.uid,
-    );
+          classEntity: widget.classEntity,
+          date: _selectedDate,
+          markedByUid: auth.uid,
+        );
 
     if (!mounted) return;
     if (ok) {
@@ -112,8 +112,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
             style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.event_rounded,
-                color: AppColors.textSecondary),
+            icon:
+                const Icon(Icons.event_rounded, color: AppColors.textSecondary),
             tooltip: 'Change date',
             onPressed: _pickDate,
           ),
@@ -142,8 +142,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.group_off_rounded,
-              size: 56, color: AppColors.textMuted),
+          Icon(Icons.group_off_rounded, size: 56, color: AppColors.textMuted),
           SizedBox(height: 12),
           Text('No students enrolled in this class',
               style: TextStyle(color: AppColors.textSecondary)),
@@ -215,15 +214,15 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.accent,
-                side: BorderSide(
-                    color: AppColors.accent.withValues(alpha: 0.6)),
+                side:
+                    BorderSide(color: AppColors.accent.withValues(alpha: 0.6)),
               ),
               icon: const Icon(Icons.check_circle_outline, size: 18),
               label: const Text('Mark All Present'),
               onPressed: () => context.read<AttendanceProvider>().markAll(
-                'present',
-                _studentEntries.map((e) => e.key).toList(),
-              ),
+                    'present',
+                    _studentEntries.map((e) => e.key).toList(),
+                  ),
             ),
           ),
         ],
@@ -275,8 +274,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
           Expanded(
             child: Text(name,
                 style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600)),
+                    color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
           ),
           _statusBtn('P', 'present', AppColors.success, status, id),
           const SizedBox(width: 4),
@@ -319,7 +317,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
+        color:
+            Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
         ),

@@ -24,15 +24,15 @@ class SharedResource {
   });
 
   Map<String, dynamic> toMap() => {
-    'academy_id': academyId,
-    'class_id': classId,
-    'teacher_id': teacherId,
-    'teacher_name': teacherName,
-    'title': title.trim(),
-    'description': description.trim(),
-    'file_url': fileUrl,
-    'created_at': FieldValue.serverTimestamp(),
-  };
+        'academy_id': academyId,
+        'class_id': classId,
+        'teacher_id': teacherId,
+        'teacher_name': teacherName,
+        'title': title.trim(),
+        'description': description.trim(),
+        'file_url': fileUrl,
+        'created_at': FieldValue.serverTimestamp(),
+      };
 
   factory SharedResource.fromMap(String id, Map<String, dynamic> map) {
     return SharedResource(

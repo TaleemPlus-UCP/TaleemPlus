@@ -20,8 +20,18 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
 
   final List<String> _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
 
   @override
@@ -38,13 +48,16 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final classes = context.watch<ClassProvider>().classes
+    final classes = context
+        .watch<ClassProvider>()
+        .classes
         .where((c) => c.primaryTeacherId == user?.uid)
         .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Monthly Reports', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Monthly Reports',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -54,8 +67,8 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             children: [
               _buildFilters(classes),
               Expanded(
-                child: _selectedClassId == null 
-                    ? _buildNoClassState() 
+                child: _selectedClassId == null
+                    ? _buildNoClassState()
                     : _buildReportList(),
               ),
             ],
@@ -72,14 +85,23 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
+            decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _selectedClassId,
                 hint: const Text('Select Class'),
                 isExpanded: true,
                 dropdownColor: AppColors.surface,
-                items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayLabel, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+                items: classes
+                    .map((c) => DropdownMenuItem(
+                        value: c.id,
+                        child: Text(c.displayLabel,
+                            style:
+                                const TextStyle(color: AppColors.textPrimary))))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedClassId = v),
               ),
             ),
@@ -87,13 +109,22 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
+            decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _selectedMonth,
                 isExpanded: true,
                 dropdownColor: AppColors.surface,
-                items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+                items: _months
+                    .map((m) => DropdownMenuItem(
+                        value: m,
+                        child: Text(m,
+                            style:
+                                const TextStyle(color: AppColors.textPrimary))))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedMonth = v!),
               ),
             ),
@@ -108,18 +139,23 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
     final academyId = user?.academyId ?? '';
 
     return StreamBuilder<Map<String, dynamic>>(
-      stream: context.read<QuizProvider>().watchMonthlyClassReport(_selectedClassId!, _selectedMonth, academyId),
+      stream: context.read<QuizProvider>().watchMonthlyClassReport(
+          _selectedClassId!, _selectedMonth, academyId),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
-        }
-        
-        final data = snap.data;
-        if (data == null || data['quizCount'] == 0) {
-          return const Center(child: Text('No data found for this month', style: TextStyle(color: AppColors.textSecondary)));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
         }
 
-        final Map<String, Map<String, dynamic>> studentStats = data['studentStats'];
+        final data = snap.data;
+        if (data == null || data['quizCount'] == 0) {
+          return const Center(
+              child: Text('No data found for this month',
+                  style: TextStyle(color: AppColors.textSecondary)));
+        }
+
+        final Map<String, Map<String, dynamic>> studentStats =
+            data['studentStats'];
         final List<String> subjects = List<String>.from(data['subjects']);
 
         return ListView.separated(
@@ -138,7 +174,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
   Widget _reportTile(Map<String, dynamic> stats, List<String> subjects) {
     final double percentage = (stats['obtained'] / stats['total']) * 100;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -152,21 +188,36 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(stats['name'], style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text("${percentage.toStringAsFixed(1)}%", 
-                style: TextStyle(color: percentage >= 50 ? AppColors.success : AppColors.danger, fontWeight: FontWeight.bold)),
+              Text(stats['name'],
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+              Text("${percentage.toStringAsFixed(1)}%",
+                  style: TextStyle(
+                      color: percentage >= 50
+                          ? AppColors.success
+                          : AppColors.danger,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const Divider(height: 24, color: AppColors.border),
           ...subjects.map((sub) {
-            final subStats = stats['subjects'][sub] ?? {'obtained': 0.0, 'total': 0.0};
+            final subStats =
+                stats['subjects'][sub] ?? {'obtained': 0.0, 'total': 0.0};
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(sub, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  Text("${subStats['obtained']} / ${subStats['total']}", style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(sub,
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12)),
+                  Text("${subStats['obtained']} / ${subStats['total']}",
+                      style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             );
@@ -177,6 +228,8 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   }
 
   Widget _buildNoClassState() {
-    return const Center(child: Text('Select a class to view reports', style: TextStyle(color: AppColors.textSecondary)));
+    return const Center(
+        child: Text('Select a class to view reports',
+            style: TextStyle(color: AppColors.textSecondary)));
   }
 }

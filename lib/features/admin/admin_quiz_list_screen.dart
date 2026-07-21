@@ -22,8 +22,10 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
-      context.read<ClassProvider>().listenAll(academyId); 
+      final academyId =
+          Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+              '';
+      context.read<ClassProvider>().listenAll(academyId);
     });
   }
 
@@ -33,7 +35,7 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Test Reports & Grading', 
+        title: const Text('Test Reports & Grading',
             style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -69,15 +71,18 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
                               style: TextStyle(color: AppColors.textSecondary)),
                           dropdownColor: AppColors.surface,
                           isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.accent),
+                          icon: const Icon(Icons.keyboard_arrow_down,
+                              color: AppColors.accent),
                           items: classes.map((c) {
                             return DropdownMenuItem(
                               value: c.id,
                               child: Text("${c.className} (${c.section})",
-                                  style: const TextStyle(color: AppColors.textPrimary)),
+                                  style: const TextStyle(
+                                      color: AppColors.textPrimary)),
                             );
                           }).toList(),
-                          onChanged: (val) => setState(() => _selectedClassId = val),
+                          onChanged: (val) =>
+                              setState(() => _selectedClassId = val),
                         ),
                       ),
                     ),
@@ -98,21 +103,28 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
 
   Widget _buildAllQuizzes() {
     return const Center(
-      child: Text('Select a class to view test reports', style: TextStyle(color: AppColors.textSecondary)),
+      child: Text('Select a class to view test reports',
+          style: TextStyle(color: AppColors.textSecondary)),
     );
   }
 
   Widget _buildQuizList(String classId) {
-    final academyId = Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ?? '';
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
     return StreamBuilder<List<QuizModel>>(
-      stream: context.read<QuizProvider>().watchTeacherQuizzes(classId, academyId),
+      stream:
+          context.read<QuizProvider>().watchTeacherQuizzes(classId, academyId),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
         }
         final list = snap.data ?? [];
         if (list.isEmpty) {
-          return const Center(child: Text('No tests found for this class', style: TextStyle(color: AppColors.textSecondary)));
+          return const Center(
+              child: Text('No tests found for this class',
+                  style: TextStyle(color: AppColors.textSecondary)));
         }
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -148,15 +160,22 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
                   color: AppColors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.analytics_rounded, color: AppColors.accent),
+                child: const Icon(Icons.analytics_rounded,
+                    color: AppColors.accent),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(quiz.title, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
-                    Text("${quiz.subject} • ${quiz.totalMarks} Marks", style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    Text(quiz.title,
+                        style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16)),
+                    Text("${quiz.subject} • ${quiz.totalMarks} Marks",
+                        style: const TextStyle(
+                            color: AppColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),

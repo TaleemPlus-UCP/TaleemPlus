@@ -48,34 +48,29 @@ class AnnouncementService {
 
   /// Admin: real-time list of academy-specific announcements.
   Stream<List<Announcement>> watchAll(String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .snapshots().map(
-          (snap) {
-            final list = snap.docs
-              .map((d) => Announcement.fromMap(d.id, d.data()))
-              .toList();
-            // Client-side sorting (Newest First) to avoid mandatory composite index
-            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return list;
-          },
+    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
+      (snap) {
+        final list =
+            snap.docs.map((d) => Announcement.fromMap(d.id, d.data())).toList();
+        // Client-side sorting (Newest First) to avoid mandatory composite index
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      },
     );
   }
 
   /// Teacher/Student/Parent: real-time list for their role in their academy.
   Stream<List<Announcement>> watchForRole(String role, String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .snapshots().map(
-          (snap) {
-            final list = snap.docs
-              .map((d) => Announcement.fromMap(d.id, d.data()))
-              .where((a) => a.isForRole(role))
-              .toList();
-            // Client-side sorting (Newest First) to avoid mandatory composite index
-            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return list;
-          },
+    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
+      (snap) {
+        final list = snap.docs
+            .map((d) => Announcement.fromMap(d.id, d.data()))
+            .where((a) => a.isForRole(role))
+            .toList();
+        // Client-side sorting (Newest First) to avoid mandatory composite index
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      },
     );
   }
 }

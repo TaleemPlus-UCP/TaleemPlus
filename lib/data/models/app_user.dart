@@ -9,14 +9,15 @@ class AppUser {
   final UserRole role;
   final String accountStatus;
   final String? academyName; // For display
-  final String? academyId;   // For multi-tenancy scoping
-  final String? academyAddress; 
-  final String? academyPhone;   
-  final String? academyLogo;    // NEW: URL for branding
-  final String? academyCode;    // NEW: Short code for joining (e.g. SRS-101)
+  final String? academyId; // For multi-tenancy scoping
+  final String? academyAddress;
+  final String? academyPhone;
+  final String? academyLogo; // NEW: URL for branding
+  final String? academyCode; // NEW: Short code for joining (e.g. SRS-101)
   final DateTime? createdAt;
-  final DateTime? joiningDate;  // NEW: When the user joined/was added
-  final List<String> assignedSections; // NEW: Sections assigned (e.g. ['A', 'B'])
+  final DateTime? joiningDate; // NEW: When the user joined/was added
+  final List<String>
+      assignedSections; // NEW: Sections assigned (e.g. ['A', 'B'])
   final List<String> linkedChildren; // NEW: Child UIDs (for Parents)
 
   const AppUser({
@@ -84,11 +85,17 @@ class AppUser {
       academyLogo: map['academy_logo'] as String?,
       academyCode: map['academy_code'] as String?,
       createdAt: ts is Timestamp ? ts.toDate() : null,
-      joiningDate: map['joining_date'] is Timestamp 
-          ? (map['joining_date'] as Timestamp).toDate() 
+      joiningDate: map['joining_date'] is Timestamp
+          ? (map['joining_date'] as Timestamp).toDate()
           : (ts is Timestamp ? ts.toDate() : null), // Fallback to createdAt
-      assignedSections: (map['sections'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      linkedChildren: (map['linked_children'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      assignedSections: (map['sections'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      linkedChildren: (map['linked_children'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }

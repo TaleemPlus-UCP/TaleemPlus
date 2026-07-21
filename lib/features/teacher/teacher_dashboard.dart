@@ -26,8 +26,7 @@ class TeacherDashboard extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     await context.read<AuthProvider>().signOut();
     if (!context.mounted) return;
-    Navigator.pushNamedAndRemoveUntil(
-        context, AppRoutes.login, (r) => false);
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
   }
 
   @override
@@ -40,8 +39,7 @@ class TeacherDashboard extends StatelessWidget {
         elevation: 0,
         title: const Row(
           children: [
-            Icon(Icons.co_present_rounded,
-                color: AppColors.accent, size: 22),
+            Icon(Icons.co_present_rounded, color: AppColors.accent, size: 22),
             SizedBox(width: 8),
             Expanded(
               child: Text('Teacher Portal',
@@ -95,7 +93,7 @@ class TeacherDashboard extends StatelessWidget {
                 'Attendance',
                 'Mark daily attendance for your classes',
                 Icons.fact_check_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const TeacherClassesScreen()),
@@ -107,7 +105,7 @@ class TeacherDashboard extends StatelessWidget {
                 'View Announcements',
                 'View broadcasts from your academy',
                 Icons.campaign_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const ViewAnnouncementsScreen()),
@@ -119,7 +117,7 @@ class TeacherDashboard extends StatelessWidget {
                 'Manage My Announcements',
                 'Reach out to parents & students',
                 Icons.add_comment_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const TeacherAnnouncementsScreen()),
@@ -131,7 +129,7 @@ class TeacherDashboard extends StatelessWidget {
                 'OCR Document Scanner',
                 'Scan and manage digitized notes',
                 Icons.document_scanner_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OcrScannerScreen()),
                 ),
@@ -142,7 +140,7 @@ class TeacherDashboard extends StatelessWidget {
                 'OCR History',
                 'View and edit previously scanned documents',
                 Icons.history_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OcrHistoryScreen()),
                 ),
@@ -153,11 +151,11 @@ class TeacherDashboard extends StatelessWidget {
                 'Grading & AI Paper Grader',
                 'Enter marks or use AI to grade papers',
                 Icons.add_chart_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) =>
-                      const TeacherQuizListScreen(isAiGen: false)),
+                          const TeacherQuizListScreen(isAiGen: false)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -166,11 +164,11 @@ class TeacherDashboard extends StatelessWidget {
                 'AI Test Paper Generator',
                 'Generate and print monthly tests',
                 Icons.auto_awesome_motion_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) =>
-                      const TeacherQuizListScreen(isAiGen: true)),
+                          const TeacherQuizListScreen(isAiGen: true)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -179,7 +177,7 @@ class TeacherDashboard extends StatelessWidget {
                 'Monthly Performance',
                 'View compiled student results',
                 Icons.insights_rounded,
-                    () => Navigator.push(
+                () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const MonthlyReportScreen()),
@@ -196,32 +194,45 @@ class TeacherDashboard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: context.appColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("Security Settings", style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Security Settings",
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            const Text("Enhance your account security with biometric authentication.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text(
+                "Enhance your account security with biometric authentication.",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 24),
             StatefulBuilder(
               builder: (context, setInternalState) {
                 final session = context.watch<SessionProvider>();
                 return SwitchListTile(
-                  title: const Text("Biometric / Face Unlock", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                  subtitle: const Text("Use fingerprints or face ID to log in.", style: TextStyle(fontSize: 12)),
+                  title: const Text("Biometric / Face Unlock",
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  subtitle: const Text("Use fingerprints or face ID to log in.",
+                      style: TextStyle(fontSize: 12)),
                   value: session.biometricEnabled,
                   activeThumbColor: AppColors.accent,
                   onChanged: (val) async {
                     if (val) {
-                      final authenticated = await session.authenticateWithBiometrics();
+                      final authenticated =
+                          await session.authenticateWithBiometrics();
                       if (authenticated) {
                         final pass = await _promptForPassword(context);
                         if (pass != null) {
-                          await session.setBiometricEnabled(true, password: pass);
+                          await session.setBiometricEnabled(true,
+                              password: pass);
                         }
                       }
                     } else {
@@ -241,7 +252,9 @@ class TeacherDashboard extends StatelessWidget {
                 foregroundColor: AppColors.accent,
                 elevation: 0,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.accent)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.accent)),
               ),
             ),
             const SizedBox(height: 24),
@@ -263,35 +276,50 @@ class TeacherDashboard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter a new password for your account.", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text("Enter a new password for your account.",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 20),
-            LabeledField(label: "New Password", hint: "Min 6 chars", controller: passCtrl, obscure: true),
-            LabeledField(label: "Confirm Password", hint: "Re-enter", controller: confirmCtrl, obscure: true),
+            LabeledField(
+                label: "New Password",
+                hint: "Min 6 chars",
+                controller: passCtrl,
+                obscure: true),
+            LabeledField(
+                label: "Confirm Password",
+                hint: "Re-enter",
+                controller: confirmCtrl,
+                obscure: true),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
           TextButton(
             onPressed: () async {
               if (passCtrl.text != confirmCtrl.text) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match!")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
               if (passCtrl.text.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Minimum 6 characters required!")));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Minimum 6 characters required!")));
                 return;
               }
               try {
                 await AuthService().directUpdatePassword(passCtrl.text);
                 if (ctx.mounted) {
-                   Navigator.pop(ctx);
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password updated successfully!")));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Password updated successfully!")));
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text("Error: $e")));
               }
-            }, 
-            child: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold)),
+            },
+            child: const Text("UPDATE",
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -308,16 +336,24 @@ class TeacherDashboard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter your account password to enable biometric login.", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const Text("Enter your account password to enable biometric login.",
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             const SizedBox(height: 16),
-            LabeledField(label: "Current Password", hint: "Required", controller: ctrl, obscure: true),
+            LabeledField(
+                label: "Current Password",
+                hint: "Required",
+                controller: ctrl,
+                obscure: true),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text), 
-            child: const Text("VERIFY", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text("VERIFY",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppColors.accent)),
           ),
         ],
       ),
@@ -327,15 +363,21 @@ class TeacherDashboard extends StatelessWidget {
   Widget _notificationBell(BuildContext context, dynamic user) {
     if (user == null) return const SizedBox();
     return StreamBuilder<List<dynamic>>(
-      stream: NotificationService().watchForUser(user.uid, user.academyId ?? ''),
+      stream:
+          NotificationService().watchForUser(user.uid, user.academyId ?? ''),
       builder: (context, snap) {
-        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        final count =
+            snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
         return Stack(
           alignment: Alignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+              icon: const Icon(Icons.notifications_rounded,
+                  color: AppColors.accent),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen())),
             ),
             if (count > 0)
               Positioned(
@@ -343,8 +385,13 @@ class TeacherDashboard extends StatelessWidget {
                 top: 8,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                  child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                  decoration: const BoxDecoration(
+                      color: AppColors.danger, shape: BoxShape.circle),
+                  child: Text('$count',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
           ],
@@ -354,12 +401,12 @@ class TeacherDashboard extends StatelessWidget {
   }
 
   Widget _actionTile(
-      BuildContext context,
-      String title,
-      String subtitle,
-      IconData icon,
-      VoidCallback? onTap,
-      ) {
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    VoidCallback? onTap,
+  ) {
     final enabled = onTap != null;
     return Opacity(
       opacity: enabled ? 1 : 0.55,
@@ -373,8 +420,8 @@ class TeacherDashboard extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.appColors.surface.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(14),
-              border:
-              Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+              border: Border.all(
+                  color: context.appColors.border.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -391,13 +438,13 @@ class TeacherDashboard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(subtitle,
                           style: TextStyle(
-                              color: context.appColors.textMuted, fontSize: 12)),
+                              color: context.appColors.textMuted,
+                              fontSize: 12)),
                     ],
                   ),
                 ),
                 if (enabled)
-                  const Icon(Icons.chevron_right,
-                      color: AppColors.textMuted),
+                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
               ],
             ),
           ),

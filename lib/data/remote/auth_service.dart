@@ -33,8 +33,8 @@ class AuthService {
     required String phoneNumber,
     required String password,
     required UserRole role,
-    String? academyName, 
-    String? academyId, 
+    String? academyName,
+    String? academyId,
     String? academyAddress,
     String? academyPhone,
   }) async {
@@ -46,7 +46,7 @@ class AuthService {
 
       final uid = cred.user!.uid;
       final status = role == UserRole.admin ? 'active' : 'pending';
-      
+
       // For Admins, we generate a short human-friendly code (e.g. TP-XXXXX)
       String? academyCode;
       if (role == UserRole.admin) {
@@ -62,7 +62,7 @@ class AuthService {
         phoneNumber: phoneNumber.trim(),
         role: role,
         accountStatus: status,
-        academyName: academyName, 
+        academyName: academyName,
         academyId: effectiveAcademyId,
         academyAddress: academyAddress,
         academyPhone: academyPhone,
@@ -122,20 +122,23 @@ class AuthService {
 
   /// Returns all approved users for the requested role and academy.
   /// Uses broad search + local filtering to avoid Firestore index requirements.
-  Future<List<AppUser>> getApprovedByRole(UserRole role, String academyId) async {
+  Future<List<AppUser>> getApprovedByRole(
+      UserRole role, String academyId) async {
     try {
       // Fetch only by role to minimize index needs
-      final snap = await _users
-          .where('role', isEqualTo: role.name)
-          .get();
+      final snap = await _users.where('role', isEqualTo: role.name).get();
 
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
           .where((u) => u.isApproved) // Local status check
-          .where((u) => u.academyId == academyId || u.academyId == null || u.academyId!.isEmpty)
+          .where((u) =>
+              u.academyId == academyId ||
+              u.academyId == null ||
+              u.academyId!.isEmpty)
           .toList();
 
-      users.sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
+      users.sort((a, b) =>
+          a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
       return users;
     } catch (e) {
       debugPrint("Error fetching approved users: $e");
@@ -150,10 +153,14 @@ class AuthService {
 
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
-          .where((u) => u.academyId == academyId || u.academyId == null || u.academyId!.isEmpty)
+          .where((u) =>
+              u.academyId == academyId ||
+              u.academyId == null ||
+              u.academyId!.isEmpty)
           .toList();
 
-      users.sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
+      users.sort((a, b) =>
+          a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
       return users;
     } catch (e) {
       debugPrint("Error fetching users by role: $e");
@@ -169,27 +176,26 @@ class AuthService {
         .where('academy_id', isEqualTo: academyId) // MUST BE SAME ACADEMY
         .limit(1)
         .get();
-    
+
     if (snap.docs.isEmpty) return null;
     return AppUser.fromMap(snap.docs.first.id, snap.docs.first.data());
   }
 
   /// NEW: Robust search for Parent Portal (restricted by academy)
-  Future<List<AppUser>> searchStudentsByName(String query, String academyId) async {
+  Future<List<AppUser>> searchStudentsByName(
+      String query, String academyId) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
 
     try {
       // Use single where to avoid composite index requirement
-      final snap = await _users
-          .where('academy_id', isEqualTo: academyId)
-          .get();
+      final snap = await _users.where('academy_id', isEqualTo: academyId).get();
 
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
           .where((u) => u.role == UserRole.student) // Local role check
-          .where((u) => 
-              u.fullName.toLowerCase().contains(q) || 
+          .where((u) =>
+              u.fullName.toLowerCase().contains(q) ||
               u.email.toLowerCase().contains(q))
           .toList();
 
@@ -201,7 +207,8 @@ class AuthService {
   }
 
   /// Update the list of children linked to a parent
-  Future<void> updateParentChildren(String parentUid, List<String> childUids) async {
+  Future<void> updateParentChildren(
+      String parentUid, List<String> childUids) async {
     await _users.doc(parentUid).update({
       'linked_children': childUids,
       'updated_at': FieldValue.serverTimestamp(),
@@ -215,7 +222,7 @@ class AuthService {
 
     try {
       final snap = await _users.where('role', isEqualTo: 'admin').get();
-      
+
       for (var doc in snap.docs) {
         final data = doc.data();
         if (data['academy_code'] == cleanCode) {
@@ -233,19 +240,21 @@ class AuthService {
 
   Future<List<AppUser>> getPendingUsers(String academyId) async {
     try {
-      final snap = await _users
-          .where('account_status', isEqualTo: 'pending')
-          .get();
+      final snap =
+          await _users.where('account_status', isEqualTo: 'pending').get();
 
-      final List<AppUser> allPending = snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
-      
-      final filtered = allPending.where((u) => 
-        u.academyId == academyId || 
-        u.academyId == null || 
-        u.academyId!.isEmpty
-      ).toList();
+      final List<AppUser> allPending =
+          snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
 
-      filtered.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+      final filtered = allPending
+          .where((u) =>
+              u.academyId == academyId ||
+              u.academyId == null ||
+              u.academyId!.isEmpty)
+          .toList();
+
+      filtered.sort((a, b) => (b.createdAt ?? DateTime.now())
+          .compareTo(a.createdAt ?? DateTime.now()));
       return filtered;
     } catch (e) {
       debugPrint("Error fetching pending users: $e");
@@ -299,7 +308,7 @@ class AuthService {
     await _users.doc(uid).update({
       'full_name': fullName.trim(),
       'phone_number': phoneNumber.trim(),
-      'academy_name': extraInfo, 
+      'academy_name': extraInfo,
       if (joiningDate != null) 'joining_date': Timestamp.fromDate(joiningDate),
       if (sections != null) 'sections': sections,
       'updated_at': FieldValue.serverTimestamp(),
@@ -315,8 +324,8 @@ class AuthService {
     required String phoneNumber,
     required String password,
     required UserRole role,
-    required String academyId, 
-    String? extraInfo, 
+    required String academyId,
+    String? extraInfo,
     DateTime? joiningDate,
     List<String>? sections,
   }) async {
@@ -336,7 +345,7 @@ class AuthService {
         phoneNumber: phoneNumber.trim(),
         role: role,
         accountStatus: 'active',
-        academyName: extraInfo, 
+        academyName: extraInfo,
         academyId: academyId,
         createdAt: DateTime.now(),
         joiningDate: joiningDate ?? DateTime.now(),

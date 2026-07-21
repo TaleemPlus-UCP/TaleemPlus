@@ -15,7 +15,7 @@ class Validators {
     return null;
   }
 
-  /// Enforces a valid email. 
+  /// Enforces a valid email.
   /// (Previously forced institutional domain, now optional for flexibility)
   static String? email(String? value) {
     final v = value?.trim() ?? '';

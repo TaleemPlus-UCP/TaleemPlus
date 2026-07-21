@@ -46,8 +46,7 @@ class RoleDashboardScaffold extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.accent, size: 22),
             const SizedBox(width: 8),
-            Text(title,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
         actions: [
@@ -115,14 +114,12 @@ class RoleDashboardScaffold extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.widgets_outlined,
-              color: AppColors.accent, size: 20),
+          const Icon(Icons.widgets_outlined, color: AppColors.accent, size: 20),
           const SizedBox(width: 14),
           Expanded(
             child: Text(label,
                 style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600)),
+                    color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
           ),
           const Icon(Icons.chevron_right, color: AppColors.textMuted),
         ],

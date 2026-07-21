@@ -34,64 +34,64 @@ class _StudentProgressChartScreenState
         child: SafeArea(
           child: academyId.isEmpty
               ? const Center(
-              child: Text("Session error",
-                  style: TextStyle(color: AppColors.textSecondary)))
+                  child: Text("Session error",
+                      style: TextStyle(color: AppColors.textSecondary)))
               : StreamBuilder<List<TestMarkModel>>(
-            stream: context
-                .read<QuizProvider>()
-                .watchStudentResults(widget.studentUid, academyId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.accent));
-              }
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'Error loading results: ${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.danger),
-                    ),
-                  ),
-                );
-              }
+                  stream: context
+                      .read<QuizProvider>()
+                      .watchStudentResults(widget.studentUid, academyId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent));
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'Error loading results: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.danger),
+                          ),
+                        ),
+                      );
+                    }
 
-              final results = snapshot.data ?? [];
-              if (results.isEmpty) return _buildEmptyState();
+                    final results = snapshot.data ?? [];
+                    if (results.isEmpty) return _buildEmptyState();
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildStatsRow(results),
-                    const SizedBox(height: 32),
-                    const Text("PROGRESS TREND",
-                        style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2)),
-                    const SizedBox(height: 16),
-                    _buildLineChart(results),
-                    const SizedBox(height: 32),
-                    const Text("SUBJECT WISE PERFORMANCE",
-                        style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2)),
-                    const SizedBox(height: 16),
-                    _buildSubjectBarChart(results),
-                    const SizedBox(height: 40),
-                  ],
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatsRow(results),
+                          const SizedBox(height: 32),
+                          const Text("PROGRESS TREND",
+                              style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2)),
+                          const SizedBox(height: 16),
+                          _buildLineChart(results),
+                          const SizedBox(height: 32),
+                          const Text("SUBJECT WISE PERFORMANCE",
+                              style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2)),
+                          const SizedBox(height: 16),
+                          _buildSubjectBarChart(results),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ),
     );
@@ -132,9 +132,7 @@ class _StudentProgressChartScreenState
               fit: BoxFit.scaleDown,
               child: Text(val,
                   style: TextStyle(
-                      color: color,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900)),
+                      color: color, fontSize: 20, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(height: 4),
             Text(label,
@@ -173,17 +171,16 @@ class _StudentProgressChartScreenState
             drawVerticalLine: false,
             horizontalInterval: 25,
             getDrawingHorizontalLine: (value) => FlLine(
-                color: AppColors.border.withValues(alpha: 0.2),
-                strokeWidth: 1),
+                color: AppColors.border.withValues(alpha: 0.2), strokeWidth: 1),
           ),
           titlesData: FlTitlesData(
             show: true,
             rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -248,7 +245,7 @@ class _StudentProgressChartScreenState
               color: AppColors.accent,
               width: 18,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(6)),
+                  const BorderRadius.vertical(top: Radius.circular(6)),
               backDrawRodData: BackgroundBarChartRodData(
                   show: true,
                   toY: 100,
@@ -278,9 +275,9 @@ class _StudentProgressChartScreenState
           titlesData: FlTitlesData(
             show: true,
             rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,

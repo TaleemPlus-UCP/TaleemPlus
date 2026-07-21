@@ -48,14 +48,15 @@ class AttendanceRepository {
   }
 
   /// Watch all attendance records for a specific student in an academy.
-  Stream<List<AttendanceRecord>> watchForStudent(String studentId, String academyId) {
+  Stream<List<AttendanceRecord>> watchForStudent(
+      String studentId, String academyId) {
     return _col
         .where('academy_id', isEqualTo: academyId)
         .where('student_id', isEqualTo: studentId)
         .orderBy('log_date', descending: true)
         .snapshots()
         .map((snap) => snap.docs
-        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-        .toList());
+            .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
+            .toList());
   }
 }

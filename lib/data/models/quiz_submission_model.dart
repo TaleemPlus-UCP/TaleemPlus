@@ -4,7 +4,8 @@ class AnswerModel {
   final String questionId;
   final String answerText;
   final double marksAwarded;
-  final bool autoGraded; // True if MCQ, False if Short Answer (needs teacher review)
+  final bool
+      autoGraded; // True if MCQ, False if Short Answer (needs teacher review)
 
   AnswerModel({
     required this.questionId,
@@ -105,7 +106,9 @@ class QuizSubmissionModel {
       gradeLetter: map['grade_letter'] ?? 'F',
       status: map['status'] ?? 'submitted',
       submittedAt: (map['submitted_at'] as Timestamp).toDate(),
-      gradedAt: map['graded_at'] != null ? (map['graded_at'] as Timestamp).toDate() : null,
+      gradedAt: map['graded_at'] != null
+          ? (map['graded_at'] as Timestamp).toDate()
+          : null,
       teacherFeedback: map['teacher_feedback'],
     );
   }

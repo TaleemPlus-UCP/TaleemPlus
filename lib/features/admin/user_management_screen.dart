@@ -36,7 +36,8 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       initialIndex: widget.initialIndex,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final user =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<MemberProvider>().load(user.uid);
       }
@@ -128,7 +129,8 @@ class _RoleListTab extends StatefulWidget {
   State<_RoleListTab> createState() => _RoleListTabState();
 }
 
-class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClientMixin {
+class _RoleListTabState extends State<_RoleListTab>
+    with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = "";
 
@@ -151,30 +153,31 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
             child: CircularProgressIndicator(color: AppColors.accent),
           );
         }
-        
+
         var list = provider.byRole(widget.role);
         if (_query.isNotEmpty) {
-          list = list.where((m) => 
-            m.fullName.toLowerCase().contains(_query.toLowerCase()) || 
-            m.extra.toLowerCase().contains(_query.toLowerCase()) ||
-            m.phone.contains(_query)
-          ).toList();
+          list = list
+              .where((m) =>
+                  m.fullName.toLowerCase().contains(_query.toLowerCase()) ||
+                  m.extra.toLowerCase().contains(_query.toLowerCase()) ||
+                  m.phone.contains(_query))
+              .toList();
         }
 
         return Column(
           children: [
             _buildSearchBar(),
             Expanded(
-              child: list.isEmpty 
-                ? _emptyState(widget.role)
-                : RepaintBoundary(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, i) => _memberTile(ctx, list[i]),
+              child: list.isEmpty
+                  ? _emptyState(widget.role)
+                  : RepaintBoundary(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (ctx, i) => _memberTile(ctx, list[i]),
+                      ),
                     ),
-                  ),
             ),
           ],
         );
@@ -191,7 +194,8 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
         style: TextStyle(color: context.appColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: "Search by name or ${_labelForSearch(widget.role)}...",
-          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.accent, size: 20),
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: AppColors.accent, size: 20),
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           fillColor: context.appColors.surface.withValues(alpha: 0.5),
         ),
@@ -201,10 +205,14 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
 
   String _labelForSearch(String role) {
     switch (role) {
-      case 'teacher': return 'designation';
-      case 'student': return 'roll number';
-      case 'parent': return 'child name';
-      default: return 'details';
+      case 'teacher':
+        return 'designation';
+      case 'student':
+        return 'roll number';
+      case 'parent':
+        return 'child name';
+      default:
+        return 'details';
     }
   }
 
@@ -236,7 +244,8 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -272,7 +281,8 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          color: context.appColors.textSecondary, fontSize: 12)),
+                          color: context.appColors.textSecondary,
+                          fontSize: 12)),
                 if (m.phone.isNotEmpty)
                   Text(m.phone,
                       maxLines: 1,
@@ -284,7 +294,8 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
           ),
           if (m.role == 'teacher')
             IconButton(
-              icon: const Icon(Icons.add_chart_rounded, color: AppColors.accent),
+              icon:
+                  const Icon(Icons.add_chart_rounded, color: AppColors.accent),
               tooltip: 'Assign Class',
               onPressed: () => _openAssignClassSheet(context, m),
             ),
@@ -342,14 +353,15 @@ class _RoleListTabState extends State<_RoleListTab> with AutomaticKeepAliveClien
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.danger)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
     );
     if (ok == true && ctx.mounted) {
-      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final user =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         await ctx.read<MemberProvider>().removeMember(m.id, user.uid);
         if (ctx.mounted) {
@@ -384,7 +396,7 @@ class _QuickAssignClassSheetState extends State<_QuickAssignClassSheet> {
     try {
       final authProv = Provider.of<AuthProvider>(context, listen: false);
       final academyId = authProv.currentUser?.uid ?? '';
-      
+
       // Convert AcademyMember to a minimal AppUser for the provider
       final teacherUser = AppUser(
         uid: widget.teacher.id,
@@ -395,25 +407,28 @@ class _QuickAssignClassSheetState extends State<_QuickAssignClassSheet> {
       );
 
       await context.read<ClassProvider>().createClassWithStudents(
-        className: _nameCtrl.text,
-        section: _sectionCtrl.text,
-        subject: _subjectCtrl.text,
-        teacher: teacherUser,
-        students: [], // Start with empty enrollment
-        academyId: academyId,
-      );
+            className: _nameCtrl.text,
+            section: _sectionCtrl.text,
+            subject: _subjectCtrl.text,
+            teacher: teacherUser,
+            students: [], // Start with empty enrollment
+            academyId: academyId,
+          );
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Assigned ${_subjectCtrl.text} (${_nameCtrl.text}) to ${widget.teacher.fullName}')),
+          SnackBar(
+              content: Text(
+                  'Assigned ${_subjectCtrl.text} (${_nameCtrl.text}) to ${widget.teacher.fullName}')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text('Error: $e'), backgroundColor: AppColors.danger),
         );
       }
     }
@@ -430,18 +445,34 @@ class _QuickAssignClassSheetState extends State<_QuickAssignClassSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Assign Class to ${widget.teacher.fullName}', 
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text('Assign Class to ${widget.teacher.fullName}',
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            const Text('Create a new class assignment for this teacher.', 
+            const Text('Create a new class assignment for this teacher.',
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             const SizedBox(height: 24),
-            LabeledField(label: 'Class Name', hint: 'e.g. Class 10', controller: _nameCtrl, validator: Validators.fullName),
-            LabeledField(label: 'Section (optional)', hint: 'e.g. A', controller: _sectionCtrl),
-            LabeledField(label: 'Subject', hint: 'e.g. Physics', controller: _subjectCtrl, 
-                validator: (v) => (v == null || v.isEmpty) ? 'Subject is required' : null),
+            LabeledField(
+                label: 'Class Name',
+                hint: 'e.g. Class 10',
+                controller: _nameCtrl,
+                validator: Validators.fullName),
+            LabeledField(
+                label: 'Section (optional)',
+                hint: 'e.g. A',
+                controller: _sectionCtrl),
+            LabeledField(
+                label: 'Subject',
+                hint: 'e.g. Physics',
+                controller: _subjectCtrl,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Subject is required' : null),
             const SizedBox(height: 24),
-            PrimaryButton(label: 'ASSIGN CLASS', icon: Icons.check_rounded, loading: _saving, onPressed: _save),
+            PrimaryButton(
+                label: 'ASSIGN CLASS',
+                icon: Icons.check_rounded,
+                loading: _saving,
+                onPressed: _save),
           ],
         ),
       ),
@@ -485,7 +516,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _saving = true);
 
     try {
@@ -514,7 +545,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text('Failed to update: $e'),
+              backgroundColor: AppColors.danger),
         );
       }
     }
@@ -533,14 +566,29 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Edit Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text('Edit Profile',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: 20),
-            LabeledField(label: 'Full Name', hint: 'Enter name', controller: _nameCtrl, validator: Validators.fullName),
-            LabeledField(label: label, hint: 'Enter $label', controller: _extraCtrl),
-            LabeledField(label: 'Phone', hint: '+92...', controller: _phoneCtrl, keyboardType: TextInputType.phone, validator: Validators.phone),
+            LabeledField(
+                label: 'Full Name',
+                hint: 'Enter name',
+                controller: _nameCtrl,
+                validator: Validators.fullName),
+            LabeledField(
+                label: label, hint: 'Enter $label', controller: _extraCtrl),
+            LabeledField(
+                label: 'Phone',
+                hint: '+92...',
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                validator: Validators.phone),
             const SizedBox(height: 12),
             if (widget.member.role == 'teacher') ...[
-              const Text('Joining Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const Text('Joining Date',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
@@ -561,15 +609,22 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.accent),
+                      const Icon(Icons.calendar_month_rounded,
+                          size: 18, color: AppColors.accent),
                       const SizedBox(width: 10),
-                      Text(_joiningDate == null ? 'Select Date' : _joiningDate!.toString().split(' ')[0]),
+                      Text(_joiningDate == null
+                          ? 'Select Date'
+                          : _joiningDate!.toString().split(' ')[0]),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Assigned Sections', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const Text('Assigned Sections',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -580,8 +635,10 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                     selected: isSel,
                     onSelected: (v) {
                       setState(() {
-                        if (v) _selectedSections.add(s);
-                        else _selectedSections.remove(s);
+                        if (v)
+                          _selectedSections.add(s);
+                        else
+                          _selectedSections.remove(s);
                       });
                     },
                   );
@@ -589,7 +646,11 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
               ),
             ],
             const SizedBox(height: 16),
-            PrimaryButton(label: 'UPDATE PROFILE', icon: Icons.check_rounded, loading: _saving, onPressed: _save),
+            PrimaryButton(
+                label: 'UPDATE PROFILE',
+                icon: Icons.check_rounded,
+                loading: _saving,
+                onPressed: _save),
           ],
         ),
       ),
@@ -611,7 +672,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController(text: "123456"); // Default password
+  final _passwordCtrl =
+      TextEditingController(text: "123456"); // Default password
   DateTime? _joiningDate = DateTime.now();
   final List<String> _selectedSections = [];
   bool _saving = false;
@@ -628,14 +690,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Duplicate check before saving
     final membersProv = context.read<MemberProvider>();
     final emailLower = _emailCtrl.text.trim().toLowerCase();
-    
-    if (membersProv.members.any((m) => m.email.trim().toLowerCase() == emailLower)) {
+
+    if (membersProv.members
+        .any((m) => m.email.trim().toLowerCase() == emailLower)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A user with this email already exists!'), backgroundColor: AppColors.danger),
+        const SnackBar(
+            content: Text('A user with this email already exists!'),
+            backgroundColor: AppColors.danger),
       );
       return;
     }
@@ -644,7 +709,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
     try {
       final auth = AuthService();
-      final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final admin =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (admin == null) return;
 
       // 1. Create account in Firebase directly as 'active' and tie to current admin academy
@@ -673,7 +739,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add user: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text('Failed to add user: $e'),
+              backgroundColor: AppColors.danger),
         );
       }
     }
@@ -755,7 +823,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               ),
               if (widget.role == 'teacher') ...[
                 const SizedBox(height: 16),
-                const Text('Joining Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                const Text('Joining Date',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -776,15 +848,22 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.accent),
+                        const Icon(Icons.calendar_month_rounded,
+                            size: 18, color: AppColors.accent),
                         const SizedBox(width: 10),
-                        Text(_joiningDate == null ? 'Select Date' : _joiningDate!.toString().split(' ')[0]),
+                        Text(_joiningDate == null
+                            ? 'Select Date'
+                            : _joiningDate!.toString().split(' ')[0]),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Assigned Sections', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                const Text('Assigned Sections',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -795,8 +874,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                       selected: isSel,
                       onSelected: (v) {
                         setState(() {
-                          if (v) _selectedSections.add(s);
-                          else _selectedSections.remove(s);
+                          if (v)
+                            _selectedSections.add(s);
+                          else
+                            _selectedSections.remove(s);
                         });
                       },
                     );

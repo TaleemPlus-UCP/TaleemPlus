@@ -16,7 +16,8 @@ import '../../../data/models/quiz_model.dart';
 class CreateQuizScreen extends StatefulWidget {
   final String classId;
   final bool isAiGen;
-  const CreateQuizScreen({super.key, required this.classId, this.isAiGen = false});
+  const CreateQuizScreen(
+      {super.key, required this.classId, this.isAiGen = false});
 
   @override
   State<CreateQuizScreen> createState() => _CreateQuizScreenState();
@@ -30,7 +31,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final _instructionsCtrl = TextEditingController();
   final _chapterCtrl = TextEditingController();
   final _sessionCtrl = TextEditingController(text: 'Monthly Test');
-  
+
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
   String _difficulty = 'Medium';
   final DateTime _testDate = DateTime.now();
@@ -38,8 +39,18 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final List<QuizQuestion> _questions = [];
 
   final List<String> _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
 
   bool _isAnalyzing = false;
@@ -53,13 +64,16 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.camera_alt_rounded, color: AppColors.accent),
-            title: const Text("Camera", style: TextStyle(color: AppColors.textPrimary)),
+            leading:
+                const Icon(Icons.camera_alt_rounded, color: AppColors.accent),
+            title: const Text("Camera",
+                style: TextStyle(color: AppColors.textPrimary)),
             onTap: () => Navigator.pop(ctx, ImageSource.camera),
           ),
           ListTile(
             leading: const Icon(Icons.image_rounded, color: AppColors.accent),
-            title: const Text("Gallery", style: TextStyle(color: AppColors.textPrimary)),
+            title: const Text("Gallery",
+                style: TextStyle(color: AppColors.textPrimary)),
             onTap: () => Navigator.pop(ctx, ImageSource.gallery),
           ),
         ],
@@ -87,7 +101,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("AI Analysis Failed: $e"), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text("AI Analysis Failed: $e"),
+              backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -99,11 +115,14 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     // Offline AI Heuristic Logic
     final lines = text.split('\n').where((l) => l.trim().length > 10).toList();
     final wordCount = text.split(' ').length;
-    
+
     // 1. Difficulty prediction based on average word length and complex markers
     String predictedDifficulty = "Medium";
     if (wordCount < 100) predictedDifficulty = "Easy";
-    if (text.contains('law') || text.contains('theorem') || text.contains('equation') || wordCount > 500) {
+    if (text.contains('law') ||
+        text.contains('theorem') ||
+        text.contains('equation') ||
+        wordCount > 500) {
       predictedDifficulty = "Hard";
     }
 
@@ -112,10 +131,12 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     int sqs = (lines.length / 4).clamp(2, 10).toInt();
     int lqs = (wordCount > 300) ? 2 : 1;
 
-    _showAiRecommendationsDialog(predictedDifficulty, mcqs, sqs, lqs, text.substring(0, text.length > 100 ? 100 : text.length));
+    _showAiRecommendationsDialog(predictedDifficulty, mcqs, sqs, lqs,
+        text.substring(0, text.length > 100 ? 100 : text.length));
   }
 
-  void _showAiRecommendationsDialog(String diff, int mcqs, int sqs, int lqs, String preview) {
+  void _showAiRecommendationsDialog(
+      String diff, int mcqs, int sqs, int lqs, String preview) {
     final mcqCountCtrl = TextEditingController(text: mcqs.toString());
     final sqCountCtrl = TextEditingController(text: sqs.toString());
     final lqCountCtrl = TextEditingController(text: lqs.toString());
@@ -128,7 +149,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           children: [
             Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
             SizedBox(width: 10),
-            Text("AI Test Blueprint", style: TextStyle(color: AppColors.textPrimary)),
+            Text("AI Test Blueprint",
+                style: TextStyle(color: AppColors.textPrimary)),
           ],
         ),
         content: SingleChildScrollView(
@@ -136,11 +158,20 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Topic: $preview...", style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontStyle: FontStyle.italic)),
+              Text("Topic: $preview...",
+                  style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic)),
               const SizedBox(height: 16),
               _aiStatRow("Predicted Difficulty", diff, AppColors.accent),
               const Divider(color: AppColors.border, height: 24),
-              const Text("ADJUST QUESTION COUNTS:", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              const Text("ADJUST QUESTION COUNTS:",
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
               const SizedBox(height: 12),
               _countInput("MCQs", mcqCountCtrl),
               _countInput("Short Questions", sqCountCtrl),
@@ -151,20 +182,24 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("CANCEL", style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text("CANCEL",
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: AppColors.textOnAccent),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.textOnAccent),
             onPressed: () {
               final mCount = int.tryParse(mcqCountCtrl.text) ?? mcqs;
               final sCount = int.tryParse(sqCountCtrl.text) ?? sqs;
               final lCount = int.tryParse(lqCountCtrl.text) ?? lqs;
-              
+
               _generateQuestionsLocally(preview, diff, mCount, sCount, lCount);
-              
+
               setState(() {
                 _difficulty = diff;
-                _instructionsCtrl.text = "Attempt all $mCount MCQs, $sCount Short Questions and $lCount Long Questions.";
+                _instructionsCtrl.text =
+                    "Attempt all $mCount MCQs, $sCount Short Questions and $lCount Long Questions.";
               });
               Navigator.pop(ctx);
             },
@@ -180,19 +215,25 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13))),
+          Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13))),
           SizedBox(
             width: 60,
             child: TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: AppColors.accent, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 fillColor: AppColors.inputFill,
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none),
               ),
             ),
           ),
@@ -201,9 +242,11 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
-  void _generateQuestionsLocally(String extractedText, String diff, int mcqs, int sqs, int lqs) {
+  void _generateQuestionsLocally(
+      String extractedText, String diff, int mcqs, int sqs, int lqs) {
     // 100% Offline Heuristic Question Generation
-    final lines = extractedText.split('\n').where((l) => l.trim().length > 20).toList();
+    final lines =
+        extractedText.split('\n').where((l) => l.trim().length > 20).toList();
     final List<QuizQuestion> generated = [];
 
     // Heuristic 1: MCQs from definitions
@@ -215,9 +258,15 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         if (parts.length == 2) {
           generated.add(QuizQuestion(
             id: const Uuid().v4(),
-            text: "What ${line.contains(' refers to ') ? 'refers to' : 'is'} ${parts[1].trim()}?",
+            text:
+                "What ${line.contains(' refers to ') ? 'refers to' : 'is'} ${parts[1].trim()}?",
             type: QuestionType.mcq,
-            options: [parts[0].trim(), "None of the above", "Both A and B", "Incorrect definition"],
+            options: [
+              parts[0].trim(),
+              "None of the above",
+              "Both A and B",
+              "Incorrect definition"
+            ],
             correctIndex: 0,
             marks: 1.0,
           ));
@@ -248,7 +297,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       if (line.length > 150) {
         generated.add(QuizQuestion(
           id: const Uuid().v4(),
-          text: "Discuss in detail the following concept: ${line.trim().substring(0, 50)}...",
+          text:
+              "Discuss in detail the following concept: ${line.trim().substring(0, 50)}...",
           type: QuestionType.short, // LQ is treated as long short answer in UI
           marks: 5.0,
         ));
@@ -259,9 +309,11 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     setState(() {
       _questions.addAll(generated);
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Generated ${generated.length} questions from notes!"), backgroundColor: AppColors.success),
+      SnackBar(
+          content: Text("Generated ${generated.length} questions from notes!"),
+          backgroundColor: AppColors.success),
     );
   }
 
@@ -271,9 +323,14 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13))),
           const SizedBox(width: 8),
-          Text(value, style: TextStyle(color: valColor, fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(value,
+              style: TextStyle(
+                  color: valColor, fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );
@@ -285,21 +342,24 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddQuestionSheet(onAdd: (q) => setState(() => _questions.add(q))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) =>
+          _AddQuestionSheet(onAdd: (q) => setState(() => _questions.add(q))),
     );
   }
 
   Future<void> _saveQuiz() async {
     if (!_formKey.currentState!.validate()) return;
     if (_questions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one question!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add at least one question!')));
       return;
     }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final cp = Provider.of<ClassProvider>(context, listen: false);
-    
+
     final user = auth.currentUser;
     final cls = cp.classes.firstWhere((c) => c.id == widget.classId);
 
@@ -326,7 +386,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     await context.read<QuizProvider>().createQuiz(quiz);
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Test created successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Test created successfully!')));
     }
   }
 
@@ -334,7 +395,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isAiGen ? 'AI Test Generator' : 'Create Test', style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(widget.isAiGen ? 'AI Test Generator' : 'Create Test',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -350,43 +412,70 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                   const SizedBox(height: 24),
                 ],
                 _buildFormSection('TEST BASICS', [
-                  LabeledField(label: 'Test Title', hint: 'e.g. Unit 1 Quiz', controller: _titleCtrl),
-                  LabeledField(label: 'Subject', hint: 'e.g. Physics', controller: _subjectCtrl),
+                  LabeledField(
+                      label: 'Test Title',
+                      hint: 'e.g. Unit 1 Quiz',
+                      controller: _titleCtrl),
+                  LabeledField(
+                      label: 'Subject',
+                      hint: 'e.g. Physics',
+                      controller: _subjectCtrl),
                 ]),
-                
                 _buildFormSection('ACADEMY DETAILS', [
-                  _buildDropdownField('Month', _selectedMonth, _months, (v) => setState(() => _selectedMonth = v!)),
+                  _buildDropdownField('Month', _selectedMonth, _months,
+                      (v) => setState(() => _selectedMonth = v!)),
                   const SizedBox(height: 16),
-                  LabeledField(label: 'Test Session', hint: 'e.g. Annual 2024', controller: _sessionCtrl),
-                  LabeledField(label: 'Chapter / Topic', hint: 'e.g. Kinematics', controller: _chapterCtrl),
+                  LabeledField(
+                      label: 'Test Session',
+                      hint: 'e.g. Annual 2024',
+                      controller: _sessionCtrl),
+                  LabeledField(
+                      label: 'Chapter / Topic',
+                      hint: 'e.g. Kinematics',
+                      controller: _chapterCtrl),
                 ]),
-
                 _buildFormSection('SPECIFICATIONS', [
-                  _buildDropdownField('Difficulty', _difficulty, ['Easy', 'Medium', 'Hard'], (v) => setState(() => _difficulty = v!)),
+                  _buildDropdownField(
+                      'Difficulty',
+                      _difficulty,
+                      ['Easy', 'Medium', 'Hard'],
+                      (v) => setState(() => _difficulty = v!)),
                   const SizedBox(height: 16),
-                  LabeledField(label: 'Total Marks', hint: 'e.g. 20', controller: _totalMarksCtrl, keyboardType: TextInputType.number),
-                  LabeledField(label: 'Instructions', hint: 'e.g. No calculators', controller: _instructionsCtrl),
+                  LabeledField(
+                      label: 'Total Marks',
+                      hint: 'e.g. 20',
+                      controller: _totalMarksCtrl,
+                      keyboardType: TextInputType.number),
+                  LabeledField(
+                      label: 'Instructions',
+                      hint: 'e.g. No calculators',
+                      controller: _instructionsCtrl),
                 ]),
-                
                 const SizedBox(height: 10),
-                const Text('QUESTIONS', style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                const Text('QUESTIONS',
+                    style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1)),
                 const SizedBox(height: 12),
-                
                 ..._questions.asMap().entries.map((entry) {
                   final i = entry.key;
                   final q = entry.value;
                   return _questionCard(i + 1, q);
                 }),
-
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _addQuestion,
-                  icon: const Icon(Icons.add_circle_outline, color: AppColors.accent),
-                  label: const Text('Add Question', style: TextStyle(color: AppColors.accent)),
+                  icon: const Icon(Icons.add_circle_outline,
+                      color: AppColors.accent),
+                  label: const Text('Add Question',
+                      style: TextStyle(color: AppColors.accent)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.border),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -419,12 +508,19 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             children: [
               Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
               SizedBox(width: 10),
-              Text("AI TEST ASSISTANT", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.2)),
+              Text("AI TEST ASSISTANT",
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      letterSpacing: 1.2)),
             ],
           ),
           const SizedBox(height: 12),
-          const Text("Take a photo of the textbook topic to get suggested question counts and difficulty.", 
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+          const Text(
+              "Take a photo of the textbook topic to get suggested question counts and difficulty.",
+              style: TextStyle(
+                  color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
           const SizedBox(height: 16),
           PrimaryButton(
             label: "SCAN TOPIC WITH AI",
@@ -441,7 +537,12 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+        Text(title,
+            style: const TextStyle(
+                color: AppColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
         const SizedBox(height: 16),
         ...children,
         const SizedBox(height: 12),
@@ -449,11 +550,16 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
-  Widget _buildDropdownField(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownField(String label, String value, List<String> items,
+      ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -465,11 +571,18 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
-              items: items.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: AppColors.textPrimary)))).toList(),
+              items: items
+                  .map((m) => DropdownMenuItem(
+                      value: m,
+                      child: Text(m,
+                          style:
+                              const TextStyle(color: AppColors.textPrimary))))
+                  .toList(),
               onChanged: onChanged,
               dropdownColor: AppColors.surface,
               isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.accent),
+              icon: const Icon(Icons.keyboard_arrow_down,
+                  color: AppColors.accent),
             ),
           ),
         ),
@@ -494,20 +607,33 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
               CircleAvatar(
                 radius: 12,
                 backgroundColor: AppColors.accent,
-                child: Text('$index', style: const TextStyle(color: AppColors.textOnAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text('$index',
+                    style: const TextStyle(
+                        color: AppColors.textOnAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 10),
-              Text(q.type == QuestionType.mcq ? 'MCQ' : 'Short Answer', style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(q.type == QuestionType.mcq ? 'MCQ' : 'Short Answer',
+                  style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700)),
               const Spacer(),
-              Text('${q.marks} Marks', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              Text('${q.marks} Marks',
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 12)),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 18),
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.danger, size: 18),
                 onPressed: () => setState(() => _questions.remove(q)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(q.text, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+          Text(q.text,
+              style: const TextStyle(
+                  color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -527,8 +653,9 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
   final _marksCtrl = TextEditingController(text: '1');
   final _keywordsCtrl = TextEditingController();
   QuestionType _type = QuestionType.mcq;
-  
-  final List<TextEditingController> _optionCtrls = List.generate(4, (_) => TextEditingController());
+
+  final List<TextEditingController> _optionCtrls =
+      List.generate(4, (_) => TextEditingController());
   int _correctIdx = 0;
 
   @override
@@ -541,7 +668,11 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Question', style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text('Add Question',
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -551,18 +682,27 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
               ],
             ),
             const SizedBox(height: 20),
-            LabeledField(label: 'Question Text', hint: 'Enter question', controller: _questionCtrl),
-            LabeledField(label: 'Marks', hint: '1', controller: _marksCtrl, keyboardType: TextInputType.number),
-            
+            LabeledField(
+                label: 'Question Text',
+                hint: 'Enter question',
+                controller: _questionCtrl),
+            LabeledField(
+                label: 'Marks',
+                hint: '1',
+                controller: _marksCtrl,
+                keyboardType: TextInputType.number),
             if (_type == QuestionType.short)
               LabeledField(
-                label: 'Grading Keywords (Optional)', 
-                hint: 'e.g. Force, mass, acceleration (comma separated)', 
+                label: 'Grading Keywords (Optional)',
+                hint: 'e.g. Force, mass, acceleration (comma separated)',
                 controller: _keywordsCtrl,
               ),
-            
             if (_type == QuestionType.mcq) ...[
-              const Text('OPTIONS', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700)),
+              const Text('OPTIONS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               ..._optionCtrls.asMap().entries.map((entry) {
                 final i = entry.key;
@@ -576,10 +716,12 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                     contentPadding: EdgeInsets.zero,
                     title: TextField(
                       controller: entry.value,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Option ${i + 1}',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
                     ),
                   ),
@@ -591,8 +733,9 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
               label: 'Add Question',
               onPressed: () {
                 if (_questionCtrl.text.isEmpty) return;
-                
-                final keywords = _keywordsCtrl.text.split(',')
+
+                final keywords = _keywordsCtrl.text
+                    .split(',')
                     .map((e) => e.trim().toLowerCase())
                     .where((e) => e.isNotEmpty)
                     .toList();
@@ -602,7 +745,9 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                   text: _questionCtrl.text.trim(),
                   type: _type,
                   marks: double.tryParse(_marksCtrl.text) ?? 1,
-                  options: _type == QuestionType.mcq ? _optionCtrls.map((c) => c.text).toList() : null,
+                  options: _type == QuestionType.mcq
+                      ? _optionCtrls.map((c) => c.text).toList()
+                      : null,
                   correctIndex: _type == QuestionType.mcq ? _correctIdx : null,
                   gradingKeywords: keywords,
                 );
@@ -626,11 +771,17 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surface,
+            color: selected
+                ? AppColors.accent.withValues(alpha: 0.15)
+                : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: selected ? AppColors.accent : AppColors.border),
+            border: Border.all(
+                color: selected ? AppColors.accent : AppColors.border),
           ),
-          child: Text(label, style: TextStyle(color: selected ? AppColors.accent : AppColors.textSecondary, fontWeight: FontWeight.bold)),
+          child: Text(label,
+              style: TextStyle(
+                  color: selected ? AppColors.accent : AppColors.textSecondary,
+                  fontWeight: FontWeight.bold)),
         ),
       ),
     );

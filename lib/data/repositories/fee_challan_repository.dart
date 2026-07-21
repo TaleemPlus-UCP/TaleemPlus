@@ -14,13 +14,11 @@ class FeeChallanRepository {
       String studentId, String academyId) async {
     // academy_id hata diya taake composite index na banana paray.
     // studentId hamesha unique hai (Firebase UID).
-    final snap = await _col
-        .where('student_id', isEqualTo: studentId)
-        .get();
+    final snap = await _col.where('student_id', isEqualTo: studentId).get();
 
     final list = snap.docs
-        .map((doc) => FeeChallanModel.fromMap(
-        doc.id, doc.data() as Map<String, dynamic>))
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
         .toList();
     _sortNewestFirst(list);
     return list;
@@ -28,11 +26,10 @@ class FeeChallanRepository {
 
   /// Sorting client-side — no index needed.
   Future<List<FeeChallanModel>> getAll(String academyId) async {
-    final snap =
-    await _col.where('academy_id', isEqualTo: academyId).get();
+    final snap = await _col.where('academy_id', isEqualTo: academyId).get();
     final list = snap.docs
-        .map((doc) => FeeChallanModel.fromMap(
-        doc.id, doc.data() as Map<String, dynamic>))
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
         .toList();
     _sortNewestFirst(list);
     return list;
@@ -42,21 +39,17 @@ class FeeChallanRepository {
   Future<FeeChallanModel?> getLatestForStudent(
       String studentId, String academyId,
       {String? month}) async {
-    final snap = await _col
-        .where('student_id', isEqualTo: studentId)
-        .get();
+    final snap = await _col.where('student_id', isEqualTo: studentId).get();
 
     var list = snap.docs
-        .map((doc) => FeeChallanModel.fromMap(
-        doc.id, doc.data() as Map<String, dynamic>))
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
         .toList();
 
     // Month filter client-side (challan_number "CH-JUL..." pattern se)
     if (month != null && month.length >= 3) {
       final prefix = "CH-${month.substring(0, 3).toUpperCase()}";
-      list = list
-          .where((c) => c.challanNumber.startsWith(prefix))
-          .toList();
+      list = list.where((c) => c.challanNumber.startsWith(prefix)).toList();
     }
 
     if (list.isEmpty) return null;
@@ -71,7 +64,7 @@ class FeeChallanRepository {
     });
   }
 
-    /// Newest first
+  /// Newest first
   void _sortNewestFirst(List<FeeChallanModel> list) {
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }

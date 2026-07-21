@@ -40,7 +40,8 @@ class AppTheme {
         hintStyle: const TextStyle(color: AppColors.textMutedDark),
         labelStyle: const TextStyle(color: AppColors.textSecondaryDark),
         floatingLabelStyle: const TextStyle(color: AppColors.accent),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: _inputBorder(AppColors.borderDark),
         enabledBorder: _inputBorder(AppColors.borderDark),
         focusedBorder: _inputBorder(AppColors.accent, width: 1.4),
@@ -95,7 +96,8 @@ class AppTheme {
         hintStyle: const TextStyle(color: AppColors.textMutedLight),
         labelStyle: const TextStyle(color: AppColors.textSecondaryLight),
         floatingLabelStyle: const TextStyle(color: AppColors.accent),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: _inputBorder(AppColors.borderLight),
         enabledBorder: _inputBorder(AppColors.borderLight),
         focusedBorder: _inputBorder(AppColors.accent, width: 1.4),

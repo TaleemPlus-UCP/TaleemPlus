@@ -25,7 +25,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   String? _selectedStudentId;
   String? _selectedStudentName;
   bool _isProcessing = false;
-  
+
   // Grading state
   Map<String, double> _suggestedMarks = {}; // questionId: suggestedScore
   Map<String, String> _extractedText = {}; // questionId: text
@@ -33,16 +33,20 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   @override
   Widget build(BuildContext context) {
     final classProv = context.watch<ClassProvider>();
-    final clsList = classProv.classes.where((c) => c.id == widget.quiz.classId).toList();
+    final clsList =
+        classProv.classes.where((c) => c.id == widget.quiz.classId).toList();
 
     if (clsList.isEmpty) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text("Class data not found.")));
+      return Scaffold(
+          appBar: AppBar(),
+          body: const Center(child: Text("Class data not found.")));
     }
     final cls = clsList.first;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Smart Grader', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('AI Smart Grader',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -52,7 +56,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
             children: [
               _buildStudentSelector(cls),
               Expanded(
-                child: _selectedStudentId == null 
+                child: _selectedStudentId == null
                     ? _buildNoStudentState()
                     : _buildQuestionList(),
               ),
@@ -70,8 +74,12 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("SELECT STUDENT TO GRADE", 
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const Text("SELECT STUDENT TO GRADE",
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -107,10 +115,13 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   }
 
   Widget _buildQuestionList() {
-    final shortQuestions = widget.quiz.questions.where((q) => q.type == QuestionType.short).toList();
-    
+    final shortQuestions = widget.quiz.questions
+        .where((q) => q.type == QuestionType.short)
+        .toList();
+
     if (shortQuestions.isEmpty) {
-      return const Center(child: Text("Only 'Short Answer' questions support AI grading."));
+      return const Center(
+          child: Text("Only 'Short Answer' questions support AI grading."));
     }
 
     return ListView.separated(
@@ -129,7 +140,10 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: hasResult ? AppColors.success.withValues(alpha: 0.3) : context.appColors.border),
+        border: Border.all(
+            color: hasResult
+                ? AppColors.success.withValues(alpha: 0.3)
+                : context.appColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,21 +151,27 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(q.text, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                child: Text(q.text,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 15)),
               ),
               const SizedBox(width: 10),
-              Text("${q.marks} Pts", style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+              Text("${q.marks} Pts",
+                  style: const TextStyle(
+                      color: AppColors.accent, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
-          Text("Keywords: ${q.gradingKeywords.join(', ')}", style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontStyle: FontStyle.italic)),
+          Text("Keywords: ${q.gradingKeywords.join(', ')}",
+              style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic)),
           const Divider(height: 32),
-          
           if (hasResult) ...[
             _resultPreview(q),
             const SizedBox(height: 16),
           ],
-
           PrimaryButton(
             label: hasResult ? "RE-SCAN PAPER" : "SCAN ANSWER SHEET",
             icon: Icons.camera_alt_rounded,
@@ -170,24 +190,36 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("DETECTED TEXT:", style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+        const Text("DETECTED TEXT:",
+            style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: context.appColors.inputFill, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+              color: context.appColors.inputFill,
+              borderRadius: BorderRadius.circular(12)),
           child: Text(text, style: const TextStyle(fontSize: 13)),
         ),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("SUGGESTED SCORE:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Text("SUGGESTED SCORE:",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text("${score.toStringAsFixed(1)} / ${q.marks}", 
-                  style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w900, fontSize: 16)),
+              decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8)),
+              child: Text("${score.toStringAsFixed(1)} / ${q.marks}",
+                  style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16)),
             ),
           ],
         ),
@@ -229,10 +261,10 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
         _suggestedMarks[q.id] = suggested;
         _extractedText[q.id] = rawText;
       });
-
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -252,7 +284,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
 
   Future<void> _saveTotalMarks() async {
     if (_selectedStudentId == null) return;
-    
+
     setState(() => _isProcessing = true);
 
     try {
@@ -272,16 +304,17 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
         marksObtained: obtained,
         totalMarks: widget.quiz.totalMarks,
         percentage: (obtained / widget.quiz.totalMarks) * 100,
-        gradeLetter: TestMarkModel.calculateGrade((obtained / widget.quiz.totalMarks) * 100),
+        gradeLetter: TestMarkModel.calculateGrade(
+            (obtained / widget.quiz.totalMarks) * 100),
         updatedAt: DateTime.now(),
       );
 
       await context.read<QuizProvider>().uploadBulkMarks([mark]);
-      
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Paper graded and saved!"), backgroundColor: AppColors.success)
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Paper graded and saved!"),
+            backgroundColor: AppColors.success));
         setState(() {
           _selectedStudentId = null;
           _suggestedMarks.clear();
@@ -289,9 +322,9 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Firebase Error: $e"), backgroundColor: AppColors.danger)
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Firebase Error: $e"),
+            backgroundColor: AppColors.danger));
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -303,9 +336,12 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.person_search_rounded, size: 64, color: context.appColors.textMuted.withValues(alpha: 0.3)),
+          Icon(Icons.person_search_rounded,
+              size: 64,
+              color: context.appColors.textMuted.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          const Text("Select a student to begin AI grading", style: TextStyle(color: AppColors.textSecondary)),
+          const Text("Select a student to begin AI grading",
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
