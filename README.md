@@ -1,4 +1,6 @@
 # TaleemPlus 🚀
+[![TaleemPlus CI/CD](https://github.com/TaleemPlus-UCP/TaleemPlus/actions/workflows/main.yml/badge.svg)](https://github.com/TaleemPlus-UCP/TaleemPlus/actions/workflows/main.yml)
+
 **The All-in-One AI-Powered Academy Management System**
 
 TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designed to digitize academy operations. It provides specialized portals for Administrators, Teachers, Students, and Parents, enhanced with 100% offline Artificial Intelligence for automated grading, test generation, and performance insights.

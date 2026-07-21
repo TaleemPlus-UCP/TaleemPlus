@@ -253,34 +253,48 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   Future<void> _saveTotalMarks() async {
     if (_selectedStudentId == null) return;
     
-    // Calculate total
-    double obtained = 0;
-    _suggestedMarks.forEach((_, score) => obtained += score);
+    setState(() => _isProcessing = true);
 
-    final mark = TestMarkModel(
-      id: "${widget.quiz.id}_$_selectedStudentId",
-      academyId: widget.quiz.academyId,
-      quizId: widget.quiz.id,
-      studentId: _selectedStudentId!,
-      studentName: _selectedStudentName!,
-      classId: widget.quiz.classId,
-      subject: widget.quiz.subject,
-      month: widget.quiz.month,
-      marksObtained: obtained,
-      totalMarks: widget.quiz.totalMarks,
-      percentage: (obtained / widget.quiz.totalMarks) * 100,
-      gradeLetter: TestMarkModel.calculateGrade((obtained / widget.quiz.totalMarks) * 100),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      // Calculate total
+      double obtained = 0;
+      _suggestedMarks.forEach((_, score) => obtained += score);
 
-    await context.read<QuizProvider>().uploadBulkMarks([mark]);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Paper graded and saved!"), backgroundColor: AppColors.success));
-      setState(() {
-        _selectedStudentId = null;
-        _suggestedMarks.clear();
-      });
+      final mark = TestMarkModel(
+        id: "${widget.quiz.id}_$_selectedStudentId",
+        academyId: widget.quiz.academyId,
+        quizId: widget.quiz.id,
+        studentId: _selectedStudentId!,
+        studentName: _selectedStudentName!,
+        classId: widget.quiz.classId,
+        subject: widget.quiz.subject,
+        month: widget.quiz.month,
+        marksObtained: obtained,
+        totalMarks: widget.quiz.totalMarks,
+        percentage: (obtained / widget.quiz.totalMarks) * 100,
+        gradeLetter: TestMarkModel.calculateGrade((obtained / widget.quiz.totalMarks) * 100),
+        updatedAt: DateTime.now(),
+      );
+
+      await context.read<QuizProvider>().uploadBulkMarks([mark]);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Paper graded and saved!"), backgroundColor: AppColors.success)
+        );
+        setState(() {
+          _selectedStudentId = null;
+          _suggestedMarks.clear();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Firebase Error: $e"), backgroundColor: AppColors.danger)
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
