@@ -126,11 +126,11 @@ jobs:
 
       # Optional: Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting
-        if: success() && secrets.FIREBASE_SERVICE_ACCOUNT != ''
+        if: success() && (secrets.FIREBASE_SERVICE_ACCOUNT != '' || secrets.FIREBASE_SERVICE_ACCOUNT_TALEEMPLUS_40755 != '')
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_TALEEMPLUS_40755 || secrets.FIREBASE_SERVICE_ACCOUNT }}"
           channelId: live
           projectId: taleemplus-40755
 
