@@ -51,7 +51,6 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  patrol: ^3.11.0
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.14.1
 

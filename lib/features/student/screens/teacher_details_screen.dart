@@ -11,7 +11,6 @@ import '../../../data/remote/classroom_service.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/attendance_provider.dart';
 import '../../../widgets/gradient_background.dart';
-import '../../../widgets/app_widgets.dart';
 
 class TeacherDetailsScreen extends StatefulWidget {
   final ClassEntity classEntity;

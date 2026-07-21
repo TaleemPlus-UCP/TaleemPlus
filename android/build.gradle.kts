@@ -25,6 +25,7 @@ subprojects {
         }
     }
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
@@ -33,7 +34,7 @@ tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
-// Suppress obsolete Java options warnings
+// Suppress obsolete Java options warnings across all projects
 allprojects {
     tasks.withType<JavaCompile> {
         options.compilerArgs.add("-Xlint:-options")

@@ -35,9 +35,6 @@ void main() {
 
     test('should be overdue if current date is after due date and not paid',
         () {
-      final overdueInvoice = testInvoice.copyWith(
-        status: 'unpaid',
-      );
       // We need an invoice with a past due date to test this properly
       final pastInvoice = FeeInvoice(
         id: 'inv_old',
