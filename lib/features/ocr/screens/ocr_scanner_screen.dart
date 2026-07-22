@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
+import '../../../logic/session_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
 import '../services/ocr_service.dart';
@@ -42,9 +43,16 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
     });
 
     try {
-      final File? image = fromCamera
-          ? await _ocrService.captureImageWithCamera()
-          : await _ocrService.pickImageFromGallery();
+      final session = context.read<SessionProvider>();
+      session.suppressBackgroundLogout();
+      final File? image;
+      try {
+        image = fromCamera
+            ? await _ocrService.captureImageWithCamera()
+            : await _ocrService.pickImageFromGallery();
+      } finally {
+        session.resumeBackgroundLogoutTracking();
+      }
 
       if (image != null) {
         setState(() {

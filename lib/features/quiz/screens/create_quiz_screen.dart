@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
+import '../../../logic/session_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../data/models/quiz_model.dart';
@@ -81,8 +82,16 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
 
     if (source == null) return;
+    if (!mounted) return;
 
-    final pickedFile = await picker.pickImage(source: source);
+    final session = context.read<SessionProvider>();
+    session.suppressBackgroundLogout();
+    final XFile? pickedFile;
+    try {
+      pickedFile = await picker.pickImage(source: source);
+    } finally {
+      session.resumeBackgroundLogoutTracking();
+    }
     if (pickedFile == null) return;
 
     setState(() => _isAnalyzing = true);

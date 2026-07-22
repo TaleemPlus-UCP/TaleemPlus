@@ -10,7 +10,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _biometricKey = 'biometric_enabled';
   static const String _savedPassKey = 'saved_pass_v1';
 
-  static const int _backgroundGraceSeconds = 3;
+  static const int _backgroundGraceSeconds = 15;
 
   final LocalAuthentication _localAuth = LocalAuthentication();
   Timer? _timer;
@@ -18,6 +18,13 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _biometricEnabled = false;
   AuthProvider? _auth;
+
+  /// Set while the app has deliberately launched a sub-activity (camera,
+  /// gallery picker, biometric prompt) that we expect to return control to
+  /// us — those all trigger [AppLifecycleState.paused] just like genuinely
+  /// backgrounding the app, but should never sign the user out no matter
+  /// how long the user spends framing a photo or scrolling their gallery.
+  int _suppressCount = 0;
 
   bool get isLocked => _isLocked;
   bool get biometricEnabled => _biometricEnabled;
@@ -38,12 +45,25 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     _auth = auth;
   }
 
+  /// Call before launching a camera/gallery/biometric sub-activity so the
+  /// resulting [AppLifecycleState.paused] isn't treated as backgrounding.
+  /// Always pair with [resumeBackgroundLogoutTracking] in a `finally` block.
+  void suppressBackgroundLogout() {
+    _suppressCount++;
+    _backgroundGraceTimer?.cancel();
+  }
+
+  void resumeBackgroundLogoutTracking() {
+    if (_suppressCount > 0) _suppressCount--;
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
+      if (_suppressCount > 0) return;
       // Auto-logout when app goes to background as requested, but only
-      // after a short grace period — `paused` also fires for in-app system
+      // after a grace period — `paused` also fires for in-app system
       // overlays (camera picker, share sheet, biometric prompt), which
       // should not sign the user out.
       _backgroundGraceTimer?.cancel();
@@ -121,6 +141,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<bool> authenticateWithBiometrics() async {
+    suppressBackgroundLogout();
     try {
       final bool canAuthenticateWithBiometrics =
           await _localAuth.canCheckBiometrics;
@@ -139,6 +160,8 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       debugPrint("Biometric Auth Error: $e");
       return false;
+    } finally {
+      resumeBackgroundLogoutTracking();
     }
   }
 

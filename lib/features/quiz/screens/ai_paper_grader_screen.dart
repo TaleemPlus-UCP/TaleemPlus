@@ -10,6 +10,7 @@ import '../../../data/models/test_mark_model.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
+import '../../../logic/session_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
 
@@ -229,7 +230,14 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
 
   Future<void> _pickAndGrade(QuizQuestion q) async {
     final picker = ImagePicker();
-    final img = await picker.pickImage(source: ImageSource.camera);
+    final session = context.read<SessionProvider>();
+    session.suppressBackgroundLogout();
+    final XFile? img;
+    try {
+      img = await picker.pickImage(source: ImageSource.camera);
+    } finally {
+      session.resumeBackgroundLogoutTracking();
+    }
     if (img == null) return;
 
     setState(() => _isProcessing = true);

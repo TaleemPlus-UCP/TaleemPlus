@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../logic/session_provider.dart';
 import '../../../widgets/gradient_background.dart';
 
 class AiSummarizerScreen extends StatefulWidget {
@@ -27,10 +29,18 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? pickedFile = await _picker.pickImage(source: source);
+    final session = context.read<SessionProvider>();
+    session.suppressBackgroundLogout();
+    final XFile? pickedFile;
+    try {
+      pickedFile = await _picker.pickImage(source: source);
+    } finally {
+      session.resumeBackgroundLogoutTracking();
+    }
     if (pickedFile != null) {
+      final file = File(pickedFile.path);
       setState(() {
-        _image = File(pickedFile.path);
+        _image = file;
         _summary = "";
       });
       _processImage();
