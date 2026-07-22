@@ -134,6 +134,8 @@ class NotificationsScreen extends StatelessWidget {
         return Icons.fact_check_rounded;
       case 'result':
         return Icons.analytics_rounded;
+      case 'announcement':
+        return Icons.campaign_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -149,6 +151,8 @@ class NotificationsScreen extends StatelessWidget {
         return AppColors.accent;
       case 'result':
         return Colors.purple;
+      case 'announcement':
+        return AppColors.accent;
       default:
         return AppColors.textSecondary;
     }

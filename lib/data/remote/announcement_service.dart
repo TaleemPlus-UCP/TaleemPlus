@@ -1,15 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/constants/app_constants.dart';
 import '../models/announcement.dart';
+import 'auth_service.dart';
+import 'notification_service.dart';
 
 class AnnouncementService {
   final FirebaseFirestore _db;
-  AnnouncementService({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+  final AuthService _authService;
+  final NotificationService _notificationService;
+  AnnouncementService({
+    FirebaseFirestore? db,
+    AuthService? authService,
+    NotificationService? notificationService,
+  })  : _db = db ?? FirebaseFirestore.instance,
+        _authService = authService ?? AuthService(),
+        _notificationService = notificationService ?? NotificationService();
 
   CollectionReference<Map<String, dynamic>> get _col =>
       _db.collection('announcements');
 
-  /// Admin: create a new broadcast tied to an academy.
+  /// Admin/Teacher: create a new broadcast tied to an academy, and notify
+  /// every approved user in the targeted role(s) so they see a badge/alert
+  /// instead of only finding out if they happen to open Announcements.
   Future<void> create({
     required String title,
     required String message,
@@ -28,6 +41,48 @@ class AnnouncementService {
       'created_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
     });
+
+    await _notifyTargets(
+      title: title.trim(),
+      targetRoles: targetRoles,
+      academyId: academyId,
+      excludeUid: createdByUid,
+    );
+  }
+
+  /// Best-effort: a notification-delivery failure shouldn't block the
+  /// announcement itself from being posted (it already saved successfully).
+  Future<void> _notifyTargets({
+    required String title,
+    required List<String> targetRoles,
+    required String academyId,
+    required String excludeUid,
+  }) async {
+    try {
+      final isForAll = targetRoles.any((r) => r.toLowerCase() == 'all');
+      final roles = isForAll
+          ? [UserRole.teacher, UserRole.student, UserRole.parent]
+          : targetRoles
+              .map((r) => UserRoleX.fromValue(r.toLowerCase()))
+              .toSet()
+              .toList();
+
+      for (final role in roles) {
+        final users = await _authService.getApprovedByRole(role, academyId);
+        for (final user in users) {
+          if (user.uid == excludeUid) continue;
+          await _notificationService.send(
+            academyId: academyId,
+            recipientId: user.uid,
+            title: 'New Announcement',
+            message: title,
+            type: 'announcement',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Announcement notification error: $e');
+    }
   }
 
   Future<void> update({
