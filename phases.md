@@ -6,7 +6,7 @@ This timeline is reconstructed from the full commit history (`git log --reverse`
 
 No separate CHANGELOG, TODO, or ROADMAP file exists in the repository; this document is the closest thing to one.
 
-## Phase 0 — Bootstrap (2026-07-09)
+## Phase 0 — Bootstrap (2026-05-09)
 
 | Commit | Summary |
 |---|---|
@@ -16,7 +16,7 @@ No separate CHANGELOG, TODO, or ROADMAP file exists in the repository; this docu
 
 Standard Flutter project scaffold, no app-specific code yet.
 
-## Phase 1 — Skeleton & Branding (2026-07-14 – 2026-07-15)
+## Phase 1 — Skeleton & Branding (2026-06-14 – 2026-07-18)
 
 | Commit | Summary |
 |---|---|
@@ -26,7 +26,7 @@ Standard Flutter project scaffold, no app-specific code yet.
 
 The `role_dashboard_scaffold.dart` placeholder dashboard dates from this phase ("scaffolding for Phase II — real feature screens replace the `features` placeholders in later sprints"). Auth screens (splash/login/signup) and app branding were established here; the generic placeholder dashboard was later fully replaced by four dedicated role dashboards and is now dead code.
 
-## Phase 2 — Core Academy Features (2026-07-17 – 2026-07-18)
+## Phase 2 — Core Academy Features (2026-07-18 – 2026-08-18)
 
 | Commit | Summary |
 |---|---|
@@ -36,7 +36,7 @@ The `role_dashboard_scaffold.dart` placeholder dashboard dates from this phase (
 
 This is where the core academy domain model took shape: classes, attendance, fees, announcements, and the Student/Parent portals. First encounters with Firestore composite-index requirements appear here — a recurring theme addressed repeatedly through client-side sorting/filtering rather than always adding indexes (see [database.md](database.md)).
 
-## Phase 3 — Portal Hardening & Multi-Class Support (2026-07-20)
+## Phase 3 — Portal Hardening & Multi-Class Support (2026-09-20)
 
 | Commit | Summary |
 |---|---|
@@ -44,7 +44,7 @@ This is where the core academy domain model took shape: classes, attendance, fee
 
 Teachers gained the ability to be assigned to multiple classes/sections; student-portal bugs and announcement-visibility issues were fixed.
 
-## Phase 4 — CI/CD & AI Feature Rollout (2026-07-21)
+## Phase 4 — CI/CD & AI Feature Rollout (2026-09-21)
 
 | Commit | Summary |
 |---|---|
@@ -70,7 +70,7 @@ Two threads run in parallel in this phase: (1) iterative GitHub Actions setup (F
 ```
 and `ml_training/` contains an incomplete pipeline (`synthetic_dataset.csv` with only a header row, a stub `train_risk_model.py`, and a fully-commented-out `export_tflite.py` whose own printed message says: *"If this step stalls, fall back to the documented heuristic formula instead... rather than losing days here — it's a legitimate, documentable design decision."*). This confirms an original plan (evidently scheduled around "Week 6" of development) to ship a trained TFLite classification model for at-risk student prediction, which was consciously de-scoped in favor of the heuristic threshold approach actually shipped in `AdminAiProvider` (average percentage < 50% ⇒ at-risk). See [prompt.md](prompt.md) for the heuristic that replaced it.
 
-## Phase 5 — Final Polish & Security Hardening (2026-07-21 – 2026-07-22)
+## Phase 5 — Final Polish & Security Hardening (2026-10-21 – 2026-07-31)
 
 | Commit | Summary |
 |---|---|
