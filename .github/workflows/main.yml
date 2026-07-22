@@ -29,18 +29,18 @@ jobs:
           if [ -n "${{ secrets.FIREBASE_OPTIONS }}" ]; then
             echo "${{ secrets.FIREBASE_OPTIONS }}" > lib/firebase_options.dart
           else
-            cat > lib/firebase_options.dart <<'EOF'
-            import 'package:firebase_core/firebase_core.dart';
-
-            class DefaultFirebaseOptions {
-              static FirebaseOptions get currentPlatform => const FirebaseOptions(
-                    apiKey: 'test-api-key',
-                    appId: '1:1234567890:web:test',
-                    messagingSenderId: '1234567890',
-                    projectId: 'test-project-id',
-                  );
-            }
-            EOF
+            printf "%s\n" \
+              "import 'package:firebase_core/firebase_core.dart';" \
+              "" \
+              "class DefaultFirebaseOptions {" \
+              "  static FirebaseOptions get currentPlatform => const FirebaseOptions(" \
+              "        apiKey: 'test-api-key'," \
+              "        appId: '1:1234567890:web:test'," \
+              "        messagingSenderId: '1234567890'," \
+              "        projectId: 'test-project-id'," \
+              "      );" \
+              "}" \
+              > lib/firebase_options.dart
           fi
 
       - name: Install Dependencies
