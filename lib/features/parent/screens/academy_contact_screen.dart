@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../widgets/gradient_background.dart';
@@ -51,7 +52,7 @@ class AcademyContactScreen extends StatelessWidget {
                     phone,
                     Icons.chat_bubble_rounded,
                     AppColors.success,
-                    () {},
+                    () => _openWhatsApp(context, phone),
                   ),
                   const SizedBox(height: 12),
                   _contactTile(
@@ -60,7 +61,7 @@ class AcademyContactScreen extends StatelessWidget {
                     phone,
                     Icons.call_rounded,
                     AppColors.accent,
-                    () {},
+                    () => _callNumber(context, phone),
                   ),
                   const SizedBox(height: 32),
                   _buildLocationCard(context, address),
@@ -71,6 +72,29 @@ class AcademyContactScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _callNumber(BuildContext context, String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'\s+'), ''));
+    final ok = await launchUrl(uri);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open the dialer.")));
+    }
+  }
+
+  Future<void> _openWhatsApp(BuildContext context, String phone) async {
+    // wa.me expects digits only, with country code and no leading zero/+.
+    var digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('0')) {
+      digits = '92${digits.substring(1)}'; // Pakistan local -> country code
+    }
+    final uri = Uri.parse('https://wa.me/$digits');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open WhatsApp.")));
+    }
   }
 
   Widget _buildHeader(BuildContext context, String name) {

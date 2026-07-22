@@ -17,6 +17,18 @@ class StudentFeeScreen extends StatefulWidget {
 
 class _StudentFeeScreenState extends State<StudentFeeScreen> {
   final _repo = FeeChallanRepository();
+  late Future<List<FeeChallanModel>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadChallans();
+  }
+
+  Future<List<FeeChallanModel>> _loadChallans() {
+    final user = context.read<AuthProvider>().currentUser;
+    return _repo.getForStudent(widget.studentUid, user?.academyId ?? '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,15 +42,15 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
       body: GradientBackground(
         child: SafeArea(
           child: FutureBuilder<List<FeeChallanModel>>(
-            future: () {
-              final user = context.read<AuthProvider>().currentUser;
-              return _repo.getForStudent(
-                  widget.studentUid, user?.academyId ?? '');
-            }(),
+            future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                     child: CircularProgressIndicator(color: AppColors.accent));
+              }
+
+              if (snapshot.hasError) {
+                return _buildErrorState('${snapshot.error}');
               }
 
               final challans = snapshot.data ?? [];
@@ -202,6 +214,29 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
           Text("No fee records found.",
               style: TextStyle(color: AppColors.textSecondary)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 64, color: AppColors.danger),
+            const SizedBox(height: 16),
+            const Text("Could not load your fee records.",
+                style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => setState(() => _future = _loadChallans()),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

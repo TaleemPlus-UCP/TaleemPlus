@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants/app_constants.dart';
 import 'auth_provider.dart';
 
 class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
@@ -9,8 +10,11 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _biometricKey = 'biometric_enabled';
   static const String _savedPassKey = 'saved_pass_v1';
 
+  static const int _backgroundGraceSeconds = 3;
+
   final LocalAuthentication _localAuth = LocalAuthentication();
   Timer? _timer;
+  Timer? _backgroundGraceTimer;
   bool _isLocked = false;
   bool _biometricEnabled = false;
   AuthProvider? _auth;
@@ -26,6 +30,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _backgroundGraceTimer?.cancel();
     super.dispose();
   }
 
@@ -37,10 +42,22 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      // Auto-logout when app goes to background as requested
-      if (_auth != null && _auth!.isAuthenticated) {
-        _auth!.signOut();
-      }
+      // Auto-logout when app goes to background as requested, but only
+      // after a short grace period — `paused` also fires for in-app system
+      // overlays (camera picker, share sheet, biometric prompt), which
+      // should not sign the user out.
+      _backgroundGraceTimer?.cancel();
+      _backgroundGraceTimer = Timer(
+        const Duration(seconds: _backgroundGraceSeconds),
+        () {
+          if (_auth != null && _auth!.isAuthenticated) {
+            _forceSignOut(
+                'You were signed out because the app was in the background.');
+          }
+        },
+      );
+    } else if (state == AppLifecycleState.resumed) {
+      _backgroundGraceTimer?.cancel();
     }
   }
 
@@ -74,15 +91,33 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     _timer?.cancel();
     if (auth.isAuthenticated) {
       _timer = Timer(const Duration(seconds: _timeoutSeconds), () {
-        _handleTimeout(context, auth);
+        _handleTimeout();
       });
     }
   }
 
-  void _handleTimeout(BuildContext context, AuthProvider auth) {
+  void _handleTimeout() {
+    _forceSignOut('You were logged out after 5 minutes of inactivity.');
+  }
+
+  /// Signs the user out, clears the lock flag once they land back on Login,
+  /// and makes sure they actually see a screen + reason instead of silently
+  /// losing their session mid-dashboard.
+  void _forceSignOut(String message) {
     _isLocked = true;
-    auth.signOut(); // Force logout for security as requested
+    _auth?.signOut();
     notifyListeners();
+
+    final nav = rootNavigatorKey.currentState;
+    nav?.pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isLocked = false;
+      final ctx = rootNavigatorKey.currentContext;
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    });
   }
 
   Future<bool> authenticateWithBiometrics() async {

@@ -32,6 +32,20 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
   bool _isGenerating = false;
 
+  /// Due date for a challan billed for [monthName]: the 10th of that month.
+  /// Since there is no year selector, a month earlier than the current one
+  /// is assumed to refer to that month next year (e.g. generating a
+  /// "January" challan in November means January next year).
+  DateTime _dueDateForMonth(String monthName) {
+    final now = DateTime.now();
+    final monthIndex = _months.indexOf(monthName) + 1;
+    var year = now.year;
+    if (monthIndex < now.month) {
+      year += 1;
+    }
+    return DateTime(year, monthIndex, 10);
+  }
+
   final List<String> _months = [
     'January',
     'February',
@@ -98,7 +112,9 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
                 label: "GENERATE FOR ENTIRE CLASS",
                 icon: Icons.auto_awesome_motion_rounded,
                 loading: _isGenerating,
-                onPressed: _selectedClassId == null ? null : _generateChallans,
+                onPressed: (_selectedClassId == null || _isGenerating)
+                    ? null
+                    : _confirmAndGenerate,
               ),
               const SizedBox(height: 12),
               const Text(
@@ -185,6 +201,34 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
     );
   }
 
+  Future<void> _confirmAndGenerate() async {
+    final cp = context.read<ClassProvider>();
+    final cls = cp.classes.firstWhere((c) => c.id == _selectedClassId);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Generate challans?'),
+        content: Text(
+            'This will create pending challans for every student enrolled in '
+            '${cls.displayLabel} for $_selectedMonth. Students who already '
+            'have a challan for this month will be skipped. This cannot be '
+            'undone automatically.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Generate')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _generateChallans();
+    }
+  }
+
   Future<void> _generateChallans() async {
     setState(() => _isGenerating = true);
 
@@ -204,8 +248,22 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
       final allStudents =
           await authService.getApprovedByRole(UserRole.student, admin.uid);
 
+      // Avoid creating a second challan for a student who already has one
+      // for this billing month.
+      final monthPrefix = "CH-${_selectedMonth.substring(0, 3).toUpperCase()}";
+      final existingChallans = await _repo.getAll(admin.uid);
+      final studentsAlreadyBilled = existingChallans
+          .where((c) => c.challanNumber.startsWith(monthPrefix))
+          .map((c) => c.studentId)
+          .toSet();
+
       int count = 0;
+      int skipped = 0;
       for (var studentId in cls.studentIds) {
+        if (studentsAlreadyBilled.contains(studentId)) {
+          skipped++;
+          continue;
+        }
         // Find student in our fresh list, or fallback to class records
         final student = allStudents.firstWhere((s) => s.uid == studentId,
             orElse: () => AppUser(
@@ -230,7 +288,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
           classLabel: cls.displayLabel,
           rollNumber: cls.id.substring(0, 4), // Fallback or extra data
           issueDate: DateTime.now(),
-          dueDate: DateTime.now().add(const Duration(days: 10)),
+          dueDate: _dueDateForMonth(_selectedMonth),
           monthlyFee: double.tryParse(_monthlyFeeCtrl.text) ?? 0,
           admissionFee: double.tryParse(_admissionFeeCtrl.text) ?? 0,
           examFee: double.tryParse(_examFeeCtrl.text) ?? 0,
@@ -246,17 +304,20 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
       }
 
       if (mounted) {
+        final skippedNote =
+            skipped > 0 ? " ($skipped already had one, skipped)" : "";
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
-                "Successfully generated $count challans for $_selectedMonth!"),
+                "Generated $count challans for $_selectedMonth!$skippedNote"),
             backgroundColor: AppColors.success));
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Generation failed: $e"),
             backgroundColor: AppColors.danger));
+      }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }

@@ -124,19 +124,15 @@ class MemberProvider extends ChangeNotifier {
   }
 
   Future<void> removeMember(String id, String academyId) async {
-    try {
-      // 1. Attempt to delete from local SQLite (if it exists there)
-      await _repo.delete(id);
+    // 1. Attempt to delete from local SQLite (if it exists there)
+    await _repo.delete(id);
 
-      // 2. Attempt to delete from Firestore (if it exists there)
-      final doc = await _authService.getProfile(id);
-      if (doc != null) {
-        await _authService.rejectUser(id);
-      }
-
-      await load(academyId);
-    } catch (e) {
-      debugPrint("Error removing member: $e");
+    // 2. Attempt to delete from Firestore (if it exists there)
+    final doc = await _authService.getProfile(id);
+    if (doc != null) {
+      await _authService.rejectUser(id);
     }
+
+    await load(academyId);
   }
 }

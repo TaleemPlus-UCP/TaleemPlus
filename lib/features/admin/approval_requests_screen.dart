@@ -23,6 +23,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   List<AppUser> _pending = [];
   bool _loading = true;
   String? _error;
+  final Set<String> _processingIds = {};
 
   @override
   void initState() {
@@ -54,75 +55,124 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   }
 
   Future<void> _approve(AppUser u) async {
+    if (_processingIds.contains(u.uid)) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final admin = auth.currentUser;
     if (admin == null) return;
 
-    // 1. Update status in Firebase to 'active' and tie to THIS admin's academy
-    await _authService.approveUser(u.uid, admin.uid);
+    setState(() => _processingIds.add(u.uid));
+    try {
+      // 1. Update status in Firebase to 'active' and tie to THIS admin's academy
+      await _authService.approveUser(u.uid, admin.uid);
 
-    // 2. Notify the user
-    await NotificationService().send(
-      academyId: admin.uid,
-      recipientId: u.uid,
-      title: "Account Approved ✅",
-      message:
-          "Your account has been approved by ${admin.academyName ?? 'the administrator'}. You can now access all features.",
-      type: "approval",
-    );
-
-    // 3. Also mirror this user into the local User Management portal
-    if (u.role != UserRole.admin) {
-      if (!mounted) return;
-      final memberProvider =
-          Provider.of<MemberProvider>(context, listen: false);
-      final alreadyPresent = memberProvider.members.any((m) => m.id == u.uid);
-      if (!alreadyPresent) {
-        await memberProvider.addMember(
-          fullName: u.fullName,
-          email: u.email,
-          phone: u.phoneNumber,
-          role: u.role.value,
-          academyId: admin.uid,
-        );
-      }
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${u.fullName} approved for your academy')),
+      // 2. Notify the user
+      await NotificationService().send(
+        academyId: admin.uid,
+        recipientId: u.uid,
+        title: "Account Approved ✅",
+        message:
+            "Your account has been approved by ${admin.academyName ?? 'the administrator'}. You can now access all features.",
+        type: "approval",
       );
-      // Refresh global counts
-      Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
-      _load();
+
+      // 3. Also mirror this user into the local User Management portal
+      if (u.role != UserRole.admin) {
+        if (!mounted) return;
+        final memberProvider =
+            Provider.of<MemberProvider>(context, listen: false);
+        final alreadyPresent = memberProvider.members.any((m) => m.id == u.uid);
+        if (!alreadyPresent) {
+          await memberProvider.addMember(
+            fullName: u.fullName,
+            email: u.email,
+            phone: u.phoneNumber,
+            role: u.role.value,
+            academyId: admin.uid,
+          );
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${u.fullName} approved for your academy')),
+        );
+        // Refresh global counts
+        Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
+        await _load();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to approve ${u.fullName}: $e'),
+            backgroundColor: AppColors.danger));
+      }
+    } finally {
+      if (mounted) setState(() => _processingIds.remove(u.uid));
+    }
+  }
+
+  Future<void> _confirmReject(AppUser u) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Reject this request?'),
+        content: Text(
+            "This will reject ${u.fullName}'s signup request. They will be "
+            "notified and won't be able to log in."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Reject',
+                  style: TextStyle(color: AppColors.danger))),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _reject(u);
     }
   }
 
   Future<void> _reject(AppUser u) async {
+    if (_processingIds.contains(u.uid)) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final admin = auth.currentUser;
     if (admin == null) return;
 
-    // Only change the status; keep the record for admin history.
-    await _authService.rejectUser(u.uid);
+    setState(() => _processingIds.add(u.uid));
+    try {
+      // Only change the status; keep the record for admin history.
+      await _authService.rejectUser(u.uid);
 
-    // Notify the user (They can see this if they try to login again)
-    await NotificationService().send(
-      academyId: admin.uid,
-      recipientId: u.uid,
-      title: "Account Rejected ❌",
-      message:
-          "Your signup request for ${admin.academyName ?? 'this academy'} was not approved.",
-      type: "approval",
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${u.fullName} rejected')),
+      // Notify the user (They can see this if they try to login again)
+      await NotificationService().send(
+        academyId: admin.uid,
+        recipientId: u.uid,
+        title: "Account Rejected ❌",
+        message:
+            "Your signup request for ${admin.academyName ?? 'this academy'} was not approved.",
+        type: "approval",
       );
-      // Refresh global counts for THIS academy
-      Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
-      _load();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${u.fullName} rejected')),
+        );
+        // Refresh global counts for THIS academy
+        Provider.of<MemberProvider>(context, listen: false).load(admin.uid);
+        await _load();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to reject ${u.fullName}: $e'),
+            backgroundColor: AppColors.danger));
+      }
+    } finally {
+      if (mounted) setState(() => _processingIds.remove(u.uid));
     }
   }
 
@@ -166,9 +216,9 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     }
     if (_pending.isEmpty) {
       return ListView(
-        children: [
-          const SizedBox(height: 120),
-          const Center(
+        children: const [
+          SizedBox(height: 120),
+          Center(
             child: Column(
               children: [
                 Icon(Icons.done_all_rounded,
@@ -243,7 +293,9 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                   ),
                   icon: const Icon(Icons.close, size: 18),
                   label: const Text('Reject'),
-                  onPressed: () => _reject(u),
+                  onPressed: _processingIds.contains(u.uid)
+                      ? null
+                      : () => _confirmReject(u),
                 ),
               ),
               const SizedBox(width: 10),
@@ -255,7 +307,8 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                   ),
                   icon: const Icon(Icons.check, size: 18),
                   label: const Text('Approve'),
-                  onPressed: () => _approve(u),
+                  onPressed:
+                      _processingIds.contains(u.uid) ? null : () => _approve(u),
                 ),
               ),
             ],

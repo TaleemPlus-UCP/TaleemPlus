@@ -360,14 +360,23 @@ class _RoleListTabState extends State<_RoleListTab>
       ),
     );
     if (ok == true && ctx.mounted) {
-      final user =
-          Provider.of<AuthProvider>(context, listen: false).currentUser;
+      final user = Provider.of<AuthProvider>(ctx, listen: false).currentUser;
       if (user != null) {
-        await ctx.read<MemberProvider>().removeMember(m.id, user.uid);
-        if (ctx.mounted) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(content: Text('${m.fullName} removed')),
-          );
+        try {
+          await ctx.read<MemberProvider>().removeMember(m.id, user.uid);
+          if (ctx.mounted) {
+            ScaffoldMessenger.of(ctx).showSnackBar(
+              SnackBar(content: Text('${m.fullName} removed')),
+            );
+          }
+        } catch (e) {
+          if (ctx.mounted) {
+            ScaffoldMessenger.of(ctx).showSnackBar(
+              SnackBar(
+                  content: Text('Failed to remove ${m.fullName}: $e'),
+                  backgroundColor: AppColors.danger),
+            );
+          }
         }
       }
     }
@@ -536,10 +545,12 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
         if (admin != null) {
           await context.read<MemberProvider>().load(admin.uid);
         }
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
-        );
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -635,10 +646,11 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                     selected: isSel,
                     onSelected: (v) {
                       setState(() {
-                        if (v)
+                        if (v) {
                           _selectedSections.add(s);
-                        else
+                        } else {
                           _selectedSections.remove(s);
+                        }
                       });
                     },
                   );
@@ -874,10 +886,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                       selected: isSel,
                       onSelected: (v) {
                         setState(() {
-                          if (v)
+                          if (v) {
                             _selectedSections.add(s);
-                          else
+                          } else {
                             _selectedSections.remove(s);
+                          }
                         });
                       },
                     );

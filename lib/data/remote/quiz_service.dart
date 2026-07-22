@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import '../models/quiz_model.dart';
 import '../models/test_mark_model.dart';
 
@@ -18,13 +17,13 @@ class QuizService {
   Stream<List<QuizModel>> watchQuizzesByClass(
       String classId, String academyId) {
     return _quizzes
+        .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .snapshots()
         .map((snap) {
       final list = snap.docs
           .map((doc) =>
               QuizModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((q) => q.academyId == academyId)
           .toList();
       list.sort((a, b) {
         final dateA = a.createdAt ?? DateTime(2000);
@@ -36,9 +35,12 @@ class QuizService {
   }
 
   /// Delete a test
-  Future<void> deleteQuiz(String quizId) async {
+  Future<void> deleteQuiz(String quizId, String academyId) async {
     await _quizzes.doc(quizId).delete();
-    final marks = await _marks.where('quiz_id', isEqualTo: quizId).get();
+    final marks = await _marks
+        .where('academy_id', isEqualTo: academyId)
+        .where('quiz_id', isEqualTo: quizId)
+        .get();
     for (var doc in marks.docs) {
       await doc.reference.delete();
     }
@@ -57,12 +59,13 @@ class QuizService {
   /// Watch marks for a specific quiz (Safe query)
   Stream<List<TestMarkModel>> watchMarksByQuiz(
       String quizId, String academyId) {
-    return _marks.where('quiz_id', isEqualTo: quizId).snapshots().map((snap) =>
-        snap
-            .docs
+    return _marks
+        .where('academy_id', isEqualTo: academyId)
+        .where('quiz_id', isEqualTo: quizId)
+        .snapshots()
+        .map((snap) => snap.docs
             .map((doc) => TestMarkModel.fromMap(
                 doc.id, doc.data() as Map<String, dynamic>))
-            .where((m) => m.academyId == academyId)
             .toList());
   }
 
@@ -70,13 +73,13 @@ class QuizService {
   Stream<List<TestMarkModel>> watchStudentMarks(
       String studentUid, String academyId) {
     return _marks
+        .where('academy_id', isEqualTo: academyId)
         .where('student_id', isEqualTo: studentUid)
         .snapshots()
         .map((snap) {
       final list = snap.docs
           .map((doc) =>
               TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((m) => m.academyId == academyId)
           .toList();
       list.sort((a, b) {
         return b.updatedAt.compareTo(a.updatedAt);
@@ -88,26 +91,22 @@ class QuizService {
   /// Get all marks for a class (Safe query)
   Stream<List<TestMarkModel>> watchClassMarks(
       String classId, String academyId) {
-    return _marks.where('class_id', isEqualTo: classId).snapshots().map(
-        (snap) => snap.docs
+    return _marks
+        .where('academy_id', isEqualTo: academyId)
+        .where('class_id', isEqualTo: classId)
+        .snapshots()
+        .map((snap) => snap.docs
             .map((doc) => TestMarkModel.fromMap(
                 doc.id, doc.data() as Map<String, dynamic>))
-            .where((m) => m.academyId == academyId)
             .toList());
   }
 
   /// NEW: Fetch ALL marks across the academy (for AI Predictions)
   Future<List<TestMarkModel>> getAllAcademyMarks(String academyId) async {
-    try {
-      final snap = await _marks.get();
-      return snap.docs
-          .map((doc) =>
-              TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((m) => m.academyId == academyId)
-          .toList();
-    } catch (e) {
-      debugPrint("Error fetching academy marks: $e");
-      return [];
-    }
+    final snap = await _marks.where('academy_id', isEqualTo: academyId).get();
+    return snap.docs
+        .map((doc) =>
+            TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
   }
 }

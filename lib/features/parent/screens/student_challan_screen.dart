@@ -315,6 +315,20 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
     }
   }
 
+  Future<void> _handleShare(FeeChallanModel c) async {
+    try {
+      await ChallanPdfService.generateAndShare(c);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Share Error: $e"),
+              backgroundColor: AppColors.danger),
+        );
+      }
+    }
+  }
+
   Widget _buildActionButtons(FeeChallanModel c) {
     return Column(
       children: [
@@ -351,7 +365,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _handlePrint(c),
+                onPressed: () => _handleShare(c),
                 icon: const Icon(Icons.share_rounded),
                 label: const Text("SHARE"),
                 style: OutlinedButton.styleFrom(
@@ -451,7 +465,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
           Icon(Icons.receipt_long_rounded,
               size: 64, color: AppColors.textMuted),
           SizedBox(height: 16),
-          const Text("No challans available for this month.",
+          Text("No challans available for this month.",
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

@@ -111,6 +111,11 @@ class AuthService {
       return profile;
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapAuthError(e));
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw AuthException(
+          'Could not sign in. Check your connection and try again.');
     }
   }
 
@@ -131,10 +136,7 @@ class AuthService {
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
           .where((u) => u.isApproved) // Local status check
-          .where((u) =>
-              u.academyId == academyId ||
-              u.academyId == null ||
-              u.academyId!.isEmpty)
+          .where((u) => u.academyId == academyId)
           .toList();
 
       users.sort((a, b) =>
@@ -153,10 +155,7 @@ class AuthService {
 
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
-          .where((u) =>
-              u.academyId == academyId ||
-              u.academyId == null ||
-              u.academyId!.isEmpty)
+          .where((u) => u.academyId == academyId)
           .toList();
 
       users.sort((a, b) =>
@@ -246,12 +245,8 @@ class AuthService {
       final List<AppUser> allPending =
           snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
 
-      final filtered = allPending
-          .where((u) =>
-              u.academyId == academyId ||
-              u.academyId == null ||
-              u.academyId!.isEmpty)
-          .toList();
+      final filtered =
+          allPending.where((u) => u.academyId == academyId).toList();
 
       filtered.sort((a, b) => (b.createdAt ?? DateTime.now())
           .compareTo(a.createdAt ?? DateTime.now()));
@@ -366,6 +361,22 @@ class AuthService {
       await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapAuthError(e));
+    }
+  }
+
+  /// Confirms [password] actually matches the signed-in user's real
+  /// credentials, without signing them out. Used before saving a password
+  /// for biometric unlock, so a mistyped password can't silently get stored.
+  Future<bool> verifyPassword(String password) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) return false;
+    try {
+      final cred =
+          EmailAuthProvider.credential(email: user.email!, password: password);
+      await user.reauthenticateWithCredential(cred);
+      return true;
+    } on FirebaseAuthException {
+      return false;
     }
   }
 

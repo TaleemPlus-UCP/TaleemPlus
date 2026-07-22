@@ -25,10 +25,10 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteQuiz(String quizId) async {
+  Future<void> deleteQuiz(String quizId, String academyId) async {
     _setLoading(true);
     try {
-      await _service.deleteQuiz(quizId);
+      await _service.deleteQuiz(quizId, academyId);
     } finally {
       _setLoading(false);
     }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -42,7 +43,7 @@ class PdfGeneratorService {
       try {
         logoImage = await networkImage(academy.academyLogo!);
       } catch (e) {
-        print("Could not load academy logo for Test PDF: $e");
+        debugPrint("Could not load academy logo for Test PDF: $e");
       }
     }
 
@@ -71,7 +72,7 @@ class PdfGeneratorService {
                       pw.Text(
                           academy?.academyName?.toUpperCase() ??
                               "TALEEMPLUS ACADEMY",
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               fontSize: 18, fontWeight: pw.FontWeight.bold)),
                       pw.Text(academy?.academyAddress ?? "",
                           style: const pw.TextStyle(fontSize: 10)),
@@ -92,7 +93,7 @@ class PdfGeneratorService {
                       style: const pw.TextStyle(
                           fontSize: 14, fontWeight: pw.FontWeight.bold)),
                   pw.Text(quiz.title,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           fontSize: 20, fontWeight: pw.FontWeight.bold)),
                   pw.Text("Subject: ${quiz.subject}",
                       style: const pw.TextStyle(fontSize: 12)),

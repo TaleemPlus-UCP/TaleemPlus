@@ -72,7 +72,8 @@ class ClassProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> deleteClass(String classId) => _repo.deleteClass(classId);
+  Future<void> deleteClass(String classId, String academyId) =>
+      _repo.deleteClass(classId, academyId);
 
   Future<void> updateEnrollment({
     required String classId,

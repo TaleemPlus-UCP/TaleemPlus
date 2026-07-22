@@ -190,7 +190,19 @@ class _TeacherAnnouncementsScreenState
       ),
     );
     if (ok == true && mounted) {
-      await _service.delete(a.id);
+      try {
+        await _service.delete(a.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Announcement deleted')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Failed to delete announcement: $e'),
+              backgroundColor: AppColors.danger));
+        }
+      }
     }
   }
 

@@ -43,6 +43,28 @@ class ChildAlertsScreen extends StatelessWidget {
                               color: AppColors.accent));
                     }
 
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.error_outline_rounded,
+                                  size: 48, color: AppColors.danger),
+                              SizedBox(height: 12),
+                              Text(
+                                  "Could not load attendance alerts. "
+                                  "Check your connection.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
                     final absences = (snapshot.data ?? [])
                         .where((r) => r.status == 'absent')
                         .toList();

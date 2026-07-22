@@ -109,8 +109,10 @@ class _SignupScreenState extends State<SignupScreen>
         return;
       }
       await _verifyCode();
-      if (_linkedAcademyId == null)
+      if (!mounted) return;
+      if (_linkedAcademyId == null) {
         return; // _verifyCode will show its own snackbar
+      }
     }
 
     final auth = context.read<AuthProvider>();

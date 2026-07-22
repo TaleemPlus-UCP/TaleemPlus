@@ -12,9 +12,10 @@ class FeeChallanRepository {
   /// Sorting phone pe (client-side) — Firestore index ki zaroorat nahi.
   Future<List<FeeChallanModel>> getForStudent(
       String studentId, String academyId) async {
-    // academy_id hata diya taake composite index na banana paray.
-    // studentId hamesha unique hai (Firebase UID).
-    final snap = await _col.where('student_id', isEqualTo: studentId).get();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .get();
 
     final list = snap.docs
         .map((doc) =>
@@ -39,7 +40,10 @@ class FeeChallanRepository {
   Future<FeeChallanModel?> getLatestForStudent(
       String studentId, String academyId,
       {String? month}) async {
-    final snap = await _col.where('student_id', isEqualTo: studentId).get();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .get();
 
     var list = snap.docs
         .map((doc) =>

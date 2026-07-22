@@ -185,7 +185,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                       child: _choiceCard(
                         "Take Photo",
                         Icons.camera_alt_rounded,
-                        () => _pickImage(true),
+                        _isProcessing ? null : () => _pickImage(true),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -193,7 +193,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                       child: _choiceCard(
                         "Gallery",
                         Icons.photo_library_rounded,
-                        () => _pickImage(false),
+                        _isProcessing ? null : () => _pickImage(false),
                       ),
                     ),
                   ],
@@ -298,7 +298,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
     );
   }
 
-  Widget _choiceCard(String title, IconData icon, VoidCallback onTap) {
+  Widget _choiceCard(String title, IconData icon, VoidCallback? onTap) {
     // ... logic remains same
     return Material(
       color: Colors.transparent,

@@ -186,8 +186,16 @@ class QuizResultsScreen extends StatelessWidget {
     );
     if (ok == true) {
       if (!context.mounted) return;
-      await context.read<QuizProvider>().deleteQuiz(quiz.id);
-      if (context.mounted) Navigator.pop(context);
+      try {
+        await context.read<QuizProvider>().deleteQuiz(quiz.id, quiz.academyId);
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Failed to delete test: $e'),
+              backgroundColor: AppColors.danger));
+        }
+      }
     }
   }
 }

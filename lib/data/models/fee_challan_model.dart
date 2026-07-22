@@ -89,7 +89,9 @@ class FeeChallanModel {
       fine: (map['fine'] ?? 0).toDouble(),
       status: map['status'] ?? 'pending',
       createdAt: (map['created_at'] as Timestamp).toDate(),
-      updatedAt: (map['updated_at'] as Timestamp).toDate(),
+      updatedAt: map['updated_at'] is Timestamp
+          ? (map['updated_at'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

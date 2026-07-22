@@ -370,7 +370,19 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
       ),
     );
     if (ok == true && mounted) {
-      await context.read<QuizProvider>().deleteQuiz(quiz.id);
+      try {
+        await context.read<QuizProvider>().deleteQuiz(quiz.id, quiz.academyId);
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Test deleted.')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Failed to delete test: $e'),
+              backgroundColor: AppColors.danger));
+        }
+      }
     }
   }
 }

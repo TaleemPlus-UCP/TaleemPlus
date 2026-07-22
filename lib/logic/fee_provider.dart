@@ -13,9 +13,11 @@ class FeeProvider extends ChangeNotifier {
 
   List<FeeInvoice> _invoices = [];
   bool _loading = false;
+  String? _error;
 
   List<FeeInvoice> get invoices => _invoices;
   bool get loading => _loading;
+  String? get error => _error;
 
   double get totalCollected =>
       _invoices.fold(0, (sum, i) => sum + i.accumulatedAmountPaid);
@@ -36,10 +38,16 @@ class FeeProvider extends ChangeNotifier {
 
   Future<void> load(String academyId) async {
     _loading = true;
+    _error = null;
     notifyListeners();
-    _invoices = await _repo.getAll(academyId);
-    _loading = false;
-    notifyListeners();
+    try {
+      _invoices = await _repo.getAll(academyId);
+    } catch (e) {
+      _error = 'Could not load fee records: $e';
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addInvoice({

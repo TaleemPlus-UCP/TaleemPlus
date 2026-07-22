@@ -187,7 +187,7 @@ class StudentTestReportScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Quiz ID: ${res.quizId.split('-').first}", // Simplified ID display
+                  res.subject,
                   style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,

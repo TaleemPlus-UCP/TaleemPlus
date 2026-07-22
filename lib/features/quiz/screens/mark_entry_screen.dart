@@ -43,12 +43,27 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
   }
 
   Future<void> _saveMarks() async {
+    final cls = context
+        .read<ClassProvider>()
+        .classes
+        .firstWhere((c) => c.id == widget.quiz.classId);
+
+    for (var entry in _markControllers.entries) {
+      final text = entry.value.text.trim();
+      if (text.isEmpty) continue;
+      final val = double.tryParse(text);
+      if (val == null || val < 0 || val > widget.quiz.totalMarks) {
+        final name = cls.studentNames[entry.key] ?? "a student";
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                "Invalid mark for $name: must be between 0 and ${widget.quiz.totalMarks}."),
+            backgroundColor: AppColors.danger));
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
     try {
-      final cls = context
-          .read<ClassProvider>()
-          .classes
-          .firstWhere((c) => c.id == widget.quiz.classId);
       final List<TestMarkModel> marksList = [];
 
       _markControllers.forEach((uid, ctrl) {
@@ -87,9 +102,10 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("Error saving marks: $e")));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

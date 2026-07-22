@@ -63,6 +63,36 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
                 );
               }
 
+              if (fees.error != null) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            size: 48, color: AppColors.danger),
+                        const SizedBox(height: 12),
+                        Text(fees.error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary)),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            final user = Provider.of<AuthProvider>(context,
+                                    listen: false)
+                                .currentUser;
+                            if (user != null) fees.load(user.uid);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               // Local filtering by month for the UI
               final filteredInvoices = fees.invoices.where((inv) {
                 try {

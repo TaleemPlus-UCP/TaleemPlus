@@ -65,12 +65,14 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
 
   Widget _buildQueriesTab() {
     return StreamBuilder<List<StudentQuery>>(
-      stream: _classroomService.watchQueriesForClass(widget.classEntity.id),
+      stream: _classroomService.watchQueriesForClass(
+          widget.classEntity.id, widget.classEntity.academyId),
       builder: (context, snap) {
         final list = snap.data ?? [];
-        if (list.isEmpty)
+        if (list.isEmpty) {
           return _emptyState(
               Icons.question_answer_outlined, "No pending student queries.");
+        }
 
         return ListView.separated(
           padding: const EdgeInsets.all(20),
@@ -155,7 +157,7 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
               onPressed: () async {
                 if (ctrl.text.isEmpty) return;
                 await _classroomService.answerQuery(q.id, ctrl.text);
-                if (mounted) Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text("SEND")),
         ],
@@ -176,12 +178,14 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
         ),
         Expanded(
           child: StreamBuilder<List<SharedResource>>(
-            stream: _classroomService.watchResources(widget.classEntity.id),
+            stream: _classroomService.watchResources(
+                widget.classEntity.id, widget.classEntity.academyId),
             builder: (context, snap) {
               final list = snap.data ?? [];
-              if (list.isEmpty)
+              if (list.isEmpty) {
                 return _emptyState(Icons.folder_open_rounded,
                     "You haven't shared any content yet.");
+              }
               return ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: list.length,
@@ -208,47 +212,83 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
   void _showUploadSheet() {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final linkCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Share Study Material",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            LabeledField(
-                label: "Title",
-                hint: "e.g. Physics Chapter 1 Notes",
-                controller: titleCtrl),
-            LabeledField(
-                label: "Description",
-                hint: "Summary or instructions...",
-                controller: descCtrl),
-            const SizedBox(height: 20),
-            PrimaryButton(
-                label: "POST TO CLASS",
-                onPressed: () async {
-                  final user = context.read<AuthProvider>().currentUser;
-                  final res = SharedResource(
-                    id: '',
-                    academyId: user!.academyId!,
-                    classId: widget.classEntity.id,
-                    teacherId: user.uid,
-                    teacherName: user.fullName,
-                    title: titleCtrl.text,
-                    description: descCtrl.text,
-                    createdAt: DateTime.now(),
-                  );
-                  await _classroomService.uploadResource(res);
-                  if (mounted) Navigator.pop(ctx);
-                }),
-          ],
-        ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          bool saving = false;
+
+          Future<void> submit() async {
+            final user = context.read<AuthProvider>().currentUser;
+            if (user?.academyId == null) return;
+            if (titleCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                  content: Text('Title is required.'),
+                  backgroundColor: AppColors.danger));
+              return;
+            }
+
+            setSheetState(() => saving = true);
+            try {
+              final res = SharedResource(
+                id: '',
+                academyId: user!.academyId!,
+                classId: widget.classEntity.id,
+                teacherId: user.uid,
+                teacherName: user.fullName,
+                title: titleCtrl.text.trim(),
+                description: descCtrl.text.trim(),
+                fileUrl:
+                    linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim(),
+                createdAt: DateTime.now(),
+              );
+              await _classroomService.uploadResource(res);
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              setSheetState(() => saving = false);
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content: Text('Failed to share resource: $e'),
+                    backgroundColor: AppColors.danger));
+              }
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+                24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Share Study Material",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                LabeledField(
+                    label: "Title",
+                    hint: "e.g. Physics Chapter 1 Notes",
+                    controller: titleCtrl),
+                LabeledField(
+                    label: "Description",
+                    hint: "Summary or instructions...",
+                    controller: descCtrl),
+                LabeledField(
+                    label: "Link (optional)",
+                    hint: "https://... (notes/video link)",
+                    controller: linkCtrl,
+                    keyboardType: TextInputType.url),
+                const SizedBox(height: 20),
+                PrimaryButton(
+                    label: "POST TO CLASS",
+                    loading: saving,
+                    onPressed: saving ? null : submit),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

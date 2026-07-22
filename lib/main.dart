@@ -68,6 +68,7 @@ class TaleemPlusApp extends StatelessWidget {
           onPointerDown: (_) =>
               context.read<SessionProvider>().resetTimer(context, auth),
           child: MaterialApp(
+            navigatorKey: rootNavigatorKey,
             title: 'Taleem Plus',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,

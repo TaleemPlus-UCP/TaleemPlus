@@ -76,12 +76,13 @@ class ClassRepository {
     return docRef.id;
   }
 
-  Future<void> deleteClass(String classId) async {
+  Future<void> deleteClass(String classId, String academyId) async {
     // Delete class doc
     await _col.doc(classId).delete();
     // Cascade delete attendance records for that class
     final att = await _db
         .collection('attendance_records')
+        .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .get();
     for (final d in att.docs) {

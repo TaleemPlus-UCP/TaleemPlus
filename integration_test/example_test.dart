@@ -1,18 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:patrol/patrol.dart';
+import 'package:integration_test/integration_test.dart';
 import 'package:taleemplus_app/main.dart' as app;
 
 void main() {
-  patrolTest(
-    'counter state is maintained after home restart',
-    ($) async {
-      await app.main();
-      await $.pumpAndSettle();
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-      // Example: Finding a widget and interacting with it
-      // await $(#loginButton).tap();
+  testWidgets('basic app flow test', (WidgetTester tester) async {
+    // Start the app
+    await app.main();
+    await tester.pumpAndSettle();
 
-      expect($('Taleem Plus'), findsOneWidget);
-    },
-  );
+    // The splash screen navigates away after a fixed delay with no
+    // animation running right before it fires, so pumpAndSettle alone can
+    // report "settled" before that navigation happens. Pump past it explicitly.
+    await tester.pump(const Duration(milliseconds: 2600));
+    await tester.pumpAndSettle();
+
+    // Splash screen auto-navigates to the login screen, which shows the
+    // "TaleemPlus" wordmark (rendered without a space).
+    expect(find.text('TaleemPlus'), findsOneWidget);
+  });
 }

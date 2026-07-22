@@ -51,8 +51,9 @@ class ParentProvider extends ChangeNotifier {
   }
 
   Future<String?> linkChild(String email) async {
-    if (_parentUid == null || _academyId == null)
+    if (_parentUid == null || _academyId == null) {
       return "User session expired.";
+    }
 
     _loading = true;
     notifyListeners();

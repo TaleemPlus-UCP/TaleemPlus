@@ -1,3 +1,9 @@
+import 'package:flutter/widgets.dart';
+
+/// Root navigator key so code outside the widget tree (e.g. a session
+/// timeout firing from a [Timer]) can still navigate/show feedback.
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Named routes used across the app.
 class AppRoutes {
   AppRoutes._();

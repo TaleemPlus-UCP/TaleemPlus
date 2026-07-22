@@ -383,11 +383,19 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       questions: _questions,
     );
 
-    await context.read<QuizProvider>().createQuiz(quiz);
-    if (mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Test created successfully!')));
+    try {
+      await context.read<QuizProvider>().createQuiz(quiz);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Test created successfully!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to create test: $e'),
+            backgroundColor: AppColors.danger));
+      }
     }
   }
 
@@ -415,11 +423,17 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                   LabeledField(
                       label: 'Test Title',
                       hint: 'e.g. Unit 1 Quiz',
-                      controller: _titleCtrl),
+                      controller: _titleCtrl,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Title is required'
+                          : null),
                   LabeledField(
                       label: 'Subject',
                       hint: 'e.g. Physics',
-                      controller: _subjectCtrl),
+                      controller: _subjectCtrl,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Subject is required'
+                          : null),
                 ]),
                 _buildFormSection('ACADEMY DETAILS', [
                   _buildDropdownField('Month', _selectedMonth, _months,
@@ -445,7 +459,14 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       label: 'Total Marks',
                       hint: 'e.g. 20',
                       controller: _totalMarksCtrl,
-                      keyboardType: TextInputType.number),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        final marks = double.tryParse(v?.trim() ?? '');
+                        if (marks == null || marks <= 0) {
+                          return 'Enter total marks greater than 0';
+                        }
+                        return null;
+                      }),
                   LabeledField(
                       label: 'Instructions',
                       hint: 'e.g. No calculators',
@@ -483,7 +504,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                   label: 'Save & Publish Test',
                   icon: Icons.cloud_upload_rounded,
                   loading: context.watch<QuizProvider>().loading,
-                  onPressed: _saveQuiz,
+                  onPressed:
+                      context.watch<QuizProvider>().loading ? null : _saveQuiz,
                 ),
                 const SizedBox(height: 40),
               ],
@@ -704,29 +726,33 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                       fontSize: 11,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
-              ..._optionCtrls.asMap().entries.map((entry) {
-                final i = entry.key;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: RadioListTile<int>(
-                    value: i,
-                    groupValue: _correctIdx,
-                    onChanged: (v) => setState(() => _correctIdx = v!),
-                    activeColor: AppColors.accent,
-                    contentPadding: EdgeInsets.zero,
-                    title: TextField(
-                      controller: entry.value,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Option ${i + 1}',
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+              RadioGroup<int>(
+                groupValue: _correctIdx,
+                onChanged: (v) => setState(() => _correctIdx = v!),
+                child: Column(
+                  children: _optionCtrls.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: RadioListTile<int>(
+                        value: i,
+                        activeColor: AppColors.accent,
+                        contentPadding: EdgeInsets.zero,
+                        title: TextField(
+                          controller: entry.value,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Option ${i + 1}',
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              }),
+                    );
+                  }).toList(),
+                ),
+              ),
             ],
             const SizedBox(height: 20),
             PrimaryButton(

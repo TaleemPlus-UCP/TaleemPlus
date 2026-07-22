@@ -27,8 +27,8 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   bool _isProcessing = false;
 
   // Grading state
-  Map<String, double> _suggestedMarks = {}; // questionId: suggestedScore
-  Map<String, String> _extractedText = {}; // questionId: text
+  final Map<String, double> _suggestedMarks = {}; // questionId: suggestedScore
+  final Map<String, String> _extractedText = {}; // questionId: text
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +277,9 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       child: PrimaryButton(
         label: "APPROVE & SAVE MARKS",
         icon: Icons.check_circle_rounded,
-        onPressed: _suggestedMarks.isEmpty ? null : _saveTotalMarks,
+        loading: _isProcessing,
+        onPressed:
+            (_suggestedMarks.isEmpty || _isProcessing) ? null : _saveTotalMarks,
       ),
     );
   }

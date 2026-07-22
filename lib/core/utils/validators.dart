@@ -24,13 +24,6 @@ class Validators {
     return null;
   }
 
-  /// Login accepts email OR a unique ID, so we only check it isn't empty.
-  static String? emailOrId(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Email or unique ID is required';
-    return null;
-  }
-
   static String? phone(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Phone number is required';

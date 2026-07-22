@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../data/models/class_entity.dart';
@@ -25,6 +26,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
   late TabController _tabController;
   final _classroomService = ClassroomService();
   final _queryCtrl = TextEditingController();
+  bool _sendingQuery = false;
 
   @override
   void initState() {
@@ -76,14 +78,17 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
 
   Widget _buildResourcesTab() {
     return StreamBuilder<List<SharedResource>>(
-      stream: _classroomService.watchResources(widget.classEntity.id),
+      stream: _classroomService.watchResources(
+          widget.classEntity.id, widget.classEntity.academyId),
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting)
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
         final list = snap.data ?? [];
-        if (list.isEmpty)
+        if (list.isEmpty) {
           return _emptyState(
               Icons.folder_open_rounded, "No resources shared yet.");
+        }
 
         return ListView.separated(
           padding: const EdgeInsets.all(20),
@@ -93,6 +98,15 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
         );
       },
     );
+  }
+
+  Future<void> _openResourceLink(String url) async {
+    final uri = Uri.tryParse(url);
+    final ok = uri != null && await launchUrl(uri);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open this link.")));
+    }
   }
 
   Widget _resourceCard(SharedResource res) {
@@ -133,7 +147,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
                       color: context.appColors.textMuted, fontSize: 11)),
               if (res.fileUrl != null)
                 TextButton.icon(
-                  onPressed: () {}, // Link opening logic
+                  onPressed: () => _openResourceLink(res.fileUrl!),
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text("View File",
                       style:
@@ -161,11 +175,13 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
             .where((r) => r.classId == widget.classEntity.id)
             .toList();
 
-        if (snap.connectionState == ConnectionState.waiting)
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
-        if (classRecords.isEmpty)
+        }
+        if (classRecords.isEmpty) {
           return _emptyState(
               Icons.fact_check_outlined, "No attendance records found.");
+        }
 
         final total = classRecords.length;
         final present = classRecords
@@ -259,15 +275,16 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
       children: [
         Expanded(
           child: StreamBuilder<List<StudentQuery>>(
-            stream:
-                _classroomService.watchQueriesForClass(widget.classEntity.id),
+            stream: _classroomService.watchQueriesForClass(
+                widget.classEntity.id, widget.classEntity.academyId),
             builder: (context, snap) {
               final queries = (snap.data ?? [])
                   .where((q) => q.studentId == user?.uid)
                   .toList();
-              if (queries.isEmpty)
+              if (queries.isEmpty) {
                 return _emptyState(Icons.question_answer_outlined,
                     "Ask your teacher a question!");
+              }
 
               return ListView.separated(
                 padding: const EdgeInsets.all(20),
@@ -351,8 +368,14 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
             ),
           ),
           IconButton(
-            onPressed: () => _submitQuery(user),
-            icon: const Icon(Icons.send_rounded, color: AppColors.accent),
+            onPressed: _sendingQuery ? null : () => _submitQuery(user),
+            icon: _sendingQuery
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.accent))
+                : const Icon(Icons.send_rounded, color: AppColors.accent),
           ),
         ],
       ),
@@ -360,7 +383,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
   }
 
   Future<void> _submitQuery(dynamic user) async {
-    if (_queryCtrl.text.trim().isEmpty) return;
+    if (_queryCtrl.text.trim().isEmpty || _sendingQuery) return;
     final q = StudentQuery(
       id: '', // Firestore auto-gen
       academyId: user.academyId,
@@ -368,11 +391,22 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
       studentId: user.uid,
       studentName: user.fullName,
       teacherId: widget.classEntity.primaryTeacherId,
-      question: _queryCtrl.text,
+      question: _queryCtrl.text.trim(),
       createdAt: DateTime.now(),
     );
-    await _classroomService.postQuery(q);
-    _queryCtrl.clear();
+    setState(() => _sendingQuery = true);
+    try {
+      await _classroomService.postQuery(q);
+      _queryCtrl.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to send question: $e'),
+            backgroundColor: AppColors.danger));
+      }
+    } finally {
+      if (mounted) setState(() => _sendingQuery = false);
+    }
   }
 
   Widget _emptyState(IconData icon, String msg) {

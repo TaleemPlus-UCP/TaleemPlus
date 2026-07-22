@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    function signedIn() { return request.auth != null; }
+
+    // User ka data fetch karne ka function (Safe Access)
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check ke user active/approved hai ya nahi (Spelling Safe)
+    function isApproved() {
+      let user = getUserData();
+      return signedIn() &&
+             user.get('account_status', 'inactive') == "active";
+    }
+
+    // Role check helpers (Safe Access)
+    function isAdmin() { return getUserData().get('role', '') == "admin"; }
+    function isTeacher() { return getUserData().get('role', '') == "teacher"; }
+    function isStaff() { return isAdmin() || isTeacher(); }
+
+    // Same-academy check (closes the cross-tenant leak)
+    function sameAcademy(docAcademyId) {
+      return getUserData().get('academy_id', '') == docAcademyId;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      // Public read limited to admin profiles only (needed for pre-auth
+      // academy-code lookup at signup). Everyone else needs to be signed in.
+      allow read: if signedIn() || resource.data.role == 'admin';
+      // A user may only create their own profile document.
+      allow create: if signedIn() && request.auth.uid == userId;
+      // Self-edit always allowed; admins may only edit/delete users in
+      // their own academy.
+      allow update, delete: if signedIn() && (
+        request.auth.uid == userId ||
+        (isApproved() && isAdmin() && sameAcademy(resource.data.academy_id))
+      );
+    }
+
+    match /announcements/{docId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isStaff() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isStaff() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    match /test_marks/{markId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      // AI Grader aur Manual Entry ke liye
+      allow create, update: if isApproved() && isStaff() &&
+          sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
+    }
+
+    match /attendance_records/{recordId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isStaff() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    match /classes/{classId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    // Classroom Management (Notes & Materials)
+    match /learning_resources/{docId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isStaff() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    // Student Queries (Question/Answer)
+    match /student_queries/{docId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      // Students create kar sakte hain, Teacher reply
+      allow create: if isApproved() &&
+          sameAcademy(request.resource.data.academy_id);
+      allow update: if isApproved() && isStaff() &&
+          sameAcademy(resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
+    }
+
+    // OCR Private Documents (owner-scoped, no academy field on this model)
+    match /ocr_documents/{docId} {
+      allow read, update, delete: if signedIn() &&
+          request.auth.uid == resource.data.created_by_uid;
+      allow create: if isApproved() &&
+          request.resource.data.created_by_uid == request.auth.uid;
+    }
+
+    // Fee Invoices (Check collection name: fee_challans or fee_invoices)
+    match /fee_challans/{challanId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    // Kuch projects mein name fee_invoices ho sakta hai
+    match /fee_invoices/{docId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update, delete: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+
+    match /notifications/{docId} {
+      // Sirf recipient apni notifications dekh sakta hai
+      allow read, update, delete: if signedIn() &&
+          request.auth.uid == resource.data.recipient_id;
+      allow create: if isApproved() &&
+          sameAcademy(request.resource.data.academy_id);
+    }
+  }
+}

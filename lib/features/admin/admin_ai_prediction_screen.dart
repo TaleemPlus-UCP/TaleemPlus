@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../logic/auth_provider.dart';
-import '../../logic/fee_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../logic/admin_ai_provider.dart';
 import '../../widgets/gradient_background.dart';
@@ -26,7 +25,6 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
           Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<MemberProvider>().load(user.uid);
-        context.read<FeeProvider>().load(user.uid);
         context.read<AdminAiProvider>().runAcademyAnalysis(user.uid);
       }
     });
@@ -53,11 +51,15 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  if (ai.error != null) ...[
+                    _aiErrorBanner(ai.error!),
+                    const SizedBox(height: 20),
+                  ],
                   _aiStatusHeader(),
                   const SizedBox(height: 24),
                   _buildRiskPrediction(ai),
                   const SizedBox(height: 20),
-                  _buildRevenueForecast(),
+                  _buildRevenueForecast(ai),
                   const SizedBox(height: 20),
                   _buildAcademicInsights(ai),
                   const SizedBox(height: 40),
@@ -66,6 +68,32 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _aiErrorBanner(String error) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Insights may be incomplete — some data failed to load.",
+              style: TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -145,25 +173,21 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     );
   }
 
-  Widget _buildRevenueForecast() {
-    return Consumer<FeeProvider>(
-      builder: (context, feeProvider, _) {
-        final double pending = feeProvider.totalPending;
-        final double predicted =
-            pending * 0.85; // Heuristic: 85% usually pay on time
+  Widget _buildRevenueForecast(AdminAiProvider ai) {
+    final double pending = ai.pendingAmount;
+    final double predicted =
+        pending * 0.85; // Heuristic: 85% usually pay on time
 
-        return _predictionCard(
-          title: "Revenue Forecast",
-          prediction: "Predicted Rs. ${predicted.toStringAsFixed(0)}",
-          insight:
-              "Expected collection for this month based on Rs. ${pending.toStringAsFixed(0)} total pending fees.",
-          icon: Icons.payments_rounded,
-          color: AppColors.success,
-          actionLabel: "LEDGER",
-          onAction: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
-        );
-      },
+    return _predictionCard(
+      title: "Revenue Forecast",
+      prediction: "Predicted Rs. ${predicted.toStringAsFixed(0)}",
+      insight:
+          "Expected collection for this month based on Rs. ${pending.toStringAsFixed(0)} total pending fees.",
+      icon: Icons.payments_rounded,
+      color: AppColors.success,
+      actionLabel: "LEDGER",
+      onAction: () => Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
     );
   }
 

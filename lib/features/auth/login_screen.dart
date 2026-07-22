@@ -235,11 +235,11 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         children: [
           LabeledField(
-            label: 'Email or Unique ID',
-            hint: 'Enter your email or unique ID...',
+            label: 'Email',
+            hint: 'Enter your email...',
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            validator: Validators.emailOrId,
+            validator: Validators.email,
           ),
           LabeledField(
             label: 'Password',

@@ -185,7 +185,20 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       ),
     );
     if (ok == true && mounted) {
-      await context.read<ClassProvider>().deleteClass(c.id);
+      try {
+        await context.read<ClassProvider>().deleteClass(c.id, c.academyId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('${c.displayLabel} deleted'),
+              backgroundColor: AppColors.success));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Failed to delete class: $e'),
+              backgroundColor: AppColors.danger));
+        }
+      }
     }
   }
 

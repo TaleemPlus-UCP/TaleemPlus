@@ -99,8 +99,9 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
       }
     }
 
-    if (sb.length < 50)
+    if (sb.length < 50) {
       return "Detected text is too short for a structured summary:\n\n$text";
+    }
 
     return sb.toString();
   }
@@ -151,7 +152,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () => _pickImage(ImageSource.camera),
+            onPressed:
+                _isProcessing ? null : () => _pickImage(ImageSource.camera),
             icon: const Icon(Icons.camera_alt_rounded),
             label: const Text("SCAN NOTES"),
             style: ElevatedButton.styleFrom(
@@ -166,7 +168,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => _pickImage(ImageSource.gallery),
+            onPressed:
+                _isProcessing ? null : () => _pickImage(ImageSource.gallery),
             icon: const Icon(Icons.image_rounded),
             label: const Text("GALLERY"),
             style: OutlinedButton.styleFrom(

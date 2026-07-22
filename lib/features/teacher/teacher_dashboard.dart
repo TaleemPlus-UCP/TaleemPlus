@@ -228,6 +228,7 @@ class TeacherDashboard extends StatelessWidget {
                     if (val) {
                       final authenticated =
                           await session.authenticateWithBiometrics();
+                      if (!context.mounted) return;
                       if (authenticated) {
                         final pass = await _promptForPassword(context);
                         if (pass != null) {
@@ -310,12 +311,16 @@ class TeacherDashboard extends StatelessWidget {
                 await AuthService().directUpdatePassword(passCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
+                }
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text("Password updated successfully!")));
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text("Error: $e")));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text("Error: $e")));
+                }
               }
             },
             child: const Text("UPDATE",
@@ -328,34 +333,64 @@ class TeacherDashboard extends StatelessWidget {
 
   Future<String?> _promptForPassword(BuildContext context) async {
     final ctrl = TextEditingController();
+    String? error;
+    bool verifying = false;
     return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.appColors.surface,
-        title: const Text("Verify Password"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Enter your account password to enable biometric login.",
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 16),
-            LabeledField(
-                label: "Current Password",
-                hint: "Required",
-                controller: ctrl,
-                obscure: true),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.appColors.surface,
+          title: const Text("Verify Password"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                  "Enter your account password to enable biometric login.",
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              LabeledField(
+                  label: "Current Password",
+                  hint: "Required",
+                  controller: ctrl,
+                  obscure: true),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(error!,
+                      style: const TextStyle(
+                          color: AppColors.danger, fontSize: 12)),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("CANCEL")),
+            TextButton(
+              onPressed: verifying
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        verifying = true;
+                        error = null;
+                      });
+                      final ok = await AuthService().verifyPassword(ctrl.text);
+                      if (!ok) {
+                        setDialogState(() {
+                          verifying = false;
+                          error = "Incorrect password.";
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx, ctrl.text);
+                    },
+              child: Text(verifying ? "VERIFYING..." : "VERIFY",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.accent)),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text),
-            child: const Text("VERIFY",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: AppColors.accent)),
-          ),
-        ],
       ),
     );
   }

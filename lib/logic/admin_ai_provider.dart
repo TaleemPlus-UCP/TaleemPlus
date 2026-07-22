@@ -8,7 +8,9 @@ class AdminAiProvider extends ChangeNotifier {
   final FeeChallanRepository _feeRepo = FeeChallanRepository();
 
   bool _loading = false;
+  String? _error;
   bool get loading => _loading;
+  String? get error => _error;
 
   // Insights Data
   int _atRiskCount = 0;
@@ -20,6 +22,7 @@ class AdminAiProvider extends ChangeNotifier {
   double _projectedRevenue = 0.0;
   double _collectionEfficiency = 0.0;
   int _pendingPaymentsCount = 0;
+  double _pendingAmount = 0.0;
 
   int get atRiskCount => _atRiskCount;
   String get weakestSubject => _weakestSubject;
@@ -29,9 +32,11 @@ class AdminAiProvider extends ChangeNotifier {
   double get projectedRevenue => _projectedRevenue;
   double get collectionEfficiency => _collectionEfficiency;
   int get pendingPaymentsCount => _pendingPaymentsCount;
+  double get pendingAmount => _pendingAmount;
 
   Future<void> runAcademyAnalysis(String academyId) async {
     _loading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -42,6 +47,7 @@ class AdminAiProvider extends ChangeNotifier {
       ]);
     } catch (e) {
       debugPrint("AI Analysis Error: $e");
+      _error = 'Could not load insights: $e';
     } finally {
       _loading = false;
       notifyListeners();
@@ -61,27 +67,25 @@ class AdminAiProvider extends ChangeNotifier {
   }
 
   Future<void> _analyzeRevenue(String academyId) async {
-    try {
-      final allChallans = await _feeRepo.getAll(academyId);
-      if (allChallans.isEmpty) {
-        _projectedRevenue = 0;
-        _collectionEfficiency = 0;
-        _pendingPaymentsCount = 0;
-      } else {
-        final totalPayable =
-            allChallans.map((c) => c.totalAmount).reduce((a, b) => a + b);
-        final totalPaid = allChallans
-            .where((c) => c.isPaid)
-            .map((c) => c.totalAmount)
-            .fold(0.0, (a, b) => a + b);
+    final allChallans = await _feeRepo.getAll(academyId);
+    if (allChallans.isEmpty) {
+      _projectedRevenue = 0;
+      _collectionEfficiency = 0;
+      _pendingPaymentsCount = 0;
+      _pendingAmount = 0;
+    } else {
+      final totalPayable =
+          allChallans.map((c) => c.totalAmount).reduce((a, b) => a + b);
+      final totalPaid = allChallans
+          .where((c) => c.isPaid)
+          .map((c) => c.totalAmount)
+          .fold(0.0, (a, b) => a + b);
 
-        _pendingPaymentsCount = allChallans.where((c) => !c.isPaid).length;
-        _collectionEfficiency = (totalPaid / totalPayable) * 100;
-        _projectedRevenue =
-            totalPayable; // Simple forecast: next month expected similar to current setup
-      }
-    } catch (e) {
-      debugPrint("Revenue Analysis Error: $e");
+      _pendingPaymentsCount = allChallans.where((c) => !c.isPaid).length;
+      _pendingAmount = totalPayable - totalPaid;
+      _collectionEfficiency = (totalPaid / totalPayable) * 100;
+      _projectedRevenue =
+          totalPayable; // Simple forecast: next month expected similar to current setup
     }
   }
 

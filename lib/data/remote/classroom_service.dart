@@ -10,9 +10,11 @@ class ClassroomService {
     await _db.collection('learning_resources').add(res.toMap());
   }
 
-  Stream<List<SharedResource>> watchResources(String classId) {
+  Stream<List<SharedResource>> watchResources(
+      String classId, String academyId) {
     return _db
         .collection('learning_resources')
+        .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .snapshots()
         .map((snap) => snap.docs
@@ -33,9 +35,11 @@ class ClassroomService {
     });
   }
 
-  Stream<List<StudentQuery>> watchQueriesForClass(String classId) {
+  Stream<List<StudentQuery>> watchQueriesForClass(
+      String classId, String academyId) {
     return _db
         .collection('student_queries')
+        .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .snapshots()
         .map((snap) => snap.docs
@@ -43,9 +47,11 @@ class ClassroomService {
             .toList());
   }
 
-  Stream<List<StudentQuery>> watchQueriesForTeacher(String teacherId) {
+  Stream<List<StudentQuery>> watchQueriesForTeacher(
+      String teacherId, String academyId) {
     return _db
         .collection('student_queries')
+        .where('academy_id', isEqualTo: academyId)
         .where('teacher_id', isEqualTo: teacherId)
         .snapshots()
         .map((snap) => snap.docs
