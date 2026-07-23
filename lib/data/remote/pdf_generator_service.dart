@@ -194,7 +194,7 @@ class PdfGeneratorService {
                       pw.Padding(
                         padding: const pw.EdgeInsets.only(top: 8, bottom: 20),
                         child: pw.Container(
-                          height: 60,
+                          height: q.type == QuestionType.long ? 140 : 60,
                           width: double.infinity,
                           decoration: pw.BoxDecoration(
                             border: pw.Border.all(color: PdfColors.grey300),

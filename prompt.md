@@ -14,7 +14,7 @@ All four heuristic features share the same two-stage pipeline: **image → ML Ki
 ## 2. AI Smart Grader
 
 **Screen**: `lib/features/quiz/screens/ai_paper_grader_screen.dart`
-**Scope**: only questions of type "Short Answer" are eligible (MCQs are excluded from AI grading).
+**Scope**: only questions of type "Short Answer" or "Long Answer" are eligible (MCQs are excluded from AI grading since they're auto-scored by option index, not keyword matching).
 
 **"Prompt" (grading rule), in plain language:**
 
@@ -60,15 +60,15 @@ suggested counts:
 ```
 These suggested counts are shown to the teacher in an "AI Test Blueprint" dialog and can be adjusted before generation.
 
-**Step 2 — question generation** (`_generateQuestionsLocally`), three independent heuristics applied per line of OCR'd text:
+**Step 2 — question generation** (`_generateQuestionsLocally`): the OCR text is first rejoined into one blob and re-split on sentence terminators (`.`, `?`, `!`) — ML Kit returns one line per *visual* line, not per sentence, so heuristics run on reconstructed sentences instead of raw line breaks. Three heuristics then run in order, each consuming sentences the previous one didn't use, so the same sentence never becomes two questions:
 
 | Question type | Trigger rule | Generated form |
 |---|---|---|
-| MCQ | line contains `" is "` or `" refers to "` | Split on the matched phrase → "What is/refers to `<term>`?" with the term as the correct option plus 3 fixed distractors ("None of the above", "Both A and B", "Incorrect definition"); `correctIndex` is always the first option |
-| Short answer | line < 100 chars, no `?` | "Briefly explain: `<line>`" (2 marks) |
-| Long answer (stored as `QuestionType.short`) | line > 150 chars | "Discuss in detail the following concept: `<first 50 chars>`…" (5 marks) |
+| MCQ | sentence contains `" is "` or `" refers to "` | Split on the matched phrase → "What is/refers to `<term>`?" with the term as the correct option plus 3 fixed distractors ("None of the above", "Both A and B", "Incorrect definition"); `correctIndex` is always the first option |
+| Long answer (`QuestionType.long`) | remaining sentences ≥ 80 chars, longest first | "Discuss in detail the following concept: `<first 60 chars>`…" (5 marks) |
+| Short answer (`QuestionType.short`) | remaining sentences, no `?` | "Briefly explain: `<sentence>`" (2 marks) |
 
-Generated questions are merged into the same manual question builder used for hand-authored questions, so a teacher can freely mix AI-suggested and manually-written questions (including manually adding `gradingKeywords` for the Smart Grader to later use) before saving the quiz.
+Generated questions are merged into the same manual question builder used for hand-authored questions, so a teacher can freely mix AI-suggested and manually-written questions (including manually adding `gradingKeywords` for the Smart Grader to later use) before saving the quiz. The AI Smart Grader (§2) now accepts both Short and Long Answer questions.
 
 **Known limitation**: the MCQ distractors are generic filler text, not plausible wrong answers derived from the source material — a student with no knowledge of the topic can often eliminate 3 of 4 options by pattern-matching the distractor wording alone.
 

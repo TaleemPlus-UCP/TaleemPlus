@@ -253,22 +253,37 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   void _generateQuestionsLocally(
       String extractedText, String diff, int mcqs, int sqs, int lqs) {
-    // 100% Offline Heuristic Question Generation
-    final lines =
-        extractedText.split('\n').where((l) => l.trim().length > 20).toList();
-    final List<QuizQuestion> generated = [];
+    // 100% Offline Heuristic Question Generation.
+    // ML Kit OCR breaks text on visual line boundaries, not sentence
+    // boundaries, so a raw '\n' split rarely produces a long enough line to
+    // trigger the "long question" heuristic and often chops "X is Y"
+    // definitions mid-sentence, starving the MCQ heuristic too. Rejoining
+    // into one blob and re-splitting on sentence terminators gives each
+    // heuristic real sentence-level text to work with.
+    final normalized = extractedText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final sentences = normalized
+        .split(RegExp(r'[.?!]+'))
+        .map((s) => s.trim())
+        .where((s) => s.length > 15)
+        .toList();
 
-    // Heuristic 1: MCQs from definitions
+    final List<QuizQuestion> generated = [];
+    final usedSentences = <String>{};
+
+    // Heuristic 1: MCQs from "X is/refers to Y" definitions.
     int mGenerated = 0;
-    for (var line in lines) {
+    for (var sentence in sentences) {
       if (mGenerated >= mcqs) break;
-      if (line.contains(' is ') || line.contains(' refers to ')) {
-        final parts = line.split(RegExp(r' is | refers to '));
-        if (parts.length == 2) {
+      if (usedSentences.contains(sentence)) continue;
+      if (sentence.contains(' is ') || sentence.contains(' refers to ')) {
+        final parts = sentence.split(RegExp(r' is | refers to '));
+        if (parts.length == 2 &&
+            parts[0].trim().isNotEmpty &&
+            parts[1].trim().isNotEmpty) {
           generated.add(QuizQuestion(
             id: const Uuid().v4(),
             text:
-                "What ${line.contains(' refers to ') ? 'refers to' : 'is'} ${parts[1].trim()}?",
+                "What ${sentence.contains(' refers to ') ? 'refers to' : 'is'} ${parts[1].trim()}?",
             type: QuestionType.mcq,
             options: [
               parts[0].trim(),
@@ -279,40 +294,50 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             correctIndex: 0,
             marks: 1.0,
           ));
+          usedSentences.add(sentence);
           mGenerated++;
         }
       }
     }
 
-    // Heuristic 2: Short Questions from key sentences
-    int sGenerated = 0;
-    for (var line in lines) {
-      if (sGenerated >= sqs) break;
-      if (line.length < 100 && !line.contains('?')) {
-        generated.add(QuizQuestion(
-          id: const Uuid().v4(),
-          text: "Briefly explain: ${line.trim()}",
-          type: QuestionType.short,
-          marks: 2.0,
-        ));
-        sGenerated++;
-      }
+    // Remaining sentences, longest first, so the longest ones become Long
+    // Questions and the rest are available for Short Questions.
+    final remaining = sentences.where((s) => !usedSentences.contains(s))
+        .toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    // Heuristic 2: Long Questions from the longest remaining sentences.
+    int lGenerated = 0;
+    for (var sentence in remaining) {
+      if (lGenerated >= lqs) break;
+      if (usedSentences.contains(sentence)) continue;
+      if (sentence.length < 80) continue;
+      final preview =
+          sentence.length > 60 ? '${sentence.substring(0, 60)}...' : sentence;
+      generated.add(QuizQuestion(
+        id: const Uuid().v4(),
+        text: "Discuss in detail the following concept: $preview",
+        type: QuestionType.long,
+        marks: 5.0,
+      ));
+      usedSentences.add(sentence);
+      lGenerated++;
     }
 
-    // Heuristic 3: Long Questions from paragraphs
-    int lGenerated = 0;
-    for (var line in lines) {
-      if (lGenerated >= lqs) break;
-      if (line.length > 150) {
-        generated.add(QuizQuestion(
-          id: const Uuid().v4(),
-          text:
-              "Discuss in detail the following concept: ${line.trim().substring(0, 50)}...",
-          type: QuestionType.short, // LQ is treated as long short answer in UI
-          marks: 5.0,
-        ));
-        lGenerated++;
-      }
+    // Heuristic 3: Short Questions from whatever's left.
+    int sGenerated = 0;
+    for (var sentence in remaining) {
+      if (sGenerated >= sqs) break;
+      if (usedSentences.contains(sentence)) continue;
+      if (sentence.contains('?')) continue;
+      generated.add(QuizQuestion(
+        id: const Uuid().v4(),
+        text: "Briefly explain: $sentence",
+        type: QuestionType.short,
+        marks: 2.0,
+      ));
+      usedSentences.add(sentence);
+      sGenerated++;
     }
 
     setState(() {
@@ -645,7 +670,12 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 10),
-              Text(q.type == QuestionType.mcq ? 'MCQ' : 'Short Answer',
+              Text(
+                  switch (q.type) {
+                    QuestionType.mcq => 'MCQ',
+                    QuestionType.long => 'Long Answer',
+                    QuestionType.short => 'Short Answer',
+                  },
                   style: const TextStyle(
                       color: AppColors.accent,
                       fontSize: 12,
@@ -710,6 +740,8 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                 _typeBtn('MCQ', QuestionType.mcq),
                 const SizedBox(width: 12),
                 _typeBtn('Short Answer', QuestionType.short),
+                const SizedBox(width: 12),
+                _typeBtn('Long Answer', QuestionType.long),
               ],
             ),
             const SizedBox(height: 20),
@@ -722,7 +754,7 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                 hint: '1',
                 controller: _marksCtrl,
                 keyboardType: TextInputType.number),
-            if (_type == QuestionType.short)
+            if (_type == QuestionType.short || _type == QuestionType.long)
               LabeledField(
                 label: 'Grading Keywords (Optional)',
                 hint: 'e.g. Force, mass, acceleration (comma separated)',

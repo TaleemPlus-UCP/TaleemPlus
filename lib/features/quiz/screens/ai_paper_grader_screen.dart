@@ -116,20 +116,21 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   }
 
   Widget _buildQuestionList() {
-    final shortQuestions = widget.quiz.questions
-        .where((q) => q.type == QuestionType.short)
+    final gradableQuestions = widget.quiz.questions
+        .where((q) => q.type == QuestionType.short || q.type == QuestionType.long)
         .toList();
 
-    if (shortQuestions.isEmpty) {
+    if (gradableQuestions.isEmpty) {
       return const Center(
-          child: Text("Only 'Short Answer' questions support AI grading."));
+          child: Text(
+              "Only 'Short Answer' and 'Long Answer' questions support AI grading."));
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: shortQuestions.length,
+      itemCount: gradableQuestions.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _gradingCard(shortQuestions[index]),
+      itemBuilder: (context, index) => _gradingCard(gradableQuestions[index]),
     );
   }
 

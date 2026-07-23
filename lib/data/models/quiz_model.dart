@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum QuestionType { mcq, short }
+enum QuestionType { mcq, short, long }
 
 class QuizQuestion {
   final String id;
@@ -37,7 +37,10 @@ class QuizQuestion {
     return QuizQuestion(
       id: map['id'] ?? '',
       text: map['text'] ?? '',
-      type: map['type'] == 'mcq' ? QuestionType.mcq : QuestionType.short,
+      type: QuestionType.values.firstWhere(
+        (t) => t.name == map['type'],
+        orElse: () => QuestionType.short,
+      ),
       options:
           map['options'] != null ? List<String>.from(map['options']) : null,
       correctIndex: map['correct_index'],
