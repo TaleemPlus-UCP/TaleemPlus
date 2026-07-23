@@ -117,7 +117,8 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
 
   Widget _buildQuestionList() {
     final gradableQuestions = widget.quiz.questions
-        .where((q) => q.type == QuestionType.short || q.type == QuestionType.long)
+        .where(
+            (q) => q.type == QuestionType.short || q.type == QuestionType.long)
         .toList();
 
     if (gradableQuestions.isEmpty) {

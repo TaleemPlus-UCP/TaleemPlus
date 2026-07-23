@@ -302,7 +302,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
     // Remaining sentences, longest first, so the longest ones become Long
     // Questions and the rest are available for Short Questions.
-    final remaining = sentences.where((s) => !usedSentences.contains(s))
+    final remaining = sentences
+        .where((s) => !usedSentences.contains(s))
         .toList()
       ..sort((a, b) => b.length.compareTo(a.length));
 
