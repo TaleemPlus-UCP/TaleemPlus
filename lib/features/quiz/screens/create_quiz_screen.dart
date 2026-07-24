@@ -422,8 +422,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     final classMatches =
         cp.classes.where((c) => c.id == widget.classId).toList();
     if (classMatches.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('This class no longer exists.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This class no longer exists.')));
       return;
     }
     final cls = classMatches.first;

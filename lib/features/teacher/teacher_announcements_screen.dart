@@ -58,7 +58,8 @@ class _TeacherAnnouncementsScreenState
                     }
                     if (snap.hasError) {
                       return Center(
-                        child: Text('Error loading announcements: ${snap.error}',
+                        child: Text(
+                            'Error loading announcements: ${snap.error}',
                             style: const TextStyle(color: AppColors.danger)),
                       );
                     }

@@ -457,9 +457,7 @@ class ParentDashboard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: AppColors.accent.withValues(alpha: 0.1),
           child: Text(
-              child.fullName.isNotEmpty
-                  ? child.fullName[0].toUpperCase()
-                  : '?',
+              child.fullName.isNotEmpty ? child.fullName[0].toUpperCase() : '?',
               style: const TextStyle(
                   color: AppColors.accent, fontWeight: FontWeight.bold)),
         ),

@@ -132,10 +132,10 @@ class AuthService {
     if (uids.isEmpty) return [];
     final results = <AppUser>[];
     for (var i = 0; i < uids.length; i += 10) {
-      final chunk = uids.sublist(i, i + 10 > uids.length ? uids.length : i + 10);
-      final snap = await _users
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
+      final chunk =
+          uids.sublist(i, i + 10 > uids.length ? uids.length : i + 10);
+      final snap =
+          await _users.where(FieldPath.documentId, whereIn: chunk).get();
       results.addAll(snap.docs.map((d) => AppUser.fromMap(d.id, d.data())));
     }
     return results;

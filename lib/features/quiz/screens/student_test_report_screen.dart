@@ -45,7 +45,8 @@ class StudentTestReportScreen extends StatelessWidget {
                     }
                     if (snapshot.hasError) {
                       return Center(
-                          child: Text('Error loading results: ${snapshot.error}',
+                          child: Text(
+                              'Error loading results: ${snapshot.error}',
                               style: const TextStyle(color: AppColors.danger)));
                     }
 

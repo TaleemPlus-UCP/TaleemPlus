@@ -55,8 +55,7 @@ class QuizResultsScreen extends StatelessWidget {
                     if (snap.hasError) {
                       return Center(
                           child: Text('Error loading marks: ${snap.error}',
-                              style:
-                                  const TextStyle(color: AppColors.danger)));
+                              style: const TextStyle(color: AppColors.danger)));
                     }
                     final list = snap.data ?? [];
                     if (list.isEmpty) {

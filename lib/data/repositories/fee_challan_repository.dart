@@ -77,8 +77,8 @@ class FeeChallanRepository {
         : null;
 
     for (var i = 0; i < studentIds.length; i += 10) {
-      final chunk =
-          studentIds.sublist(i, i + 10 > studentIds.length ? studentIds.length : i + 10);
+      final chunk = studentIds.sublist(
+          i, i + 10 > studentIds.length ? studentIds.length : i + 10);
       final snap = await _col
           .where('academy_id', isEqualTo: academyId)
           .where('student_id', whereIn: chunk)
