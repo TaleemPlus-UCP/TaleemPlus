@@ -51,14 +51,21 @@ service cloud.firestore {
 
     match /announcements/{docId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isStaff() &&
+      // `request.resource` doesn't exist on delete (there's no resulting
+      // document), so delete must check `resource.data` instead — folding
+      // it into the create/update line silently denies every delete.
+      allow create, update: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isStaff() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     match /quizzes/{quizId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isStaff() &&
+      allow create, update: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isStaff() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     match /test_marks/{markId} {
@@ -76,21 +83,27 @@ service cloud.firestore {
 
     match /attendance_records/{recordId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isStaff() &&
+      allow create, update: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isStaff() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     match /classes/{classId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isAdmin() &&
+      allow create, update: if isApproved() && isAdmin() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     // Classroom Management (Notes & Materials)
     match /learning_resources/{docId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isStaff() &&
+      allow create, update: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isStaff() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     // Student Queries (Question/Answer)
@@ -116,15 +129,19 @@ service cloud.firestore {
     // Fee Invoices (Check collection name: fee_challans or fee_invoices)
     match /fee_challans/{challanId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isAdmin() &&
+      allow create, update: if isApproved() && isAdmin() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     // Kuch projects mein name fee_invoices ho sakta hai
     match /fee_invoices/{docId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
-      allow create, update, delete: if isApproved() && isAdmin() &&
+      allow create, update: if isApproved() && isAdmin() &&
           sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
     }
 
     match /notifications/{docId} {
