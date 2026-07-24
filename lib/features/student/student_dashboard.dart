@@ -19,6 +19,7 @@ import 'screens/student_attendance_screen.dart';
 import 'screens/student_fee_screen.dart';
 import 'screens/ai_summarizer_screen.dart';
 import 'screens/student_progress_chart_screen.dart';
+import 'screens/my_timetable_screen.dart';
 import '../../widgets/academy_relink_dialog.dart';
 
 class StudentDashboard extends StatelessWidget {
@@ -98,6 +99,17 @@ class StudentDashboard extends StatelessWidget {
                 () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const MyClassroomHub()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'My Timetable',
+                'View your weekly class schedule',
+                Icons.schedule_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyTimetableScreen()),
                 ),
               ),
               const SizedBox(height: 12),

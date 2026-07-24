@@ -11,6 +11,7 @@ import 'logic/fee_provider.dart';
 import 'logic/class_provider.dart';
 import 'logic/attendance_provider.dart';
 import 'logic/quiz_provider.dart';
+import 'logic/timetable_provider.dart';
 import 'logic/theme_provider.dart';
 import 'logic/admin_ai_provider.dart';
 import 'logic/parent_provider.dart';
@@ -40,6 +41,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ClassProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
+        ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => AdminAiProvider()),
         ChangeNotifierProxyProvider<AuthProvider, ParentProvider>(
           create: (_) => ParentProvider(),

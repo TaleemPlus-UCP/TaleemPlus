@@ -144,6 +144,14 @@ service cloud.firestore {
           sameAcademy(resource.data.academy_id);
     }
 
+    match /timetables/{slotId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
+    }
+
     match /notifications/{docId} {
       // Sirf recipient apni notifications dekh sakta hai
       allow read, update, delete: if signedIn() &&

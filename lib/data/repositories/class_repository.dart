@@ -77,16 +77,35 @@ class ClassRepository {
   }
 
   Future<void> deleteClass(String classId, String academyId) async {
-    // Delete class doc
-    await _col.doc(classId).delete();
-    // Cascade delete attendance records for that class
+    // Cascade delete attendance records and timetable slots for that class,
+    // plus the class doc itself, in batches instead of sequential per-doc
+    // deletes (a long-running class can easily accumulate thousands of
+    // attendance records — well past Firestore's 500-op batch cap).
     final att = await _db
         .collection('attendance_records')
         .where('academy_id', isEqualTo: academyId)
         .where('class_id', isEqualTo: classId)
         .get();
-    for (final d in att.docs) {
-      await d.reference.delete();
+    final slots = await _db
+        .collection('timetables')
+        .where('academy_id', isEqualTo: academyId)
+        .where('class_id', isEqualTo: classId)
+        .get();
+
+    final refs = [
+      _col.doc(classId),
+      ...att.docs.map((d) => d.reference),
+      ...slots.docs.map((d) => d.reference),
+    ];
+
+    const chunkSize = 450;
+    for (var i = 0; i < refs.length; i += chunkSize) {
+      final end = i + chunkSize > refs.length ? refs.length : i + chunkSize;
+      final batch = _db.batch();
+      for (final ref in refs.sublist(i, end)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
     }
   }
 

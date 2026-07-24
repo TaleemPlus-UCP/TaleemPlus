@@ -24,6 +24,7 @@ import 'class_management_screen.dart';
 import 'admin_quiz_list_screen.dart';
 import 'admin_ai_prediction_screen.dart';
 import 'screens/challan_generation_screen.dart';
+import 'screens/timetable_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -529,6 +530,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ClassManagementScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _actionTile(
+                  'Timetable Management',
+                  'Build weekly class schedules with conflict checks',
+                  Icons.schedule_rounded,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const TimetableManagementScreen()),
                   ),
                 ),
                 const SizedBox(height: 12),

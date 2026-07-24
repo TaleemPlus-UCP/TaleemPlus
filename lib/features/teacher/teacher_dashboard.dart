@@ -19,6 +19,7 @@ import '../quiz/screens/teacher_quiz_list_screen.dart';
 import '../shared/view_announcements_screen.dart';
 import 'teacher_classes_screen.dart';
 import 'teacher_announcements_screen.dart'; // NEW
+import 'screens/my_timetable_screen.dart';
 import '../../widgets/academy_relink_dialog.dart';
 
 class TeacherDashboard extends StatelessWidget {
@@ -98,6 +99,17 @@ class TeacherDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const TeacherClassesScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'My Timetable',
+                'View your weekly class schedule',
+                Icons.schedule_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyTimetableScreen()),
                 ),
               ),
               const SizedBox(height: 12),

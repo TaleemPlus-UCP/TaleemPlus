@@ -16,6 +16,7 @@ import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart';
 import '../shared/view_announcements_screen.dart';
 import 'screens/child_overview_screen.dart';
+import 'screens/child_timetable_screen.dart';
 import 'screens/all_challans_screen.dart';
 import 'screens/academy_contact_screen.dart'; // NEW
 import '../../widgets/academy_relink_dialog.dart';
@@ -479,6 +480,11 @@ class ParentDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (_) => ChildOverviewScreen(child: child)));
+            } else if (val == 'timetable') {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ChildTimetableScreen(child: child)));
             }
           },
           itemBuilder: (ctx) => [
@@ -488,6 +494,13 @@ class ParentDashboard extends StatelessWidget {
                   Icon(Icons.visibility_rounded, size: 18),
                   SizedBox(width: 12),
                   Text("View Details")
+                ])),
+            const PopupMenuItem(
+                value: 'timetable',
+                child: Row(children: [
+                  Icon(Icons.schedule_rounded, size: 18),
+                  SizedBox(width: 12),
+                  Text("View Timetable")
                 ])),
             const PopupMenuItem(
                 value: 'remove',
