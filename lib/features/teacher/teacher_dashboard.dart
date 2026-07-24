@@ -19,6 +19,7 @@ import '../quiz/screens/teacher_quiz_list_screen.dart';
 import '../shared/view_announcements_screen.dart';
 import 'teacher_classes_screen.dart';
 import 'teacher_announcements_screen.dart'; // NEW
+import '../../widgets/academy_relink_dialog.dart';
 
 class TeacherDashboard extends StatelessWidget {
   const TeacherDashboard({super.key});
@@ -256,6 +257,19 @@ class TeacherDashboard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: const BorderSide(color: AppColors.accent)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => showAcademyRelinkDialog(context),
+              icon: const Icon(Icons.sync_problem_rounded),
+              label: const Text("Fix Academy Link"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: AppColors.border),
               ),
             ),
             const SizedBox(height: 24),

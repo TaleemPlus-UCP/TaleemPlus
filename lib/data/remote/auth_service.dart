@@ -125,18 +125,47 @@ class AuthService {
     return AppUser.fromMap(uid, doc.data()!);
   }
 
+  /// Fetches multiple user profiles in a single batch of queries instead of
+  /// one `.get()` per id (used for a parent's linked children). Firestore's
+  /// `whereIn` caps at 10 values, so ids are chunked.
+  Future<List<AppUser>> getProfilesByIds(List<String> uids) async {
+    if (uids.isEmpty) return [];
+    final results = <AppUser>[];
+    for (var i = 0; i < uids.length; i += 10) {
+      final chunk = uids.sublist(i, i + 10 > uids.length ? uids.length : i + 10);
+      final snap = await _users
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      results.addAll(snap.docs.map((d) => AppUser.fromMap(d.id, d.data())));
+    }
+    return results;
+  }
+
+  /// Real-time view of a user's own profile document. Used to keep
+  /// dependent state (e.g. a parent's `linked_children`) in sync with
+  /// Firestore instead of relying on a cached snapshot taken at login.
+  Stream<AppUser?> watchProfile(String uid) {
+    return _users.doc(uid).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return AppUser.fromMap(doc.id, doc.data()!);
+    });
+  }
+
   /// Returns all approved users for the requested role and academy.
-  /// Uses broad search + local filtering to avoid Firestore index requirements.
+  /// Both fields are filtered server-side (two equality clauses, no
+  /// composite index required) so this stays within the Firestore rule
+  /// scoping every non-admin user to their own academy.
   Future<List<AppUser>> getApprovedByRole(
       UserRole role, String academyId) async {
     try {
-      // Fetch only by role to minimize index needs
-      final snap = await _users.where('role', isEqualTo: role.name).get();
+      final snap = await _users
+          .where('role', isEqualTo: role.name)
+          .where('academy_id', isEqualTo: academyId)
+          .get();
 
       final users = snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
           .where((u) => u.isApproved) // Local status check
-          .where((u) => u.academyId == academyId)
           .toList();
 
       users.sort((a, b) =>
@@ -148,15 +177,16 @@ class AuthService {
     }
   }
 
-  /// Returns all users of a role for an academy (Safe query).
+  /// Returns all users of a role for an academy (server-side scoped).
   Future<List<AppUser>> getUsersByRole(UserRole role, String academyId) async {
     try {
-      final snap = await _users.where('role', isEqualTo: role.name).get();
+      final snap = await _users
+          .where('role', isEqualTo: role.name)
+          .where('academy_id', isEqualTo: academyId)
+          .get();
 
-      final users = snap.docs
-          .map((d) => AppUser.fromMap(d.id, d.data()))
-          .where((u) => u.academyId == academyId)
-          .toList();
+      final users =
+          snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
 
       users.sort((a, b) =>
           a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
@@ -205,13 +235,49 @@ class AuthService {
     }
   }
 
-  /// Update the list of children linked to a parent
-  Future<void> updateParentChildren(
-      String parentUid, List<String> childUids) async {
+  /// Atomically link a child to a parent. Uses `arrayUnion` instead of
+  /// reading the current list and writing the whole array back, so two
+  /// devices linking different children for the same parent at the same
+  /// time can't silently clobber one another's change.
+  Future<void> addLinkedChild(String parentUid, String childUid) async {
     await _users.doc(parentUid).update({
-      'linked_children': childUids,
+      'linked_children': FieldValue.arrayUnion([childUid]),
       'updated_at': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Atomically unlink a child from a parent — see [addLinkedChild].
+  Future<void> removeLinkedChild(String parentUid, String childUid) async {
+    await _users.doc(parentUid).update({
+      'linked_children': FieldValue.arrayRemove([childUid]),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Self-service recovery for a non-admin account that ended up scoped to
+  /// the wrong academy_id (e.g. a mistyped/stale join code at signup, or an
+  /// admin-created account from a different academy session) and therefore
+  /// can't see announcements/data from the rest of their intended school.
+  /// A user may always update their own `users/{uid}` document under the
+  /// Firestore rules, so this works even though an admin from academy A can
+  /// never fix a user who is mistakenly scoped to academy B.
+  Future<AppUser> relinkAcademy(String uid, String code) async {
+    final academy = await findAcademyByCode(code);
+    if (academy == null) {
+      throw AuthException('Invalid Academy Code!');
+    }
+    await _users.doc(uid).update({
+      'academy_id': academy.uid,
+      'academy_name': academy.academyName,
+      'academy_address': academy.academyAddress,
+      'academy_phone': academy.academyPhone,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    final profile = await getProfile(uid);
+    if (profile == null) {
+      throw AuthException('Account profile not found. Contact your admin.');
+    }
+    return profile;
   }
 
   /// Find an academy by its human-friendly code (TP-XXXXX)
@@ -239,18 +305,17 @@ class AuthService {
 
   Future<List<AppUser>> getPendingUsers(String academyId) async {
     try {
-      final snap =
-          await _users.where('account_status', isEqualTo: 'pending').get();
+      final snap = await _users
+          .where('account_status', isEqualTo: 'pending')
+          .where('academy_id', isEqualTo: academyId)
+          .get();
 
-      final List<AppUser> allPending =
+      final pending =
           snap.docs.map((d) => AppUser.fromMap(d.id, d.data())).toList();
 
-      final filtered =
-          allPending.where((u) => u.academyId == academyId).toList();
-
-      filtered.sort((a, b) => (b.createdAt ?? DateTime.now())
+      pending.sort((a, b) => (b.createdAt ?? DateTime.now())
           .compareTo(a.createdAt ?? DateTime.now()));
-      return filtered;
+      return pending;
     } catch (e) {
       debugPrint("Error fetching pending users: $e");
       return [];
@@ -303,7 +368,7 @@ class AuthService {
     await _users.doc(uid).update({
       'full_name': fullName.trim(),
       'phone_number': phoneNumber.trim(),
-      'academy_name': extraInfo,
+      'extra_info': extraInfo,
       if (joiningDate != null) 'joining_date': Timestamp.fromDate(joiningDate),
       if (sections != null) 'sections': sections,
       'updated_at': FieldValue.serverTimestamp(),

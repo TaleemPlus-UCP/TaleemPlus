@@ -78,7 +78,10 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
         leading: CircleAvatar(
           radius: 28,
           backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-          child: Text(cls.primaryTeacherName[0].toUpperCase(),
+          child: Text(
+              cls.primaryTeacherName.isNotEmpty
+                  ? cls.primaryTeacherName[0].toUpperCase()
+                  : '?',
               style: const TextStyle(
                   color: AppColors.accent,
                   fontWeight: FontWeight.bold,

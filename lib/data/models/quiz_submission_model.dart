@@ -105,7 +105,9 @@ class QuizSubmissionModel {
       percentage: (map['percentage'] ?? 0).toDouble(),
       gradeLetter: map['grade_letter'] ?? 'F',
       status: map['status'] ?? 'submitted',
-      submittedAt: (map['submitted_at'] as Timestamp).toDate(),
+      submittedAt: map['submitted_at'] is Timestamp
+          ? (map['submitted_at'] as Timestamp).toDate()
+          : DateTime.now(),
       gradedAt: map['graded_at'] != null
           ? (map['graded_at'] as Timestamp).toDate()
           : null,

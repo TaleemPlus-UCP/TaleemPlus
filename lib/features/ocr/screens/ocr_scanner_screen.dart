@@ -55,12 +55,14 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
       }
 
       if (image != null) {
+        if (!mounted) return;
         setState(() {
           _image = image;
           _isProcessing = true;
         });
 
         final String recognizedText = await _ocrService.recognizeText(image);
+        if (!mounted) return;
 
         setState(() {
           _textController.text = recognizedText;
@@ -72,6 +74,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showSnackBar("OCR Failed: $e", isError: true);
     }

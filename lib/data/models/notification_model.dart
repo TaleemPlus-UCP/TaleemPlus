@@ -36,6 +36,7 @@ class NotificationModel {
   }
 
   factory NotificationModel.fromMap(String id, Map<String, dynamic> map) {
+    final ts = map['created_at'];
     return NotificationModel(
       id: id,
       academyId: map['academy_id'] ?? '',
@@ -44,7 +45,7 @@ class NotificationModel {
       message: map['message'] ?? '',
       type: map['type'] ?? 'general',
       isRead: map['is_read'] ?? false,
-      createdAt: (map['created_at'] as Timestamp).toDate(),
+      createdAt: ts is Timestamp ? ts.toDate() : DateTime.now(),
     );
   }
 }

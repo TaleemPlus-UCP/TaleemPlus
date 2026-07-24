@@ -41,6 +41,39 @@ class NotificationService {
             .toList());
   }
 
+  /// Sends the same notification to many recipients as a small number of
+  /// batched writes instead of one sequential awaited `.add()` per
+  /// recipient. Firestore batches cap at 500 ops, so chunk conservatively.
+  Future<void> sendToMany({
+    required String academyId,
+    required List<String> recipientIds,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    const chunkSize = 450;
+    for (var i = 0; i < recipientIds.length; i += chunkSize) {
+      final end = i + chunkSize > recipientIds.length
+          ? recipientIds.length
+          : i + chunkSize;
+      final batch = _db.batch();
+      for (final recipientId in recipientIds.sublist(i, end)) {
+        final doc = _col.doc();
+        final notif = NotificationModel(
+          id: doc.id,
+          academyId: academyId,
+          recipientId: recipientId,
+          title: title,
+          message: message,
+          type: type,
+          createdAt: DateTime.now(),
+        );
+        batch.set(doc, notif.toMap());
+      }
+      await batch.commit();
+    }
+  }
+
   Future<void> markAsRead(String id) async {
     await _col.doc(id).update({'is_read': true});
   }

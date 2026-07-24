@@ -128,7 +128,9 @@ class QuizModel {
       chapter: map['chapter'] ?? '',
       difficulty: map['difficulty'] ?? 'Medium',
       totalMarks: (map['total_marks'] ?? 0).toDouble(),
-      testDate: (map['test_date'] as Timestamp).toDate(),
+      testDate: map['test_date'] is Timestamp
+          ? (map['test_date'] as Timestamp).toDate()
+          : DateTime.now(),
       instructions: map['instructions'] ?? '',
       createdByUid: map['created_by_uid'] ?? '',
       createdByName: map['created_by_name'] ?? '',

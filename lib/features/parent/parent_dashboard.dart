@@ -18,6 +18,7 @@ import '../shared/view_announcements_screen.dart';
 import 'screens/child_overview_screen.dart';
 import 'screens/all_challans_screen.dart';
 import 'screens/academy_contact_screen.dart'; // NEW
+import '../../widgets/academy_relink_dialog.dart';
 
 class ParentDashboard extends StatelessWidget {
   const ParentDashboard({super.key});
@@ -292,6 +293,19 @@ class ParentDashboard extends StatelessWidget {
                     side: const BorderSide(color: AppColors.accent)),
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => showAcademyRelinkDialog(context),
+              icon: const Icon(Icons.sync_problem_rounded),
+              label: const Text("Fix Academy Link"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: AppColors.border),
+              ),
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -442,7 +456,10 @@ class ParentDashboard extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-          child: Text(child.fullName[0].toUpperCase(),
+          child: Text(
+              child.fullName.isNotEmpty
+                  ? child.fullName[0].toUpperCase()
+                  : '?',
               style: const TextStyle(
                   color: AppColors.accent, fontWeight: FontWeight.bold)),
         ),
@@ -506,8 +523,17 @@ class ParentDashboard extends StatelessWidget {
               onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
           TextButton(
             onPressed: () async {
-              await context.read<ParentProvider>().unlinkChild(child.uid);
-              if (context.mounted) Navigator.pop(ctx);
+              try {
+                await context.read<ParentProvider>().unlinkChild(child.uid);
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text("Failed to remove child: $e"),
+                      backgroundColor: AppColors.danger));
+                }
+              }
             },
             child: const Text("REMOVE",
                 style: TextStyle(

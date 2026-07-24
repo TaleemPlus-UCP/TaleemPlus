@@ -241,6 +241,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       session.resumeBackgroundLogoutTracking();
     }
     if (img == null) return;
+    if (!mounted) return;
 
     setState(() => _isProcessing = true);
 
@@ -267,6 +268,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
         suggested = q.marks * matchRatio;
       }
 
+      if (!mounted) return;
       setState(() {
         _suggestedMarks[q.id] = suggested;
         _extractedText[q.id] = rawText;

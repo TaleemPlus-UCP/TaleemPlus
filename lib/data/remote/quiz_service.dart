@@ -34,16 +34,32 @@ class QuizService {
     });
   }
 
-  /// Delete a test
+  /// Delete a test and all its marks atomically (a single batch per chunk,
+  /// so a mid-delete failure can't leave the quiz gone with orphaned marks
+  /// still referencing it, or vice versa).
   Future<void> deleteQuiz(String quizId, String academyId) async {
-    await _quizzes.doc(quizId).delete();
     final marks = await _marks
         .where('academy_id', isEqualTo: academyId)
         .where('quiz_id', isEqualTo: quizId)
         .get();
-    for (var doc in marks.docs) {
-      await doc.reference.delete();
+
+    // Firestore batches cap at 500 ops; chunk conservatively and always
+    // include the quiz-doc delete in the first chunk.
+    const chunkSize = 450;
+    var batch = _db.batch();
+    batch.delete(_quizzes.doc(quizId));
+    var opsInBatch = 1;
+
+    for (final doc in marks.docs) {
+      if (opsInBatch >= chunkSize) {
+        await batch.commit();
+        batch = _db.batch();
+        opsInBatch = 0;
+      }
+      batch.delete(doc.reference);
+      opsInBatch++;
     }
+    await batch.commit();
   }
 
   /// Bulk upload marks for a class

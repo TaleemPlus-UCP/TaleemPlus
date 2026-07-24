@@ -125,7 +125,10 @@ class ChildOverviewScreen extends StatelessWidget {
           CircleAvatar(
             radius: 30,
             backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-            child: Text(child.fullName[0].toUpperCase(),
+            child: Text(
+                child.fullName.isNotEmpty
+                    ? child.fullName[0].toUpperCase()
+                    : '?',
                 style: const TextStyle(
                     color: AppColors.accent,
                     fontSize: 24,

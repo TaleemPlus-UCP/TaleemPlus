@@ -398,6 +398,14 @@ class _QuickAssignClassSheetState extends State<_QuickAssignClassSheet> {
   final _subjectCtrl = TextEditingController();
   bool _saving = false;
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _sectionCtrl.dispose();
+    _subjectCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -717,13 +725,20 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       return;
     }
 
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (admin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Session expired. Please log in again.'),
+            backgroundColor: AppColors.danger),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
 
     try {
       final auth = AuthService();
-      final admin =
-          Provider.of<AuthProvider>(context, listen: false).currentUser;
-      if (admin == null) return;
 
       // 1. Create account in Firebase directly as 'active' and tie to current admin academy
       await auth.adminCreateUser(

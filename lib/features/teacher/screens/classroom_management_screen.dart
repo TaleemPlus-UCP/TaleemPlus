@@ -31,6 +31,12 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -68,6 +74,15 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
       stream: _classroomService.watchQueriesForClass(
           widget.classEntity.id, widget.classEntity.academyId),
       builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
+        }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading queries: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
+        }
         final list = snap.data ?? [];
         if (list.isEmpty) {
           return _emptyState(
@@ -156,8 +171,16 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
           TextButton(
               onPressed: () async {
                 if (ctrl.text.isEmpty) return;
-                await _classroomService.answerQuery(q.id, ctrl.text);
-                if (ctx.mounted) Navigator.pop(ctx);
+                try {
+                  await _classroomService.answerQuery(q.id, ctrl.text);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text("Failed to send reply: $e"),
+                        backgroundColor: AppColors.danger));
+                  }
+                }
               },
               child: const Text("SEND")),
         ],
@@ -181,6 +204,15 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
             stream: _classroomService.watchResources(
                 widget.classEntity.id, widget.classEntity.academyId),
             builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
+              }
+              if (snap.hasError) {
+                return Center(
+                    child: Text('Error loading resources: ${snap.error}',
+                        style: const TextStyle(color: AppColors.danger)));
+              }
               final list = snap.data ?? [];
               if (list.isEmpty) {
                 return _emptyState(Icons.folder_open_rounded,

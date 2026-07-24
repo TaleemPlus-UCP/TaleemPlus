@@ -55,6 +55,21 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   ];
 
   bool _isAnalyzing = false;
+  // Full OCR text, kept separately from the truncated preview shown in the
+  // dialog so question generation always runs on the complete scanned
+  // content, not just the first 100 characters used for display.
+  String _scannedText = '';
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _subjectCtrl.dispose();
+    _totalMarksCtrl.dispose();
+    _instructionsCtrl.dispose();
+    _chapterCtrl.dispose();
+    _sessionCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImageAndAnalyze() async {
     final picker = ImagePicker();
@@ -121,6 +136,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   }
 
   void _analyzeContentAndShowRecommendations(String text) {
+    _scannedText = text;
     // Offline AI Heuristic Logic
     final lines = text.split('\n').where((l) => l.trim().length > 10).toList();
     final wordCount = text.split(' ').length;
@@ -203,7 +219,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
               final sCount = int.tryParse(sqCountCtrl.text) ?? sqs;
               final lCount = int.tryParse(lqCountCtrl.text) ?? lqs;
 
-              _generateQuestionsLocally(preview, diff, mCount, sCount, lCount);
+              _generateQuestionsLocally(
+                  _scannedText, diff, mCount, sCount, lCount);
 
               setState(() {
                 _difficulty = diff;
@@ -396,11 +413,24 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     final cp = Provider.of<ClassProvider>(context, listen: false);
 
     final user = auth.currentUser;
-    final cls = cp.classes.firstWhere((c) => c.id == widget.classId);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Session expired. Please log in again.')));
+      return;
+    }
+
+    final classMatches =
+        cp.classes.where((c) => c.id == widget.classId).toList();
+    if (classMatches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This class no longer exists.')));
+      return;
+    }
+    final cls = classMatches.first;
 
     final quiz = QuizModel(
       id: const Uuid().v4(),
-      academyId: user?.academyId ?? '',
+      academyId: user.academyId ?? '',
       classId: widget.classId,
       classLabel: "${cls.className} (${cls.section})",
       title: _titleCtrl.text.trim(),
@@ -412,7 +442,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       totalMarks: double.tryParse(_totalMarksCtrl.text) ?? 0,
       testDate: _testDate,
       instructions: _instructionsCtrl.text.trim(),
-      createdByUid: user!.uid,
+      createdByUid: user.uid,
       createdByName: user.fullName,
       createdAt: DateTime.now(),
       questions: _questions,
@@ -719,6 +749,17 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
   final List<TextEditingController> _optionCtrls =
       List.generate(4, (_) => TextEditingController());
   int _correctIdx = 0;
+
+  @override
+  void dispose() {
+    _questionCtrl.dispose();
+    _marksCtrl.dispose();
+    _keywordsCtrl.dispose();
+    for (final c in _optionCtrls) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

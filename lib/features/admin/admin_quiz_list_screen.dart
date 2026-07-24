@@ -120,6 +120,11 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
           return const Center(
               child: CircularProgressIndicator(color: AppColors.accent));
         }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading tests: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
+        }
         final list = snap.data ?? [];
         if (list.isEmpty) {
           return const Center(

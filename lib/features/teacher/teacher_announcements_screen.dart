@@ -56,6 +56,12 @@ class _TeacherAnnouncementsScreenState
                             CircularProgressIndicator(color: AppColors.accent),
                       );
                     }
+                    if (snap.hasError) {
+                      return Center(
+                        child: Text('Error loading announcements: ${snap.error}',
+                            style: const TextStyle(color: AppColors.danger)),
+                      );
+                    }
 
                     // Teachers only see announcements THEY created here
                     final list = (snap.data ?? const [])
@@ -236,6 +242,13 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
   bool _students = true;
   bool _parents = true;
   bool _saving = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _messageCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;

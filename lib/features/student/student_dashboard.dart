@@ -19,6 +19,7 @@ import 'screens/student_attendance_screen.dart';
 import 'screens/student_fee_screen.dart';
 import 'screens/ai_summarizer_screen.dart';
 import 'screens/student_progress_chart_screen.dart';
+import '../../widgets/academy_relink_dialog.dart';
 
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key});
@@ -290,6 +291,19 @@ class StudentDashboard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: const BorderSide(color: AppColors.accent)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => showAcademyRelinkDialog(context),
+              icon: const Icon(Icons.sync_problem_rounded),
+              label: const Text("Fix Academy Link"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: AppColors.border),
               ),
             ),
             const SizedBox(height: 24),

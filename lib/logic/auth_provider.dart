@@ -131,6 +131,19 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Self-service fix for an account scoped to the wrong academy_id (see
+  /// [AuthService.relinkAcademy]). Refreshes [currentUser] in place so every
+  /// screen watching this provider (announcements, dashboards, etc.)
+  /// immediately re-queries under the corrected academy scope.
+  Future<void> relinkAcademy(String code) async {
+    if (_currentUser == null) {
+      throw AuthException('No active session found.');
+    }
+    final updated = await _authService.relinkAcademy(_currentUser!.uid, code);
+    _currentUser = updated;
+    notifyListeners();
+  }
+
   void clearError() {
     if (_status == AuthStatus.error) {
       _status = AuthStatus.idle;

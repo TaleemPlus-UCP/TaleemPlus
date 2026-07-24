@@ -37,6 +37,7 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
     } finally {
       session.resumeBackgroundLogoutTracking();
     }
+    if (!mounted) return;
     if (pickedFile != null) {
       final file = File(pickedFile.path);
       setState(() {
@@ -55,12 +56,14 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
       final inputImage = InputImage.fromFile(_image!);
       final RecognizedText recognizedText =
           await _textRecognizer.processImage(inputImage);
+      if (!mounted) return;
 
       setState(() {
         _summary = _generateLocalSummary(recognizedText.text);
         _isProcessing = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showSnackBar("Processing failed: $e", isError: true);
     }

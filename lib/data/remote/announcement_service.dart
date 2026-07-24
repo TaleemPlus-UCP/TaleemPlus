@@ -67,18 +67,21 @@ class AnnouncementService {
               .toSet()
               .toList();
 
+      final recipientIds = <String>{};
       for (final role in roles) {
         final users = await _authService.getApprovedByRole(role, academyId);
-        for (final user in users) {
-          if (user.uid == excludeUid) continue;
-          await _notificationService.send(
-            academyId: academyId,
-            recipientId: user.uid,
-            title: 'New Announcement',
-            message: title,
-            type: 'announcement',
-          );
-        }
+        recipientIds.addAll(
+            users.map((u) => u.uid).where((uid) => uid != excludeUid));
+      }
+
+      if (recipientIds.isNotEmpty) {
+        await _notificationService.sendToMany(
+          academyId: academyId,
+          recipientIds: recipientIds.toList(),
+          title: 'New Announcement',
+          message: title,
+          type: 'announcement',
+        );
       }
     } catch (e) {
       debugPrint('Announcement notification error: $e');

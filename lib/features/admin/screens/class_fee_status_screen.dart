@@ -56,15 +56,39 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
               Expanded(
                 child: studentIds.isEmpty
                     ? _buildEmptyState("No students enrolled in this class.")
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: studentIds.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final sid = studentIds[index];
-                          final sname =
-                              widget.classEntity.studentNames[sid] ?? 'Student';
-                          return _studentFeeTile(sid, sname, academyId);
+                    : FutureBuilder<Map<String, FeeChallanModel?>>(
+                        future: _repo.getLatestForStudents(
+                            studentIds, academyId,
+                            month: _selectedMonth),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    color: AppColors.accent));
+                          }
+                          if (snapshot.hasError) {
+                            return Center(
+                                child: Text(
+                                    'Error loading fee status: ${snapshot.error}',
+                                    style: const TextStyle(
+                                        color: AppColors.danger)));
+                          }
+                          final challansByStudent = snapshot.data ?? {};
+                          return ListView.separated(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: studentIds.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final sid = studentIds[index];
+                              final sname =
+                                  widget.classEntity.studentNames[sid] ??
+                                      'Student';
+                              return _studentFeeTile(
+                                  sname, challansByStudent[sid]);
+                            },
+                          );
                         },
                       ),
               ),
@@ -117,85 +141,75 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
     );
   }
 
-  Widget _studentFeeTile(String sid, String sname, String academyId) {
-    return FutureBuilder<FeeChallanModel?>(
-      future: _repo.getLatestForStudent(sid, academyId, month: _selectedMonth),
-      builder: (context, snapshot) {
-        final challan = snapshot.data;
-        final loading = snapshot.connectionState == ConnectionState.waiting;
+  Widget _studentFeeTile(String sname, FeeChallanModel? challan) {
+    Color statusColor = AppColors.textMuted;
+    String statusText = "No Challan";
 
-        Color statusColor = AppColors.textMuted;
-        String statusText = loading ? "Loading..." : "No Challan";
+    if (challan != null) {
+      if (challan.isPaid) {
+        statusColor = AppColors.success;
+        statusText = "PAID";
+      } else if (challan.isOverdue) {
+        statusColor = AppColors.danger;
+        statusText = "OVERDUE";
+      } else {
+        statusColor = AppColors.warning;
+        statusText = "PENDING";
+      }
+    }
 
-        if (challan != null) {
-          if (challan.isPaid) {
-            statusColor = AppColors.success;
-            statusText = "PAID";
-          } else if (challan.isOverdue) {
-            statusColor = AppColors.danger;
-            statusText = "OVERDUE";
-          } else {
-            statusColor = AppColors.warning;
-            statusText = "PENDING";
-          }
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+            child: Text(sname.isNotEmpty ? sname[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: AppColors.accent, fontWeight: FontWeight.bold)),
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                child: Text(sname[0].toUpperCase(),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(sname,
                     style: const TextStyle(
-                        color: AppColors.accent, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(sname,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold)),
-                    if (challan != null)
-                      Text(
-                          "Amount: Rs. ${challan.totalAmount.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 11)),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(statusText,
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold)),
-              ),
-              if (challan != null && !challan.isPaid)
-                IconButton(
-                  icon: const Icon(Icons.check_circle_outline,
-                      color: AppColors.accent, size: 20),
-                  onPressed: () => _markPaid(challan),
-                  tooltip: "Mark as Paid",
-                ),
-            ],
+                if (challan != null)
+                  Text("Amount: Rs. ${challan.totalAmount.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 11)),
+              ],
+            ),
           ),
-        );
-      },
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(statusText,
+                style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold)),
+          ),
+          if (challan != null && !challan.isPaid)
+            IconButton(
+              icon: const Icon(Icons.check_circle_outline,
+                  color: AppColors.accent, size: 20),
+              onPressed: () => _markPaid(challan),
+              tooltip: "Mark as Paid",
+            ),
+        ],
+      ),
     );
   }
 

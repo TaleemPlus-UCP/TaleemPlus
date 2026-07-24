@@ -80,15 +80,21 @@ class FeeChallanModel {
       fatherName: map['father_name'] ?? '',
       classLabel: map['class_label'] ?? '',
       rollNumber: map['roll_number'] ?? '',
-      issueDate: (map['issue_date'] as Timestamp).toDate(),
-      dueDate: (map['due_date'] as Timestamp).toDate(),
+      issueDate: map['issue_date'] is Timestamp
+          ? (map['issue_date'] as Timestamp).toDate()
+          : DateTime.now(),
+      dueDate: map['due_date'] is Timestamp
+          ? (map['due_date'] as Timestamp).toDate()
+          : DateTime.now(),
       monthlyFee: (map['monthly_fee'] ?? 0).toDouble(),
       admissionFee: (map['admission_fee'] ?? 0).toDouble(),
       examFee: (map['exam_fee'] ?? 0).toDouble(),
       transportFee: (map['transport_fee'] ?? 0).toDouble(),
       fine: (map['fine'] ?? 0).toDouble(),
       status: map['status'] ?? 'pending',
-      createdAt: (map['created_at'] as Timestamp).toDate(),
+      createdAt: map['created_at'] is Timestamp
+          ? (map['created_at'] as Timestamp).toDate()
+          : DateTime.now(),
       updatedAt: map['updated_at'] is Timestamp
           ? (map['updated_at'] as Timestamp).toDate()
           : DateTime.now(),

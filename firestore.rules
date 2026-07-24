@@ -30,9 +30,15 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      // Public read limited to admin profiles only (needed for pre-auth
-      // academy-code lookup at signup). Everyone else needs to be signed in.
-      allow read: if signedIn() || resource.data.role == 'admin';
+      // Admin profiles stay publicly readable (needed for pre-auth
+      // academy-code lookup at signup). A user may always read their own
+      // doc regardless of approval status (needed to detect pending/
+      // rejected accounts on sign-in). Everyone else must be an approved
+      // user reading within their own academy — closes a cross-tenant leak
+      // where `signedIn()` alone used to allow reading any user's profile.
+      allow read: if resource.data.role == 'admin' ||
+          request.auth.uid == userId ||
+          (isApproved() && sameAcademy(resource.data.academy_id));
       // A user may only create their own profile document.
       allow create: if signedIn() && request.auth.uid == userId;
       // Self-edit always allowed; admins may only edit/delete users in
@@ -60,7 +66,11 @@ service cloud.firestore {
       // AI Grader aur Manual Entry ke liye
       allow create, update: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
-      allow delete: if isApproved() && isAdmin() &&
+      // Matches `quizzes` delete permission: a teacher who can delete a
+      // quiz must also be able to delete its own test_marks, otherwise
+      // QuizService.deleteQuiz's cascade delete is guaranteed to fail
+      // partway through for any non-admin teacher.
+      allow delete: if isApproved() && isStaff() &&
           sameAcademy(resource.data.academy_id);
     }
 
@@ -121,7 +131,10 @@ service cloud.firestore {
       // Sirf recipient apni notifications dekh sakta hai
       allow read, update, delete: if signedIn() &&
           request.auth.uid == resource.data.recipient_id;
-      allow create: if isApproved() &&
+      // Only staff trigger notifications today (announcements, approvals) —
+      // without isStaff() here, any approved student/parent could write a
+      // spoofed notification aimed at any other user in their academy.
+      allow create: if isApproved() && isStaff() &&
           sameAcademy(request.resource.data.academy_id);
     }
   }

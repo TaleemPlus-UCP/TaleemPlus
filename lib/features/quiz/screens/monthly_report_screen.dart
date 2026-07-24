@@ -146,6 +146,11 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
           return const Center(
               child: CircularProgressIndicator(color: AppColors.accent));
         }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading report: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
+        }
 
         final data = snap.data;
         if (data == null || data['quizCount'] == 0) {

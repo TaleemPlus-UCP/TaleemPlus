@@ -90,6 +90,7 @@ class MemberProvider extends ChangeNotifier {
       email: u.email,
       phone: u.phoneNumber,
       role: u.role.value,
+      extra: u.extraInfo ?? '',
       status: u.accountStatus,
       createdAt: u.createdAt ?? DateTime.now(),
     );

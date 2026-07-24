@@ -84,6 +84,11 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading resources: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
+        }
         final list = snap.data ?? [];
         if (list.isEmpty) {
           return _emptyState(
@@ -177,6 +182,11 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
 
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading attendance: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
         }
         if (classRecords.isEmpty) {
           return _emptyState(
@@ -278,6 +288,14 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
             stream: _classroomService.watchQueriesForClass(
                 widget.classEntity.id, widget.classEntity.academyId),
             builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) {
+                return Center(
+                    child: Text('Error loading queries: ${snap.error}',
+                        style: const TextStyle(color: AppColors.danger)));
+              }
               final queries = (snap.data ?? [])
                   .where((q) => q.studentId == user?.uid)
                   .toList();

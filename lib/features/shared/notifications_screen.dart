@@ -4,17 +4,25 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../logic/auth_provider.dart';
-import '../../logic/notification_provider.dart';
+import '../../data/models/notification_model.dart';
+import '../../data/remote/notification_service.dart';
 import '../../widgets/gradient_background.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final _service = NotificationService();
+
+  @override
   Widget build(BuildContext context) {
-    final user = context.read<AuthProvider>().currentUser;
-    final notifProv = context.watch<NotificationProvider>();
-    final list = notifProv.notifications;
+    final user = context.watch<AuthProvider>().currentUser;
+    final uid = user?.uid ?? '';
+    final academyId = user?.academyId ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -22,26 +30,57 @@ class NotificationsScreen extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         actions: [
-          if (notifProv.unreadCount > 0)
-            TextButton(
-              onPressed: () =>
-                  notifProv.markAllAsRead(user!.uid, user.academyId ?? ''),
-              child: const Text("Mark all as read",
-                  style: TextStyle(color: AppColors.accent)),
+          if (uid.isNotEmpty)
+            StreamBuilder<List<NotificationModel>>(
+              stream: _service.watchForUser(uid, academyId),
+              builder: (context, snap) {
+                final list = snap.data ?? const [];
+                final hasUnread = list.any((n) => !n.isRead);
+                if (!hasUnread) return const SizedBox.shrink();
+                return TextButton(
+                  onPressed: () => _markAllAsRead(uid, academyId),
+                  child: const Text("Mark all as read",
+                      style: TextStyle(color: AppColors.accent)),
+                );
+              },
             ),
         ],
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: list.isEmpty
-              ? _buildEmptyState()
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (ctx, i) {
-                    final n = list[i];
-                    return _notifTile(ctx, n, notifProv);
+          child: uid.isEmpty
+              ? _buildEmptyState('Please log in again.')
+              : StreamBuilder<List<NotificationModel>>(
+                  stream: _service.watchForUser(uid, academyId),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent),
+                      );
+                    }
+                    if (snap.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'Error loading notifications: ${snap.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.danger),
+                          ),
+                        ),
+                      );
+                    }
+                    final list = snap.data ?? const [];
+                    if (list.isEmpty) {
+                      return _buildEmptyState('No notifications yet');
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (ctx, i) => _notifTile(ctx, list[i]),
+                    );
                   },
                 ),
         ),
@@ -49,25 +88,49 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Center(
+  Future<void> _markAllAsRead(String uid, String academyId) async {
+    try {
+      await _service.markAllAsRead(uid, academyId);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Failed to mark notifications as read: $e"),
+            backgroundColor: AppColors.danger));
+      }
+    }
+  }
+
+  Future<void> _markAsRead(String id) async {
+    try {
+      await _service.markAsRead(id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Failed to update notification: $e"),
+            backgroundColor: AppColors.danger));
+      }
+    }
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_rounded,
+          const Icon(Icons.notifications_none_rounded,
               size: 64, color: AppColors.textMuted),
-          SizedBox(height: 16),
-          Text("No notifications yet",
-              style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 16),
+          Text(message, style: const TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
   }
 
-  Widget _notifTile(
-      BuildContext context, dynamic n, NotificationProvider prov) {
+  Widget _notifTile(BuildContext context, NotificationModel n) {
     return InkWell(
-      onTap: () => prov.markAsRead(n.id),
+      onTap: () {
+        if (!n.isRead) _markAsRead(n.id);
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

@@ -19,6 +19,8 @@ class AppUser {
   final List<String>
       assignedSections; // NEW: Sections assigned (e.g. ['A', 'B'])
   final List<String> linkedChildren; // NEW: Child UIDs (for Parents)
+  final String?
+      extraInfo; // Role-specific note (qualification/roll no./relation)
 
   const AppUser({
     required this.uid,
@@ -37,6 +39,7 @@ class AppUser {
     this.joiningDate,
     this.assignedSections = const [],
     this.linkedChildren = const [],
+    this.extraInfo,
   });
 
   bool get isApproved => accountStatus.toLowerCase() == 'active';
@@ -59,6 +62,7 @@ class AppUser {
       'academy_code': academyCode,
       'sections': assignedSections,
       'linked_children': linkedChildren,
+      'extra_info': extraInfo,
       'created_at': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
@@ -96,6 +100,7 @@ class AppUser {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      extraInfo: map['extra_info'] as String?,
     );
   }
 }

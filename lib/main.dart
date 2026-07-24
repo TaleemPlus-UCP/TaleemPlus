@@ -15,7 +15,6 @@ import 'logic/theme_provider.dart';
 import 'logic/admin_ai_provider.dart';
 import 'logic/parent_provider.dart';
 import 'logic/session_provider.dart';
-import 'logic/notification_provider.dart'; // NEW
 import 'features/auth/splash_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
@@ -42,7 +41,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => AdminAiProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProxyProvider<AuthProvider, ParentProvider>(
           create: (_) => ParentProvider(),
           update: (_, auth, parent) => parent!..syncWithUser(auth.currentUser),
@@ -57,6 +55,31 @@ Future<void> main() async {
   );
 }
 
+/// Resets the inactivity timer on every route change (push/pop/replace),
+/// so in-app navigation counts as activity even when it isn't triggered by
+/// a raw pointer event the root [Listener] would otherwise see (e.g.
+/// programmatic navigation following a button tap already handled by the
+/// same gesture).
+class _ActivityNavigatorObserver extends NavigatorObserver {
+  void _resetSessionTimer() {
+    final ctx = navigator?.context;
+    if (ctx == null) return;
+    final auth = Provider.of<AuthProvider>(ctx, listen: false);
+    Provider.of<SessionProvider>(ctx, listen: false).resetTimer(ctx, auth);
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) => _resetSessionTimer();
+
+  @override
+  void didPop(Route route, Route? previousRoute) => _resetSessionTimer();
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) => _resetSessionTimer();
+}
+
+final _activityNavigatorObserver = _ActivityNavigatorObserver();
+
 class TaleemPlusApp extends StatelessWidget {
   const TaleemPlusApp({super.key});
 
@@ -64,11 +87,14 @@ class TaleemPlusApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<ThemeProvider, AuthProvider>(
       builder: (context, theme, auth, _) {
+        void resetTimer([_]) =>
+            context.read<SessionProvider>().resetTimer(context, auth);
         return Listener(
-          onPointerDown: (_) =>
-              context.read<SessionProvider>().resetTimer(context, auth),
+          onPointerDown: resetTimer,
+          onPointerSignal: resetTimer,
           child: MaterialApp(
             navigatorKey: rootNavigatorKey,
+            navigatorObservers: [_activityNavigatorObserver],
             title: 'Taleem Plus',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,

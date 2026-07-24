@@ -32,6 +32,15 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
   bool _isGenerating = false;
 
+  @override
+  void dispose() {
+    _monthlyFeeCtrl.dispose();
+    _admissionFeeCtrl.dispose();
+    _examFeeCtrl.dispose();
+    _fineCtrl.dispose();
+    super.dispose();
+  }
+
   /// Due date for a challan billed for [monthName]: the 10th of that month.
   /// Since there is no year selector, a month earlier than the current one
   /// is assumed to refer to that month next year (e.g. generating a
@@ -203,7 +212,15 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
   Future<void> _confirmAndGenerate() async {
     final cp = context.read<ClassProvider>();
-    final cls = cp.classes.firstWhere((c) => c.id == _selectedClassId);
+    final clsMatches =
+        cp.classes.where((c) => c.id == _selectedClassId).toList();
+    if (clsMatches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Selected class no longer exists.'),
+          backgroundColor: AppColors.danger));
+      return;
+    }
+    final cls = clsMatches.first;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

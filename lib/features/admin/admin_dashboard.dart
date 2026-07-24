@@ -50,27 +50,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   /// Ensures old admins get an Academy Code and ID if they don't have one.
+  /// Best-effort: a failure here shouldn't surface as an unhandled Future
+  /// rejection since this runs unawaited from initState — it'll simply be
+  /// retried the next time the dashboard loads.
   Future<void> _verifyLegacyAdminData(AppUser user) async {
     if (user.academyCode == null || user.academyId == null) {
-      final newCode = "TP-${user.uid.substring(0, 5).toUpperCase()}";
-      await AuthService().updateAcademyProfile(
-        uid: user.uid,
-        name: user.academyName ?? "My Academy",
-        address: user.academyAddress ?? "N/A",
-        phone: user.academyPhone ?? user.phoneNumber,
-      );
-      // Update firestore directly for the missing fields
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'academy_code': newCode,
-        'academy_id': user.uid,
-        'joining_date': user.createdAt ?? FieldValue.serverTimestamp(),
-      });
-      if (mounted) {
-        // Refresh local user state
-        context.read<AuthProvider>().tryRestoreSession();
+      try {
+        final newCode = "TP-${user.uid.substring(0, 5).toUpperCase()}";
+        await AuthService().updateAcademyProfile(
+          uid: user.uid,
+          name: user.academyName ?? "My Academy",
+          address: user.academyAddress ?? "N/A",
+          phone: user.academyPhone ?? user.phoneNumber,
+        );
+        // Update firestore directly for the missing fields
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'academy_code': newCode,
+          'academy_id': user.uid,
+          'joining_date': user.createdAt ?? FieldValue.serverTimestamp(),
+        });
+        if (mounted) {
+          // Refresh local user state
+          context.read<AuthProvider>().tryRestoreSession();
+        }
+      } catch (e) {
+        debugPrint('Legacy admin data migration failed: $e');
       }
     }
   }

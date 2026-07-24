@@ -6,7 +6,7 @@ import '../core/constants/app_constants.dart';
 import 'auth_provider.dart';
 
 class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
-  static const int _timeoutSeconds = 5 * 60; // 5 minutes
+  static const int _timeoutSeconds = 150; // 2 minutes 30 seconds
   static const String _biometricKey = 'biometric_enabled';
   static const String _savedPassKey = 'saved_pass_v1';
 
@@ -117,7 +117,8 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _handleTimeout() {
-    _forceSignOut('You were logged out after 5 minutes of inactivity.');
+    _forceSignOut(
+        'Your session has expired due to inactivity. Please log in again.');
   }
 
   /// Signs the user out, clears the lock flag once they land back on Login,

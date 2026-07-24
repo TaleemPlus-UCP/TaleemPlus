@@ -43,10 +43,18 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
   }
 
   Future<void> _saveMarks() async {
-    final cls = context
+    final clsList = context
         .read<ClassProvider>()
         .classes
-        .firstWhere((c) => c.id == widget.quiz.classId);
+        .where((c) => c.id == widget.quiz.classId)
+        .toList();
+    if (clsList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This class no longer exists.'),
+          backgroundColor: AppColors.danger));
+      return;
+    }
+    final cls = clsList.first;
 
     for (var entry in _markControllers.entries) {
       final text = entry.value.text.trim();

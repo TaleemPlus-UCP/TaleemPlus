@@ -20,13 +20,17 @@ class OcrDocumentModel {
   // Firestore se data map mein convert karne ke liye helper
   factory OcrDocumentModel.fromMap(
       Map<String, dynamic> map, String documentId) {
+    final ts = map['created_at'];
     return OcrDocumentModel(
       id: documentId,
       title: map['title'] ?? '',
       extractedText: map['extracted_text'] ?? '',
       createdByUid: map['created_by_uid'] ?? '',
       createdByName: map['created_by_name'] ?? '',
-      createdAt: (map['created_at'] as Timestamp).toDate(),
+      // `created_at` is written via FieldValue.serverTimestamp(), so the
+      // first snapshot of a pending local write has it as null before the
+      // server round-trip resolves — fall back instead of crashing.
+      createdAt: ts is Timestamp ? ts.toDate() : DateTime.now(),
     );
   }
 
