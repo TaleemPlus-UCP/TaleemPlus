@@ -36,6 +36,10 @@ class _SignupScreenState extends State<SignupScreen>
   final _academyCodeCtrl = TextEditingController();
   UserRole _selectedRole = UserRole.student;
 
+  // Password recovery
+  final _securityAnswerCtrl = TextEditingController();
+  String _securityQuestion = SecurityQuestions.all.first;
+
   bool _obscure = true;
   bool _isSearchingAcademy = false;
   String? _linkedAcademyId;
@@ -65,6 +69,7 @@ class _SignupScreenState extends State<SignupScreen>
     _academyNameCtrl.dispose();
     _academyAddressCtrl.dispose();
     _academyCodeCtrl.dispose();
+    _securityAnswerCtrl.dispose();
     super.dispose();
   }
 
@@ -126,6 +131,8 @@ class _SignupScreenState extends State<SignupScreen>
       academyId: isAdminFlow ? null : _linkedAcademyId,
       academyAddress: isAdminFlow ? _academyAddressCtrl.text : null,
       academyPhone: isAdminFlow ? _phoneCtrl.text : null,
+      securityQuestion: _securityQuestion,
+      securityAnswer: _securityAnswerCtrl.text,
     );
 
     if (!mounted) return;
@@ -413,6 +420,48 @@ class _SignupScreenState extends State<SignupScreen>
             controller: _confirmCtrl,
             obscure: _obscure,
             validator: (v) => Validators.confirmPassword(v, _passCtrl.text)),
+        const Align(
+            alignment: Alignment.centerLeft,
+            child: Text("RECOVERY QUESTION",
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1))),
+        const SizedBox(height: 4),
+        const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+                "Used to verify it's you if you ever forget your password.",
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11))),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _securityQuestion,
+              isExpanded: true,
+              dropdownColor: AppColors.surfaceAlt,
+              items: SecurityQuestions.all
+                  .map((q) => DropdownMenuItem(value: q, child: Text(q)))
+                  .toList(),
+              onChanged: (q) => setState(() => _securityQuestion = q!),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        LabeledField(
+          label: "Your Answer",
+          hint: "Keep it memorable",
+          controller: _securityAnswerCtrl,
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? "Answer is required" : null,
+        ),
       ],
     );
   }

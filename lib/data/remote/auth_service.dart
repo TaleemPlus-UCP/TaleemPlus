@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../models/app_user.dart';
@@ -37,6 +41,8 @@ class AuthService {
     String? academyId,
     String? academyAddress,
     String? academyPhone,
+    String? securityQuestion,
+    String? securityAnswer,
   }) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -73,6 +79,18 @@ class AuthService {
 
       await _users.doc(uid).set(user.toMap());
       await cred.user!.updateDisplayName(fullName.trim());
+
+      // Must happen before the sign-out below: writing a recovery record
+      // requires an active session (see Firestore rules), and a pending
+      // (non-admin) account gets signed out immediately after this.
+      if (securityQuestion != null && (securityAnswer ?? '').isNotEmpty) {
+        await saveSecurityQuestion(
+          uid: uid,
+          email: user.email,
+          question: securityQuestion,
+          answer: securityAnswer!,
+        );
+      }
 
       if (!user.isApproved) {
         await _auth.signOut();
@@ -427,6 +445,70 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapAuthError(e));
     }
+  }
+
+  // ---------- Security-question recovery ----------
+  //
+  // Firebase Auth only lets a client change a password via its own signed-in
+  // session or via the emailed reset link — there's no way to swap in a new
+  // password from a client app alone (that needs Admin SDK/Cloud Functions,
+  // which requires the Blaze plan). This adds a self-service identity check
+  // *in front of* that emailed link, so "forgot password" isn't just "type
+  // any email and hope it exists" — the actual password change still
+  // happens through [sendPasswordReset] above.
+  //
+  // Keyed by lowercased email (not uid) so the pre-login forgot-password
+  // screen can do a direct document read instead of an authenticated query.
+  // NOTE: because this must be readable before sign-in, Firestore rules
+  // can't scope it further than "this collection is public" — anyone with
+  // an account's email can fetch its question+hash and attempt an offline
+  // guess. That's an inherent trade-off of doing recovery without a paid
+  // backend; the salted hash keeps a leaked record from being a plaintext
+  // answer at least.
+  CollectionReference<Map<String, dynamic>> get _recovery =>
+      _db.collection('password_recovery');
+
+  String _hashAnswer(String answer, String salt) {
+    final normalized = answer.trim().toLowerCase();
+    return sha256.convert(utf8.encode('$salt:$normalized')).toString();
+  }
+
+  /// Sets/overwrites the security question for [uid] (must be the
+  /// currently signed-in user, per Firestore rules).
+  Future<void> saveSecurityQuestion({
+    required String uid,
+    required String email,
+    required String question,
+    required String answer,
+  }) async {
+    final salt = const Uuid().v4();
+    await _recovery.doc(email.trim().toLowerCase()).set({
+      'uid': uid,
+      'email': email.trim().toLowerCase(),
+      'security_question': question,
+      'security_answer_hash': _hashAnswer(answer, salt),
+      'salt': salt,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// The recovery question for [email], or null if that account never set
+  /// one up (e.g. an admin-created account that skipped it).
+  Future<String?> getSecurityQuestion(String email) async {
+    final doc = await _recovery.doc(email.trim().toLowerCase()).get();
+    if (!doc.exists) return null;
+    return doc.data()?['security_question'] as String?;
+  }
+
+  /// Verifies [answer] against the stored hash for [email]. False both when
+  /// the answer is wrong and when no recovery record exists.
+  Future<bool> verifySecurityAnswer(String email, String answer) async {
+    final doc = await _recovery.doc(email.trim().toLowerCase()).get();
+    if (!doc.exists) return false;
+    final data = doc.data()!;
+    final salt = data['salt'] as String? ?? '';
+    final expected = data['security_answer_hash'] as String? ?? '';
+    return _hashAnswer(answer, salt) == expected;
   }
 
   /// Confirms [password] actually matches the signed-in user's real

@@ -14,6 +14,7 @@ import '../../data/remote/notification_service.dart';
 import '../../widgets/app_widgets.dart';
 import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
+import '../../widgets/security_question_dialog.dart';
 import '../../widgets/theme_toggle_widget.dart';
 import '../../core/theme/theme_extensions.dart';
 import 'user_management_screen.dart';
@@ -21,6 +22,7 @@ import 'approval_requests_screen.dart';
 import 'fee_ledger_screen.dart';
 import 'announcements_screen.dart';
 import 'class_management_screen.dart';
+import 'class_sections_screen.dart';
 import 'admin_quiz_list_screen.dart';
 import 'admin_ai_prediction_screen.dart';
 import 'screens/challan_generation_screen.dart';
@@ -157,6 +159,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: const BorderSide(color: AppColors.accent)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => showSecurityQuestionDialog(
+                context,
+                Provider.of<AuthProvider>(context, listen: false).currentUser,
+              ),
+              icon: const Icon(Icons.help_outline_rounded),
+              label: const Text("Update Recovery Question"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                side: const BorderSide(color: AppColors.accent),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 24),
@@ -523,8 +541,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 const SizedBox(height: 12),
                 _actionTile(
+                  'Classes & Sections',
+                  'Manage 9th/10th/1st/2nd Year sections and enroll students',
+                  Icons.groups_2_rounded,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ClassSectionsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _actionTile(
                   'Class Management',
-                  'Create classes, assign teachers, enroll students',
+                  'Assign subjects and teachers to a class section',
                   Icons.class_rounded,
                   () => Navigator.push(
                     context,

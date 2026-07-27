@@ -189,18 +189,10 @@ class PdfGeneratorService {
                             );
                           }).toList(),
                         ),
-                      )
-                    else
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8, bottom: 20),
-                        child: pw.Container(
-                          height: q.type == QuestionType.long ? 140 : 60,
-                          width: double.infinity,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey300),
-                          ),
-                        ),
                       ),
+                    // Short/long questions print with no answer-writing
+                    // space: answer sheets are provided separately, so a
+                    // blank box here would just waste page space.
                   ],
                 ),
               );

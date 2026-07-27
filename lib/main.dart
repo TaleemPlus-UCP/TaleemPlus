@@ -9,6 +9,7 @@ import 'logic/auth_provider.dart';
 import 'logic/member_provider.dart';
 import 'logic/fee_provider.dart';
 import 'logic/class_provider.dart';
+import 'logic/class_section_provider.dart';
 import 'logic/attendance_provider.dart';
 import 'logic/quiz_provider.dart';
 import 'logic/timetable_provider.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MemberProvider()),
         ChangeNotifierProvider(create: (_) => FeeProvider()),
         ChangeNotifierProvider(create: (_) => ClassProvider()),
+        ChangeNotifierProvider(create: (_) => ClassSectionProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => TimetableProvider()),

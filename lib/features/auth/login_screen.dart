@@ -109,16 +109,105 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError('Please enter a valid email address first.');
       return;
     }
+
+    // Accounts that never set a recovery question (e.g. created before
+    // this feature, or by an admin who skipped it) fall back to the plain
+    // emailed reset link so they aren't locked out of recovery entirely.
+    final question = await AuthService().getSecurityQuestion(email);
+    if (!mounted) return;
+    if (question == null) {
+      await _sendResetEmail(email);
+      return;
+    }
+    await _showSecurityAnswerDialog(email, question);
+  }
+
+  Future<void> _sendResetEmail(String email) async {
     try {
       await AuthService().sendPasswordReset(email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset link sent.')),
+          const SnackBar(
+              content: Text(
+                  'Password reset link sent — check your email (and spam folder).')),
         );
       }
     } on AuthException catch (e) {
       _showError(e.message);
     }
+  }
+
+  /// Verifies the account's security answer before re-sending the reset
+  /// email. This is a self-service identity check, not a password change —
+  /// Firebase only lets a password actually change via that emailed link
+  /// (or an active session), so the answer being right just unlocks the
+  /// same [sendPasswordReset] call [_forgotPassword] would've made anyway.
+  Future<void> _showSecurityAnswerDialog(String email, String question) async {
+    final answerCtrl = TextEditingController();
+    String? error;
+    bool verifying = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceAlt,
+          title: const Text('Verify Your Identity',
+              style: TextStyle(color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(question,
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              LabeledField(
+                  label: 'Your Answer', hint: '', controller: answerCtrl),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(error!,
+                      style: const TextStyle(
+                          color: AppColors.danger, fontSize: 12)),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: verifying
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        verifying = true;
+                        error = null;
+                      });
+                      final ok = await AuthService()
+                          .verifySecurityAnswer(email, answerCtrl.text);
+                      if (!ok) {
+                        setDialogState(() {
+                          verifying = false;
+                          error = 'Incorrect answer. Please try again.';
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      await _sendResetEmail(email);
+                    },
+              child: Text(verifying ? 'VERIFYING...' : 'VERIFY',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.accent)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {

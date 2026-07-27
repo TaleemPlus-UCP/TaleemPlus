@@ -54,6 +54,8 @@ class AuthProvider extends ChangeNotifier {
     String? academyId,
     String? academyAddress,
     String? academyPhone,
+    String? securityQuestion,
+    String? securityAnswer,
   }) async {
     _setLoading();
     try {
@@ -67,6 +69,8 @@ class AuthProvider extends ChangeNotifier {
         academyId: academyId,
         academyAddress: academyAddress,
         academyPhone: academyPhone,
+        securityQuestion: securityQuestion,
+        securityAnswer: securityAnswer,
       );
 
       if (!user.isApproved) {

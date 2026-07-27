@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/validators.dart';
 import '../../data/models/app_user.dart';
 import '../../data/models/class_entity.dart';
+import '../../data/models/class_section.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
+import '../../logic/class_section_provider.dart';
+import 'class_sections_screen.dart';
 import 'screens/class_fee_status_screen.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
@@ -29,6 +31,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
           Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<ClassProvider>().listenAll(user.uid);
+        context.read<ClassSectionProvider>().listenAll(user.uid);
       }
     });
   }
@@ -41,6 +44,16 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
         elevation: 0,
         title: const Text('Class Management',
             style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.groups_2_rounded),
+            tooltip: 'Classes & Sections',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClassSectionsScreen()),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.accent,
@@ -147,11 +160,6 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.group_add_rounded, color: AppColors.accent),
-            tooltip: 'Manage Enrollment',
-            onPressed: () => _openEditSheet(c),
-          ),
-          IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.danger),
             onPressed: () => _confirmDelete(c),
           ),
@@ -232,48 +240,6 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     );
   }
 
-  Future<void> _openEditSheet(ClassEntity c) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.accent),
-      ),
-    );
-
-    final auth = AuthService();
-    final academyId =
-        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
-            '';
-    List<AppUser> students = [];
-    try {
-      students = await auth.getApprovedByRole(UserRole.student, academyId);
-    } catch (_) {
-      if (mounted) Navigator.pop(context);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load students.')),
-        );
-      }
-      return;
-    }
-    if (mounted) Navigator.pop(context);
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _EditEnrollmentSheet(
-        classEntity: c,
-        allStudents: students,
-      ),
-    );
-  }
-
   Future<void> _openAddSheet() async {
     // Show loading, fetch approved teachers + students from Firebase
     showDialog(
@@ -305,12 +271,28 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
     if (mounted) Navigator.pop(context);
 
     if (!mounted) return;
-    if (teachers.isEmpty || students.isEmpty) {
+    if (teachers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'No approved teachers. Ask them to sign up and approve them.'),
+        ),
+      );
+      return;
+    }
+    final availableSections = context.read<ClassSectionProvider>().sections;
+    if (availableSections.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(teachers.isEmpty
-              ? 'No approved teachers. Ask them to sign up and approve them.'
-              : 'No approved students. Ask them to sign up and approve them.'),
+          content: const Text(
+              'No class sections yet. Create one first from Classes & Sections.'),
+          action: SnackBarAction(
+            label: 'CREATE',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ClassSectionsScreen()),
+            ),
+          ),
         ),
       );
       return;
@@ -326,6 +308,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       builder: (_) => _AddClassSheet(
         teachers: teachers,
         students: students,
+        sections: availableSections,
       ),
     );
   }
@@ -341,9 +324,6 @@ class _EditClassSheet extends StatefulWidget {
 }
 
 class _EditClassSheetState extends State<_EditClassSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _sectionCtrl;
   late final TextEditingController _subjectCtrl;
   AppUser? _selectedTeacher;
   bool _saving = false;
@@ -351,8 +331,6 @@ class _EditClassSheetState extends State<_EditClassSheet> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: widget.classEntity.className);
-    _sectionCtrl = TextEditingController(text: widget.classEntity.section);
     _subjectCtrl = TextEditingController(text: widget.classEntity.subject);
     try {
       _selectedTeacher = widget.teachers
@@ -364,22 +342,17 @@ class _EditClassSheetState extends State<_EditClassSheet> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _sectionCtrl.dispose();
     _subjectCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
     if (_selectedTeacher == null) return;
 
     setState(() => _saving = true);
     try {
       await context.read<ClassProvider>().updateClass(
             classId: widget.classEntity.id,
-            className: _nameCtrl.text,
-            section: _sectionCtrl.text,
             subject: _subjectCtrl.text,
             teacher: _selectedTeacher!,
           );
@@ -402,237 +375,72 @@ class _EditClassSheetState extends State<_EditClassSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Edit Class Details',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 24),
-            LabeledField(
-                label: 'Class Name',
-                hint: 'e.g. Class 10',
-                controller: _nameCtrl,
-                validator: Validators.fullName),
-            LabeledField(
-                label: 'Section', hint: 'e.g. A', controller: _sectionCtrl),
-            LabeledField(
-                label: 'Subject', hint: 'e.g. Maths', controller: _subjectCtrl),
-            const Text('ASSIGNED TEACHER',
-                style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                  color: AppColors.inputFill,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border)),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<AppUser>(
-                  value: _selectedTeacher,
-                  isExpanded: true,
-                  dropdownColor: AppColors.surfaceAlt,
-                  hint: const Text('Select a teacher'),
-                  items: widget.teachers
-                      .map((t) =>
-                          DropdownMenuItem(value: t, child: Text(t.fullName)))
-                      .toList(),
-                  onChanged: (t) => setState(() => _selectedTeacher = t),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            PrimaryButton(
-                label: 'SAVE CHANGES',
-                icon: Icons.check_rounded,
-                loading: _saving,
-                onPressed: _selectedTeacher == null ? null : _save),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EditEnrollmentSheet extends StatefulWidget {
-  final ClassEntity classEntity;
-  final List<AppUser> allStudents;
-  const _EditEnrollmentSheet(
-      {required this.classEntity, required this.allStudents});
-
-  @override
-  State<_EditEnrollmentSheet> createState() => _EditEnrollmentSheetState();
-}
-
-class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
-  final Set<String> _selectedStudentUids = {};
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedStudentUids.addAll(widget.classEntity.studentIds);
-  }
-
-  Future<void> _save() async {
-    final chosen = widget.allStudents
-        .where((s) => _selectedStudentUids.contains(s.uid))
-        .toList();
-
-    setState(() => _saving = true);
-    try {
-      await context.read<ClassProvider>().updateEnrollment(
-            classId: widget.classEntity.id,
-            students: chosen,
-          );
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Enrollment updated for "${widget.classEntity.className}"')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Could not update enrollment. Check your connection.')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: 20 + bottomInset,
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text('Manage Students: ${widget.classEntity.className}',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              )),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Text('ENROLLED STUDENTS',
-                  style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1)),
-              const Spacer(),
-              Text('${_selectedStudentUids.length} selected',
-                  style: const TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-            ],
-          ),
+          const Text('Edit Class Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 24),
+          const Text('CLASS & SECTION',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
           const SizedBox(height: 8),
-          _studentPickerList(),
-          const SizedBox(height: 20),
-          PrimaryButton(
-            label: 'Update Enrollment',
-            icon: Icons.check_rounded,
-            loading: _saving,
-            onPressed: _saving ? null : _save,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+                color: AppColors.inputFill,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border)),
+            child: Text(
+                '${widget.classEntity.className} - ${widget.classEntity.section}',
+                style: const TextStyle(color: AppColors.textPrimary)),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _studentPickerList() {
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 300),
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: widget.allStudents.length,
-        itemBuilder: (_, i) {
-          final s = widget.allStudents[i];
-          final selected = _selectedStudentUids.contains(s.uid);
-          return InkWell(
-            onTap: () => setState(() {
-              if (selected) {
-                _selectedStudentUids.remove(s.uid);
-              } else {
-                _selectedStudentUids.add(s.uid);
-              }
-            }),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.border.withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? Icons.check_box_rounded
-                        : Icons.check_box_outline_blank_rounded,
-                    color: selected ? AppColors.accent : AppColors.textMuted,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s.fullName,
-                            style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600)),
-                        Text(s.email,
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                ],
+          const Text(
+              'Change the section from Classes & Sections instead — '
+              'this only edits the subject/teacher assigned here.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          const SizedBox(height: 16),
+          LabeledField(
+              label: 'Subject', hint: 'e.g. Maths', controller: _subjectCtrl),
+          const Text('ASSIGNED TEACHER',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+                color: AppColors.inputFill,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<AppUser>(
+                value: _selectedTeacher,
+                isExpanded: true,
+                dropdownColor: AppColors.surfaceAlt,
+                hint: const Text('Select a teacher'),
+                items: widget.teachers
+                    .map((t) =>
+                        DropdownMenuItem(value: t, child: Text(t.fullName)))
+                    .toList(),
+                onChanged: (t) => setState(() => _selectedTeacher = t),
               ),
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 24),
+          PrimaryButton(
+              label: 'SAVE CHANGES',
+              icon: Icons.check_rounded,
+              loading: _saving,
+              onPressed: _selectedTeacher == null ? null : _save),
+        ],
       ),
     );
   }
@@ -641,7 +449,12 @@ class _EditEnrollmentSheetState extends State<_EditEnrollmentSheet> {
 class _AddClassSheet extends StatefulWidget {
   final List<AppUser> teachers;
   final List<AppUser> students;
-  const _AddClassSheet({required this.teachers, required this.students});
+  final List<ClassSectionEntity> sections;
+  const _AddClassSheet({
+    required this.teachers,
+    required this.students,
+    required this.sections,
+  });
 
   @override
   State<_AddClassSheet> createState() => _AddClassSheetState();
@@ -649,18 +462,18 @@ class _AddClassSheet extends StatefulWidget {
 
 class _AddClassSheetState extends State<_AddClassSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _sectionCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
 
+  String? _selectedClassName;
+  ClassSectionEntity? _selectedSection;
   AppUser? _selectedTeacher;
-  final Set<String> _selectedStudentUids = {};
   bool _saving = false;
+
+  List<ClassSectionEntity> get _sectionsForSelectedClass =>
+      widget.sections.where((s) => s.className == _selectedClassName).toList();
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _sectionCtrl.dispose();
     _subjectCtrl.dispose();
     super.dispose();
   }
@@ -673,8 +486,17 @@ class _AddClassSheetState extends State<_AddClassSheet> {
       );
       return;
     }
+    if (_selectedSection == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please pick a class and section')),
+      );
+      return;
+    }
+    final section = _selectedSection!;
+    // Roster mirrors the section's roster exactly — this is what keeps
+    // enrollment a one-time action per section instead of per subject.
     final chosen = widget.students
-        .where((s) => _selectedStudentUids.contains(s.uid))
+        .where((s) => section.studentIds.contains(s.uid))
         .toList();
 
     setState(() => _saving = true);
@@ -683,8 +505,8 @@ class _AddClassSheetState extends State<_AddClassSheet> {
           Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
               '';
       await context.read<ClassProvider>().createClassWithStudents(
-            className: _nameCtrl.text,
-            section: _sectionCtrl.text,
+            className: section.className,
+            section: section.section,
             subject: _subjectCtrl.text,
             teacher: _selectedTeacher!,
             students: chosen,
@@ -695,7 +517,7 @@ class _AddClassSheetState extends State<_AddClassSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Class "${_nameCtrl.text}" created with ${chosen.length} student(s)')),
+                  'Class "${section.displayLabel}" created with ${chosen.length} student(s)')),
         );
       }
     } catch (_) {
@@ -744,17 +566,79 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                     fontWeight: FontWeight.w800,
                   )),
               const SizedBox(height: 20),
-              LabeledField(
-                label: 'Class Name',
-                hint: 'e.g. Class 10, Grade 8',
-                controller: _nameCtrl,
-                validator: Validators.fullName,
+              const Text('CLASS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.inputFill,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedClassName,
+                    isExpanded: true,
+                    dropdownColor: AppColors.surfaceAlt,
+                    hint: const Text('Select a class',
+                        style: TextStyle(color: AppColors.textMuted)),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    items: AppClasses.all
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (c) => setState(() {
+                      _selectedClassName = c;
+                      _selectedSection = null;
+                    }),
+                  ),
+                ),
               ),
-              LabeledField(
-                label: 'Section (optional)',
-                hint: 'e.g. A, Blue, Morning',
-                controller: _sectionCtrl,
+              const SizedBox(height: 16),
+              const Text('SECTION',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.inputFill,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<ClassSectionEntity>(
+                    value: _selectedSection,
+                    isExpanded: true,
+                    dropdownColor: AppColors.surfaceAlt,
+                    hint: Text(
+                        _selectedClassName == null
+                            ? 'Pick a class first'
+                            : _sectionsForSelectedClass.isEmpty
+                                ? 'No sections yet — add one in Classes & Sections'
+                                : 'Select a section',
+                        style: const TextStyle(color: AppColors.textMuted)),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    items: _sectionsForSelectedClass
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(
+                                  'Section ${s.section.isEmpty ? '-' : s.section} '
+                                  '(${s.enrollmentCount} students)'),
+                            ))
+                        .toList(),
+                    onChanged: (s) => setState(() => _selectedSection = s),
+                  ),
+                ),
               ),
+              const SizedBox(height: 16),
               LabeledField(
                 label: 'Subject (optional)',
                 hint: 'e.g. Physics, Mathematics',
@@ -792,25 +676,14 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  const Text('STUDENTS',
-                      style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1)),
-                  const Spacer(),
-                  Text('${_selectedStudentUids.length} selected',
-                      style: const TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
               const SizedBox(height: 8),
-              _studentPickerList(),
+              Text(
+                  _selectedSection == null
+                      ? 'Students are enrolled once per section, from Classes & Sections.'
+                      : '${_selectedSection!.enrollmentCount} student(s) from '
+                          '${_selectedSection!.displayLabel} will be enrolled automatically.',
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 11)),
               const SizedBox(height: 20),
               PrimaryButton(
                 label: 'Create Class',
@@ -821,70 +694,6 @@ class _AddClassSheetState extends State<_AddClassSheet> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _studentPickerList() {
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 260),
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: widget.students.length,
-        itemBuilder: (_, i) {
-          final s = widget.students[i];
-          final selected = _selectedStudentUids.contains(s.uid);
-          return InkWell(
-            onTap: () => setState(() {
-              if (selected) {
-                _selectedStudentUids.remove(s.uid);
-              } else {
-                _selectedStudentUids.add(s.uid);
-              }
-            }),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.border.withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? Icons.check_box_rounded
-                        : Icons.check_box_outline_blank_rounded,
-                    color: selected ? AppColors.accent : AppColors.textMuted,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s.fullName,
-                            style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600)),
-                        Text(s.email,
-                            style: const TextStyle(
-                                color: AppColors.textMuted, fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }

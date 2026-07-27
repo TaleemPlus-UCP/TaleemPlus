@@ -20,6 +20,7 @@ import 'screens/child_timetable_screen.dart';
 import 'screens/all_challans_screen.dart';
 import 'screens/academy_contact_screen.dart'; // NEW
 import '../../widgets/academy_relink_dialog.dart';
+import '../../widgets/security_question_dialog.dart';
 
 class ParentDashboard extends StatelessWidget {
   const ParentDashboard({super.key});
@@ -292,6 +293,22 @@ class ParentDashboard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: const BorderSide(color: AppColors.accent)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => showSecurityQuestionDialog(
+                context,
+                Provider.of<AuthProvider>(context, listen: false).currentUser,
+              ),
+              icon: const Icon(Icons.help_outline_rounded),
+              label: const Text("Update Recovery Question"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                side: const BorderSide(color: AppColors.accent),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 12),

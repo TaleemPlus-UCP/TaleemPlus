@@ -84,3 +84,26 @@ class AppRules {
   static const String emailDomain = '@taleem.edu.pk';
   static const int minPasswordLength = 6;
 }
+
+/// Preset security-question choices offered at signup, used to self-verify
+/// identity in the "forgot password" flow without needing a backend.
+class SecurityQuestions {
+  SecurityQuestions._();
+
+  static const List<String> all = [
+    "What was your childhood nickname?",
+    "What is your favorite teacher's name?",
+    "What city were you born in?",
+    "What was the name of your first school?",
+    "What is your mother's maiden name?",
+  ];
+}
+
+/// Fixed set of grade levels an academy offers. Kept closed (instead of
+/// free-text) so every section and enrollment maps to exactly one
+/// canonical class name — no "Class 10" vs "10th" duplicates.
+class AppClasses {
+  AppClasses._();
+
+  static const List<String> all = ['9th', '10th', '1st Year', '2nd Year'];
+}

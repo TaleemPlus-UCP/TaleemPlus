@@ -97,6 +97,16 @@ service cloud.firestore {
           sameAcademy(resource.data.academy_id);
     }
 
+    // Canonical class+section rosters (single enrollment per section,
+    // mirrored into `classes` docs by the app on every enrollment edit).
+    match /class_sections/{sectionId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
+    }
+
     // Classroom Management (Notes & Materials)
     match /learning_resources/{docId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
@@ -150,6 +160,18 @@ service cloud.firestore {
           sameAcademy(request.resource.data.academy_id);
       allow delete: if isApproved() && isAdmin() &&
           sameAcademy(resource.data.academy_id);
+    }
+
+    // Forgot-password security-question records. Must be readable
+    // pre-login (the whole point is recovering access without being
+    // signed in), so this is intentionally public read — only a salted
+    // answer hash lives here, never the account's real password. Writes
+    // stay owner-only so nobody can overwrite another account's question.
+    match /password_recovery/{emailKey} {
+      allow read: if true;
+      allow create, update: if signedIn() &&
+          request.auth.uid == request.resource.data.uid;
+      allow delete: if signedIn() && request.auth.uid == resource.data.uid;
     }
 
     match /notifications/{docId} {

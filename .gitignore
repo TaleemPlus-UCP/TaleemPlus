@@ -12,3 +12,13 @@ pubspec.lock
 lib/firebase_options.dart
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Release signing secrets — do NOT commit
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+
+# Local tool/debug output — do NOT commit
+devtools_options.yaml
+firebase-debug.log
+coverage/
