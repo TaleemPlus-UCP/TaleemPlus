@@ -263,7 +263,7 @@ class AuthService {
       UserRole role, String academyId) async {
     try {
       final response = await _api.get('/users',
-          queryParameters: {'role': role.value.toUpperCase(), 'limit': 200});
+          queryParameters: {'role': role.value.toUpperCase(), 'limit': 100});
       final items = response.data['data'] as List<dynamic>;
       final users = items
           .map((u) => AppUser.fromJson(u as Map<String, dynamic>))
@@ -281,7 +281,7 @@ class AuthService {
   Future<List<AppUser>> getUsersByRole(UserRole role, String academyId) async {
     try {
       final response = await _api.get('/users',
-          queryParameters: {'role': role.value.toUpperCase(), 'limit': 200});
+          queryParameters: {'role': role.value.toUpperCase(), 'limit': 100});
       final items = response.data['data'] as List<dynamic>;
       final users = items
           .map((u) => AppUser.fromJson(u as Map<String, dynamic>))

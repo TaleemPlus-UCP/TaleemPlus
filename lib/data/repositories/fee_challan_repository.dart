@@ -89,7 +89,7 @@ class FeeChallanRepository {
   /// Admin: every challan in the academy.
   Future<List<FeeChallanModel>> getAll(String academyId) async {
     final response =
-        await _api.get('/fee-challans', queryParameters: {'limit': 200});
+        await _api.get('/fee-challans', queryParameters: {'limit': 100});
     final list = _parseList(response.data['data'] as List<dynamic>);
     _sortNewestFirst(list);
     return list;

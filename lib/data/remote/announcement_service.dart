@@ -54,7 +54,7 @@ class AnnouncementService {
 
   Future<List<Announcement>> _fetchList() async {
     final response =
-        await _api.get('/announcements', queryParameters: {'limit': 200});
+        await _api.get('/announcements', queryParameters: {'limit': 100});
     final items = response.data['data'] as List<dynamic>;
     return items
         .map((a) => Announcement.fromJson(a as Map<String, dynamic>))
