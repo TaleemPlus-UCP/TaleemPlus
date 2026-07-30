@@ -37,19 +37,19 @@ class MemberProvider extends ChangeNotifier {
       // 1. Fetch SQLite local members for THIS academy
       final sqliteMembers = await _repo.getAll(academyId);
 
-      // 2. Fetch approved user profiles from the backend for THIS academy
-      final backendTeachers =
+      // 2. Fetch Firestore approved users profiles for THIS academy
+      final firestoreTeachers =
           await _authService.getApprovedByRole(UserRole.teacher, academyId);
-      final backendStudents =
+      final firestoreStudents =
           await _authService.getApprovedByRole(UserRole.student, academyId);
-      final backendParents =
+      final firestoreParents =
           await _authService.getApprovedByRole(UserRole.parent, academyId);
 
-      // 3. Convert backend users to AcademyMember model for a unified list
-      final List<AcademyMember> backendMembers = [
-        ...backendTeachers.map((u) => _fromAppUser(u)),
-        ...backendStudents.map((u) => _fromAppUser(u)),
-        ...backendParents.map((u) => _fromAppUser(u)),
+      // 3. Convert Firestore users to AcademyMember model for a unified list
+      final List<AcademyMember> firestoreMembers = [
+        ...firestoreTeachers.map((u) => _fromAppUser(u)),
+        ...firestoreStudents.map((u) => _fromAppUser(u)),
+        ...firestoreParents.map((u) => _fromAppUser(u)),
       ];
 
       // 4. Merge and Deduplicate by EMAIL
@@ -60,8 +60,8 @@ class MemberProvider extends ChangeNotifier {
         mergedMap[m.email.trim().toLowerCase()] = m;
       }
 
-      // Backend members (override SQLite if same email found)
-      for (var m in backendMembers) {
+      // Firestore members (override SQLite if same email found)
+      for (var m in firestoreMembers) {
         mergedMap[m.email.trim().toLowerCase()] = m;
       }
 
@@ -128,13 +128,10 @@ class MemberProvider extends ChangeNotifier {
     // 1. Attempt to delete from local SQLite (if it exists there)
     await _repo.delete(id);
 
-    // 2. Best-effort: also reject the backend account if one exists (a
-    // locally-added member created before the REST signup flow may have
-    // no server-side account at all).
-    try {
+    // 2. Attempt to delete from Firestore (if it exists there)
+    final doc = await _authService.getProfile(id);
+    if (doc != null) {
       await _authService.rejectUser(id);
-    } catch (e) {
-      debugPrint("No backend account to remove for $id: $e");
     }
 
     await load(academyId);

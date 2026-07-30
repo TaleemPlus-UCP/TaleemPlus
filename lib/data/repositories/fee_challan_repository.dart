@@ -1,153 +1,114 @@
-import '../../data/remote/api_client.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fee_challan_model.dart';
 
-const _monthNames = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-/// Backed by the Node API's `/fee-challans` endpoints instead of Firestore.
 class FeeChallanRepository {
-  final ApiClient _api;
-  FeeChallanRepository({ApiClient? api}) : _api = api ?? ApiClient.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  CollectionReference get _col => _db.collection('fee_challans');
 
-  /// One ad-hoc challan for a single student (e.g. a one-off fine), separate
-  /// from section-wide billing. See [generateForSection] for that.
-  Future<FeeChallanModel> createSingle({
-    required String studentId,
-    required int billingYear,
-    required int billingMonth,
-    required double monthlyFee,
-    double admissionFee = 0,
-    double examFee = 0,
-    double transportFee = 0,
-    double fine = 0,
-    DateTime? dueDate,
-  }) async {
-    final response = await _api.post('/fee-challans', data: {
-      'studentId': studentId,
-      'billingYear': billingYear,
-      'billingMonth': billingMonth,
-      'monthlyFee': monthlyFee,
-      'admissionFee': admissionFee,
-      'examFee': examFee,
-      'transportFee': transportFee,
-      'fine': fine,
-      if (dueDate != null) 'dueDate': _dateOnly(dueDate),
-    });
-    return FeeChallanModel.fromJson(
-        response.data['data'] as Map<String, dynamic>);
+  Future<void> createChallan(FeeChallanModel challan) async {
+    await _col.doc(challan.id).set(challan.toMap());
   }
 
-  /// Batch-generates a challan for every ACTIVE student enrolled in
-  /// [sectionId]; students already billed for that month are skipped
-  /// server-side. Returns `{generatedCount, skippedCount, eligibleCount}`.
-  Future<Map<String, dynamic>> generateForSection({
-    required String sectionId,
-    required int billingYear,
-    required int billingMonth,
-    required double monthlyFee,
-    double admissionFee = 0,
-    double examFee = 0,
-    double transportFee = 0,
-    double fine = 0,
-    DateTime? dueDate,
-  }) async {
-    final response = await _api.post('/fee-challans/generate', data: {
-      'sectionId': sectionId,
-      'billingYear': billingYear,
-      'billingMonth': billingMonth,
-      'monthlyFee': monthlyFee,
-      'admissionFee': admissionFee,
-      'examFee': examFee,
-      'transportFee': transportFee,
-      'fine': fine,
-      if (dueDate != null) 'dueDate': _dateOnly(dueDate),
-    });
-    return response.data['data'] as Map<String, dynamic>;
-  }
-
+  /// Sorting phone pe (client-side) — Firestore index ki zaroorat nahi.
   Future<List<FeeChallanModel>> getForStudent(
       String studentId, String academyId) async {
-    final response = await _api.get('/fee-challans',
-        queryParameters: {'studentId': studentId, 'limit': 100});
-    final list = _parseList(response.data['data'] as List<dynamic>);
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .get();
+
+    final list = snap.docs
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
     _sortNewestFirst(list);
     return list;
   }
 
-  /// Admin: every challan in the academy.
+  /// Sorting client-side — no index needed.
   Future<List<FeeChallanModel>> getAll(String academyId) async {
-    final response =
-        await _api.get('/fee-challans', queryParameters: {'limit': 100});
-    final list = _parseList(response.data['data'] as List<dynamic>);
+    final snap = await _col.where('academy_id', isEqualTo: academyId).get();
+    final list = snap.docs
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
     _sortNewestFirst(list);
     return list;
   }
 
-  /// [month] is a month NAME (e.g. "July"); the current year is assumed,
-  /// matching the rest of the app's convention (there is no year selector).
+  /// Month filter + latest — dono phone pe. No index needed.
   Future<FeeChallanModel?> getLatestForStudent(
       String studentId, String academyId,
       {String? month}) async {
-    final query = <String, dynamic>{'studentId': studentId, 'limit': 1};
-    final monthIndex = month != null ? _monthNames.indexOf(month) + 1 : 0;
-    if (monthIndex > 0) {
-      query['billingYear'] = DateTime.now().year;
-      query['billingMonth'] = monthIndex;
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_id', isEqualTo: studentId)
+        .get();
+
+    var list = snap.docs
+        .map((doc) =>
+            FeeChallanModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
+
+    // Month filter client-side (challan_number "CH-JUL..." pattern se)
+    if (month != null && month.length >= 3) {
+      final prefix = "CH-${month.substring(0, 3).toUpperCase()}";
+      list = list.where((c) => c.challanNumber.startsWith(prefix)).toList();
     }
-    final response = await _api.get('/fee-challans', queryParameters: query);
-    final list = _parseList(response.data['data'] as List<dynamic>);
+
     if (list.isEmpty) return null;
     _sortNewestFirst(list);
     return list.first;
   }
 
-  /// Fee status for every student enrolled in [sectionId] for one month, via
-  /// a single roster call instead of one query per student.
-  Future<Map<String, FeeChallanModel?>> getSectionStatus(String sectionId,
+  /// Batched version of [getLatestForStudent] for a whole class roster —
+  /// one `whereIn` query per 10 students instead of one query per student,
+  /// so a class fee-status screen doesn't fire N separate reads for N rows.
+  Future<Map<String, FeeChallanModel?>> getLatestForStudents(
+      List<String> studentIds, String academyId,
       {String? month}) async {
-    final query = <String, dynamic>{};
-    final monthIndex = month != null ? _monthNames.indexOf(month) + 1 : 0;
-    if (monthIndex > 0) {
-      query['year'] = DateTime.now().year;
-      query['month'] = monthIndex;
-    }
-    final response = await _api.get('/fee-challans/sections/$sectionId/status',
-        queryParameters: query);
-    final students = (response.data['data'] as Map<String, dynamic>)['students']
-        as List<dynamic>;
-    return {
-      for (final s in students)
-        (s as Map<String, dynamic>)['studentId'] as String: s['challan'] != null
-            ? FeeChallanModel.fromJson(s['challan'] as Map<String, dynamic>)
-            : null,
+    final result = <String, FeeChallanModel?>{
+      for (final id in studentIds) id: null,
     };
+    if (studentIds.isEmpty) return result;
+
+    final prefix = (month != null && month.length >= 3)
+        ? "CH-${month.substring(0, 3).toUpperCase()}"
+        : null;
+
+    for (var i = 0; i < studentIds.length; i += 10) {
+      final chunk = studentIds.sublist(
+          i, i + 10 > studentIds.length ? studentIds.length : i + 10);
+      final snap = await _col
+          .where('academy_id', isEqualTo: academyId)
+          .where('student_id', whereIn: chunk)
+          .get();
+
+      final list = snap.docs
+          .map((doc) => FeeChallanModel.fromMap(
+              doc.id, doc.data() as Map<String, dynamic>))
+          .where((c) => prefix == null || c.challanNumber.startsWith(prefix))
+          .toList();
+      _sortNewestFirst(list);
+
+      for (final challan in list) {
+        // Newest-first, so only keep the first (latest) challan seen per
+        // student.
+        result[challan.studentId] ??= challan;
+      }
+    }
+    return result;
   }
 
   Future<void> updateStatus(String id, String status) async {
-    await _api.patch('/fee-challans/$id/status',
-        data: {'status': status.toUpperCase()});
+    await _col.doc(id).update({
+      'status': status,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 
-  List<FeeChallanModel> _parseList(List<dynamic> items) => items
-      .map((c) => FeeChallanModel.fromJson(c as Map<String, dynamic>))
-      .toList();
-
+  /// Newest first
   void _sortNewestFirst(List<FeeChallanModel> list) {
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
-
-  static String _dateOnly(DateTime d) =>
-      DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
 }

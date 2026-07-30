@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class NotificationModel {
   final String id;
   final String academyId;
@@ -20,16 +22,30 @@ class NotificationModel {
     required this.createdAt,
   });
 
-  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'academy_id': academyId,
+      'recipient_id': recipientId,
+      'title': title,
+      'message': message,
+      'type': type,
+      'is_read': isRead,
+      'created_at': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory NotificationModel.fromMap(String id, Map<String, dynamic> map) {
+    final ts = map['created_at'];
     return NotificationModel(
-      id: json['id'] as String,
-      academyId: json['academyId'] as String,
-      recipientId: json['recipientId'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      type: (json['type'] as String).toLowerCase(),
-      isRead: json['isRead'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: id,
+      academyId: map['academy_id'] ?? '',
+      recipientId: map['recipient_id'] ?? '',
+      title: map['title'] ?? '',
+      message: map['message'] ?? '',
+      type: map['type'] ?? 'general',
+      isRead: map['is_read'] ?? false,
+      createdAt: ts is Timestamp ? ts.toDate() : DateTime.now(),
     );
   }
 }

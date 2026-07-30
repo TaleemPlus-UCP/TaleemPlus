@@ -16,32 +16,10 @@ class QuizProvider extends ChangeNotifier {
 
   // --- Actions ---
 
-  Future<void> createQuiz({
-    required String offeringId,
-    required String title,
-    required String subject,
-    String? session,
-    String? chapter,
-    required String difficulty,
-    required double totalMarks,
-    required DateTime testDate,
-    String? instructions,
-    required List<QuizQuestion> questions,
-  }) async {
+  Future<void> createQuiz(QuizModel quiz) async {
     _setLoading(true);
     try {
-      await _service.createQuiz(
-        offeringId: offeringId,
-        title: title,
-        subject: subject,
-        session: session,
-        chapter: chapter,
-        difficulty: difficulty,
-        totalMarks: totalMarks,
-        testDate: testDate,
-        instructions: instructions,
-        questions: questions,
-      );
+      await _service.createQuiz(quiz);
     } finally {
       _setLoading(false);
     }
@@ -56,48 +34,48 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> uploadBulkMarks(
-      String quizId, List<MarkRecordInput> records) async {
+  Future<void> uploadBulkMarks(List<TestMarkModel> marksList) async {
     _setLoading(true);
     try {
-      await _service.upsertMarks(quizId, records);
+      await _service.uploadBulkMarks(marksList);
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<GradeSuggestion> gradeSuggestion(
-      String quizId, String questionId, String ocrText) {
-    return _service.gradeSuggestion(quizId, questionId, ocrText);
+  // --- Streams (Real-time data) ---
+
+  /// Watch all tests created for a specific class in an academy
+  Stream<List<QuizModel>> watchTeacherQuizzes(
+      String classId, String academyId) {
+    return _service.watchQuizzesByClass(classId, academyId);
   }
 
-  // --- Reads ---
-
-  /// Watch all tests created for a specific class offering. `academyId` is
-  /// unused — the backend scopes admin/teacher access from the JWT — kept
-  /// so call sites don't need to change.
-  Stream<List<QuizModel>> watchTeacherQuizzes(
-          String classId, String academyId) =>
-      Stream.fromFuture(_service.fetchQuizzesForOffering(classId));
-
-  /// Watch marks for a specific test (for Teacher/Admin review).
+  /// Watch marks for a specific test (for Teacher/Admin review)
   Stream<List<TestMarkModel>> watchQuizResults(
-          String quizId, String academyId) =>
-      Stream.fromFuture(_service.fetchMarksForQuiz(quizId));
+      String quizId, String academyId) {
+    return _service.watchMarksByQuiz(quizId, academyId);
+  }
 
-  /// Watch all test results for a specific student (for Report Card).
+  /// Watch all test results for a specific student (for Report Card)
   Stream<List<TestMarkModel>> watchStudentResults(
-          String uid, String academyId) =>
-      Stream.fromFuture(_service.fetchStudentResults(uid));
+      String uid, String academyId) {
+    return _service.watchStudentMarks(uid, academyId);
+  }
 
-  /// Compiles monthly report data for a class offering. There is no
-  /// "all marks for a class" endpoint (marks are read per-quiz or
-  /// per-student), so this fans out: quizzes for the offering, then marks
-  /// per quiz, filtered to [month] and aggregated per student/subject.
+  /// Watch all marks for a class (for Admin Analytics)
+  Stream<List<TestMarkModel>> watchClassResults(
+      String classId, String academyId) {
+    return _service.watchClassMarks(classId, academyId);
+  }
+
+  /// NEW: Compiles monthly report data for a class
   Stream<Map<String, dynamic>> watchMonthlyClassReport(
       String classId, String month, String academyId) {
-    return Stream.fromFuture(() async {
-      final quizzes = await _service.fetchQuizzesForOffering(classId);
+    return watchClassResults(classId, academyId).asyncMap((marks) async {
+      // 1. Get all quizzes for this class and month to know total possible marks
+      final quizzes =
+          await _service.watchQuizzesByClass(classId, academyId).first;
       final monthlyQuizzes = quizzes.where((q) => q.month == month).toList();
 
       if (monthlyQuizzes.isEmpty) {
@@ -110,9 +88,9 @@ class QuizProvider extends ChangeNotifier {
 
       final Map<String, Map<String, dynamic>> studentStats = {};
 
-      for (final q in monthlyQuizzes) {
-        final marks = await _service.fetchMarksForQuiz(q.id);
-        for (final m in marks) {
+      for (var q in monthlyQuizzes) {
+        final qMarks = marks.where((m) => m.quizId == q.id).toList();
+        for (var m in qMarks) {
           if (!studentStats.containsKey(m.studentId)) {
             studentStats[m.studentId] = {
               'name': m.studentName,
@@ -143,6 +121,6 @@ class QuizProvider extends ChangeNotifier {
         'subjects': monthlyQuizzes.map((q) => q.subject).toSet().toList(),
         'studentStats': studentStats,
       };
-    }());
+    });
   }
 }

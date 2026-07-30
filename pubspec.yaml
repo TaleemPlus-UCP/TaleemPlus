@@ -1,7 +1,7 @@
 name: taleemplus_app
 description: "TaleemPlus - Offline-first AI-powered academy management app"
 publish_to: 'none'
-version: 0.2.0+1
+version: 0.1.5+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -17,9 +17,10 @@ dependencies:
   sqflite: ^2.3.3
   path: ^1.9.0
 
-  # Node backend API client
-  dio: ^5.7.0
-  flutter_secure_storage: ^9.2.2
+  # Firebase (Auth + Firestore for cloud sync)
+  firebase_core: ^3.1.0
+  firebase_auth: ^5.1.0
+  cloud_firestore: ^5.0.1
 
   # Connectivity (drives offline-first sync logic)
   connectivity_plus: ^6.0.3
@@ -54,7 +55,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.14.1
-  flutter_native_splash: ^2.4.3
 
 flutter:
   uses-material-design: true
@@ -69,10 +69,3 @@ flutter_launcher_icons:
   image_path: "assets/images/app_icon.png"
   adaptive_icon_background: "#061F1E"
   adaptive_icon_foreground: "assets/images/app_icon_foreground.png"
-
-flutter_native_splash:
-  color: "#061F1E"
-  image: "assets/images/splash_logo.png"
-  android_12:
-    color: "#061F1E"
-    image: "assets/images/splash_logo.png"

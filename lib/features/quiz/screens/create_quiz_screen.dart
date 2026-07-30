@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
+import '../../../logic/class_provider.dart';
 import '../../../logic/session_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
@@ -34,6 +35,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
   String _difficulty = 'Medium';
+  final DateTime _testDate = DateTime.now();
 
   final List<QuizQuestion> _questions = [];
 
@@ -399,18 +401,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
-  /// The backend stores a real `testDate`, not a separate free-text month
-  /// label — this derives one from the selected month: today's date if that
-  /// month is the current one, otherwise the 1st of that month (there is no
-  /// day selector, matching the convention used elsewhere in this app for
-  /// month-only pickers).
-  DateTime _testDateForMonth(String monthName) {
-    final now = DateTime.now();
-    final monthIndex = _months.indexOf(monthName) + 1;
-    if (monthIndex == now.month) return now;
-    return DateTime(now.year, monthIndex, 1);
-  }
-
   Future<void> _saveQuiz() async {
     if (!_formKey.currentState!.validate()) return;
     if (_questions.isEmpty) {
@@ -420,6 +410,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final cp = Provider.of<ClassProvider>(context, listen: false);
+
     final user = auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -427,19 +419,37 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       return;
     }
 
+    final classMatches =
+        cp.classes.where((c) => c.id == widget.classId).toList();
+    if (classMatches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This class no longer exists.')));
+      return;
+    }
+    final cls = classMatches.first;
+
+    final quiz = QuizModel(
+      id: const Uuid().v4(),
+      academyId: user.academyId ?? '',
+      classId: widget.classId,
+      classLabel: "${cls.className} (${cls.section})",
+      title: _titleCtrl.text.trim(),
+      subject: _subjectCtrl.text.trim(),
+      month: _selectedMonth,
+      session: _sessionCtrl.text.trim(),
+      chapter: _chapterCtrl.text.trim(),
+      difficulty: _difficulty,
+      totalMarks: double.tryParse(_totalMarksCtrl.text) ?? 0,
+      testDate: _testDate,
+      instructions: _instructionsCtrl.text.trim(),
+      createdByUid: user.uid,
+      createdByName: user.fullName,
+      createdAt: DateTime.now(),
+      questions: _questions,
+    );
+
     try {
-      await context.read<QuizProvider>().createQuiz(
-            offeringId: widget.classId,
-            title: _titleCtrl.text.trim(),
-            subject: _subjectCtrl.text.trim(),
-            session: _sessionCtrl.text.trim(),
-            chapter: _chapterCtrl.text.trim(),
-            difficulty: _difficulty,
-            totalMarks: double.tryParse(_totalMarksCtrl.text) ?? 0,
-            testDate: _testDateForMonth(_selectedMonth),
-            instructions: _instructionsCtrl.text.trim(),
-            questions: _questions,
-          );
+      await context.read<QuizProvider>().createQuiz(quiz);
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

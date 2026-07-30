@@ -72,24 +72,38 @@ class _MarkEntryScreenState extends State<MarkEntryScreen> {
 
     setState(() => _isSaving = true);
     try {
-      final List<MarkRecordInput> records = [];
+      final List<TestMarkModel> marksList = [];
 
       _markControllers.forEach((uid, ctrl) {
         if (ctrl.text.trim().isNotEmpty) {
           final obtained = double.tryParse(ctrl.text.trim()) ?? 0;
-          records.add(MarkRecordInput(studentId: uid, marksObtained: obtained));
+          final percentage = (obtained / widget.quiz.totalMarks) * 100;
+
+          marksList.add(TestMarkModel(
+            id: "${widget.quiz.id}_$uid",
+            academyId: widget.quiz.academyId,
+            quizId: widget.quiz.id,
+            studentId: uid,
+            studentName: cls.studentNames[uid] ?? "Unknown",
+            classId: widget.quiz.classId,
+            subject: widget.quiz.subject,
+            month: widget.quiz.month,
+            marksObtained: obtained,
+            totalMarks: widget.quiz.totalMarks,
+            percentage: percentage,
+            gradeLetter: TestMarkModel.calculateGrade(percentage),
+            updatedAt: DateTime.now(),
+          ));
         }
       });
 
-      if (records.isEmpty) {
+      if (marksList.isEmpty) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("No marks entered!")));
         return;
       }
 
-      await context
-          .read<QuizProvider>()
-          .uploadBulkMarks(widget.quiz.id, records);
+      await context.read<QuizProvider>().uploadBulkMarks(marksList);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Marks saved successfully!")));

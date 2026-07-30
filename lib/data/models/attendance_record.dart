@@ -1,116 +1,74 @@
-/// One day's attendance status for a student, as returned by the
-/// `/attendance/students/{id}/monthly` endpoint.
-class AttendanceDayRecord {
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// One attendance record: a single student on a single date.
+/// Stored in Firestore under `attendance_records/{docId}`.
+class AttendanceRecord {
+  final String id;
+  final String academyId; // NEW
+  final String classId;
+  final String studentId;
+  final String studentName;
   final DateTime logDate;
   final String status; // 'present' | 'absent' | 'late'
-  final DateTime? recordedAt;
+  final String markedByUid;
+  final DateTime recordedAt;
 
-  const AttendanceDayRecord({
+  const AttendanceRecord({
+    required this.id,
+    required this.academyId, // NEW
+    required this.classId,
+    required this.studentId,
+    required this.studentName,
     required this.logDate,
     required this.status,
-    this.recordedAt,
+    required this.markedByUid,
+    required this.recordedAt,
   });
 
   bool get isPresent => status == 'present';
   bool get isAbsent => status == 'absent';
   bool get isLate => status == 'late';
 
-  factory AttendanceDayRecord.fromJson(Map<String, dynamic> json) {
-    return AttendanceDayRecord(
-      logDate: DateTime.parse(json['logDate'] as String),
-      status: (json['status'] as String).toLowerCase(),
-      recordedAt: json['recordedAt'] != null
-          ? DateTime.tryParse(json['recordedAt'] as String)
-          : null,
+  /// Deterministic Firestore doc id so that saving the same
+  /// (class, student, date) upserts instead of duplicating.
+  static String buildId({
+    required String classId,
+    required String studentId,
+    required DateTime date,
+  }) {
+    final key = _dateOnly(date);
+    return '${classId}_${studentId}_$key';
+  }
+
+  Map<String, dynamic> toMap() => {
+        'academy_id': academyId,
+        'class_id': classId,
+        'student_id': studentId,
+        'student_name': studentName,
+        'log_date': _dateOnly(logDate),
+        'status': status,
+        'marked_by_uid': markedByUid,
+        'recorded_at': FieldValue.serverTimestamp(),
+      };
+
+  factory AttendanceRecord.fromMap(String id, Map<String, dynamic> map) {
+    final ts = map['recorded_at'];
+    return AttendanceRecord(
+      id: id,
+      academyId: (map['academy_id'] ?? '') as String,
+      classId: (map['class_id'] ?? '') as String,
+      studentId: (map['student_id'] ?? '') as String,
+      studentName: (map['student_name'] ?? '') as String,
+      logDate: DateTime.tryParse((map['log_date'] ?? '') as String) ??
+          DateTime.now(),
+      status: (map['status'] ?? 'absent') as String,
+      markedByUid: (map['marked_by_uid'] ?? '') as String,
+      recordedAt: ts is Timestamp ? ts.toDate() : DateTime.now(),
     );
   }
-}
 
-/// Present/absent/late counts + percentage over a date range.
-class AttendanceSummary {
-  final int totalDays;
-  final int presentCount;
-  final int absentCount;
-  final int lateCount;
-  final double percentage;
-
-  const AttendanceSummary({
-    required this.totalDays,
-    required this.presentCount,
-    required this.absentCount,
-    required this.lateCount,
-    required this.percentage,
-  });
-
-  factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
-    return AttendanceSummary(
-      totalDays: json['totalDays'] as int,
-      presentCount: json['presentCount'] as int,
-      absentCount: json['absentCount'] as int,
-      lateCount: json['lateCount'] as int,
-      percentage: (json['percentage'] as num).toDouble(),
-    );
-  }
-}
-
-/// One student's daily records + summary for a single month.
-class AttendanceMonthlyReport {
-  final int year;
-  final int month;
-  final List<AttendanceDayRecord> records;
-  final AttendanceSummary summary;
-
-  const AttendanceMonthlyReport({
-    required this.year,
-    required this.month,
-    required this.records,
-    required this.summary,
-  });
-
-  factory AttendanceMonthlyReport.fromJson(Map<String, dynamic> json) {
-    final records = json['records'] as List<dynamic>;
-    return AttendanceMonthlyReport(
-      year: json['year'] as int,
-      month: json['month'] as int,
-      records: records
-          .map((r) => AttendanceDayRecord.fromJson(r as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => a.logDate.compareTo(b.logDate)),
-      summary: AttendanceSummary.fromJson(json),
-    );
-  }
-}
-
-/// One month's summary within a yearly report.
-class AttendanceMonthSummary {
-  final int month;
-  final AttendanceSummary summary;
-
-  const AttendanceMonthSummary({required this.month, required this.summary});
-
-  factory AttendanceMonthSummary.fromJson(Map<String, dynamic> json) {
-    return AttendanceMonthSummary(
-      month: json['month'] as int,
-      summary: AttendanceSummary.fromJson(json),
-    );
-  }
-}
-
-/// One student's month-by-month summary for a whole year.
-class AttendanceYearlyReport {
-  final int year;
-  final List<AttendanceMonthSummary> months;
-
-  const AttendanceYearlyReport({required this.year, required this.months});
-
-  factory AttendanceYearlyReport.fromJson(Map<String, dynamic> json) {
-    final months = json['months'] as List<dynamic>;
-    return AttendanceYearlyReport(
-      year: json['year'] as int,
-      months: months
-          .map(
-              (m) => AttendanceMonthSummary.fromJson(m as Map<String, dynamic>))
-          .toList(),
-    );
+  static String _dateOnly(DateTime d) {
+    final iso = DateTime(d.year, d.month, d.day).toIso8601String();
+    return iso.substring(0, 10);
   }
 }

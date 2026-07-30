@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
 import '../data/models/app_user.dart';
-import '../data/remote/api_client.dart';
 import '../data/remote/auth_service.dart';
 
 enum AuthStatus { idle, loading, authenticated, error }
@@ -12,11 +11,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
 
   AuthProvider({AuthService? authService})
-      : _authService = authService ?? AuthService() {
-    // A dead refresh token (expired/revoked/reused) surfaces here from
-    // anywhere in the app, not just an explicit sign-out.
-    ApiClient.instance.onSessionExpired = _handleSessionExpiredWithNotice;
-  }
+      : _authService = authService ?? AuthService();
 
   AuthStatus _status = AuthStatus.idle;
   AppUser? _currentUser;
@@ -30,14 +25,11 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
   bool get pendingApproval => _pendingApproval;
 
-  /// Restores a session from the securely-stored token pair (see
-  /// [TokenStorage]) instead of Firebase Auth's own persisted session.
-  /// [ApiClient] transparently refreshes an expired access token using the
-  /// stored refresh token, so this succeeds as long as the refresh token
-  /// itself is still valid (not expired, revoked, or reused elsewhere).
   Future<AppUser?> tryRestoreSession() async {
+    final fbUser = _authService.firebaseUser;
+    if (fbUser == null) return null;
     try {
-      final profile = await _authService.getCurrentProfile();
+      final profile = await _authService.getProfile(fbUser.uid);
       if (profile != null && profile.isApproved) {
         _currentUser = profile;
         _status = AuthStatus.authenticated;
@@ -123,38 +115,6 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = null;
     _status = AuthStatus.idle;
     notifyListeners();
-  }
-
-  /// Drops local session state without an extra round-trip to `/auth/logout`,
-  /// since the token is already dead server-side. Screens react to
-  /// `isAuthenticated` flipping false the same way they would after an
-  /// explicit [signOut].
-  void handleSessionExpired() {
-    if (_currentUser == null) return;
-    _currentUser = null;
-    _status = AuthStatus.idle;
-    notifyListeners();
-  }
-
-  /// Same as [handleSessionExpired], plus forces navigation to Login with a
-  /// visible reason — mirrors [SessionProvider]'s own forced-sign-out UX so
-  /// a dropped session is never silent, however it was detected.
-  void _handleSessionExpiredWithNotice() {
-    final wasAuthenticated = _currentUser != null;
-    handleSessionExpired();
-    if (!wasAuthenticated) return;
-
-    final nav = rootNavigatorKey.currentState;
-    nav?.pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = rootNavigatorKey.currentContext;
-      if (ctx != null) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-              content: Text('Your session has expired. Please log in again.')),
-        );
-      }
-    });
   }
 
   Future<String?> loadSavedEmail() async {

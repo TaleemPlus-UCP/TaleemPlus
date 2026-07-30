@@ -2,15 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/quiz_model.dart';
 import '../models/app_user.dart';
 
 class PdfGeneratorService {
-  /// Print preview kholta hai. [academy] should be the caller's own
-  /// signed-in [AppUser] (already carries the academy branding fields from
-  /// the REST login response) — no separate fetch needed.
-  static Future<void> printTestPaper(QuizModel quiz, AppUser? academy) async {
-    final pdf = await _buildDocument(quiz, academy);
+  /// Print preview kholta hai
+  static Future<void> printTestPaper(QuizModel quiz) async {
+    final pdf = await _buildDocument(quiz);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: '${quiz.title}_Paper',
@@ -18,8 +17,8 @@ class PdfGeneratorService {
   }
 
   /// Share sheet kholta hai
-  static Future<void> shareTestPaper(QuizModel quiz, AppUser? academy) async {
-    final pdf = await _buildDocument(quiz, academy);
+  static Future<void> shareTestPaper(QuizModel quiz) async {
+    final pdf = await _buildDocument(quiz);
     final bytes = await pdf.save();
     final safeName =
         quiz.title.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
@@ -27,8 +26,17 @@ class PdfGeneratorService {
   }
 
   /// PDF document banata hai
-  static Future<pw.Document> _buildDocument(
-      QuizModel quiz, AppUser? academy) async {
+  static Future<pw.Document> _buildDocument(QuizModel quiz) async {
+    // 1. Fetch Academy Details
+    final academyDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(quiz.academyId)
+        .get();
+    AppUser? academy;
+    if (academyDoc.exists && academyDoc.data() != null) {
+      academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
+    }
+
     // Load network image if logo exists
     pw.ImageProvider? logoImage;
     if (academy?.academyLogo != null && academy!.academyLogo!.isNotEmpty) {

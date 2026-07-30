@@ -28,34 +28,10 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
   final _queryCtrl = TextEditingController();
   bool _sendingQuery = false;
 
-  DateTime _attendanceMonth =
-      DateTime(DateTime.now().year, DateTime.now().month);
-  Future<AttendanceMonthlyReport>? _attendanceFuture;
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAttendanceMonth());
-  }
-
-  void _loadAttendanceMonth() {
-    final user = context.read<AuthProvider>().currentUser;
-    setState(() {
-      _attendanceFuture = context.read<AttendanceProvider>().loadStudentMonthly(
-            user?.uid ?? '',
-            year: _attendanceMonth.year,
-            month: _attendanceMonth.month,
-          );
-    });
-  }
-
-  void _shiftAttendanceMonth(int delta) {
-    setState(() {
-      _attendanceMonth =
-          DateTime(_attendanceMonth.year, _attendanceMonth.month + delta);
-    });
-    _loadAttendanceMonth();
   }
 
   @override
@@ -191,82 +167,56 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
     );
   }
 
-  /// Shows the student's overall attendance for the selected month (across
-  /// every class, not just this teacher's) — the backend's monthly summary
-  /// endpoint has no per-offering filter, only per-student.
   Widget _buildAttendanceTab() {
-    return Column(
-      children: [
-        _attendanceMonthHeader(),
-        Expanded(
-          child: FutureBuilder<AttendanceMonthlyReport>(
-            future: _attendanceFuture,
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.hasError) {
-                return Center(
-                    child: Text('Error loading attendance: ${snap.error}',
-                        style: const TextStyle(color: AppColors.danger)));
-              }
+    final user = context.watch<AuthProvider>().currentUser;
+    return StreamBuilder<List<AttendanceRecord>>(
+      stream: context
+          .read<AttendanceProvider>()
+          .watchStudentAttendance(user?.uid ?? '', user?.academyId ?? ''),
+      builder: (context, snap) {
+        final allRecords = snap.data ?? [];
+        // Filter specifically for this teacher's class
+        final classRecords = allRecords
+            .where((r) => r.classId == widget.classEntity.id)
+            .toList();
 
-              final report = snap.data!;
-              if (report.records.isEmpty) {
-                return _emptyState(Icons.fact_check_outlined,
-                    "No attendance records found for this month.");
-              }
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(
+              child: Text('Error loading attendance: ${snap.error}',
+                  style: const TextStyle(color: AppColors.danger)));
+        }
+        if (classRecords.isEmpty) {
+          return _emptyState(
+              Icons.fact_check_outlined, "No attendance records found.");
+        }
 
-              final records = report.records.reversed.toList();
+        final total = classRecords.length;
+        final present = classRecords
+            .where((r) => r.status == 'present' || r.status == 'late')
+            .length;
+        final percentage = (present / total) * 100;
 
-              return Column(
-                children: [
-                  _attendanceSummaryHeader(report.summary),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: records.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) => _attendanceTile(records[i]),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _attendanceMonthHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left_rounded),
-            onPressed: () => _shiftAttendanceMonth(-1),
-          ),
-          Expanded(
-            child: Text(
-              DateFormat('MMMM yyyy').format(_attendanceMonth),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: context.appColors.textPrimary,
-                  fontWeight: FontWeight.w700),
+        return Column(
+          children: [
+            _attendanceSummaryHeader(percentage, present, total),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: classRecords.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, i) => _attendanceTile(classRecords[i]),
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: () => _shiftAttendanceMonth(1),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _attendanceSummaryHeader(AttendanceSummary summary) {
+  Widget _attendanceSummaryHeader(double pct, int p, int t) {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
@@ -281,11 +231,10 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem("Attendance", "${summary.percentage.toStringAsFixed(1)}%",
+          _statItem("Subject Presence", "${pct.toStringAsFixed(1)}%",
               AppColors.accent),
-          _statItem("Present", "${summary.presentCount}", AppColors.success),
-          _statItem("Total Days", "${summary.totalDays}",
-              context.appColors.textPrimary),
+          _statItem("Present", "$p", AppColors.success),
+          _statItem("Total Classes", "$t", context.appColors.textPrimary),
         ],
       ),
     );
@@ -306,7 +255,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
     );
   }
 
-  Widget _attendanceTile(AttendanceDayRecord r) {
+  Widget _attendanceTile(AttendanceRecord r) {
     final isPresent = r.status == 'present' || r.status == 'late';
     return Container(
       padding: const EdgeInsets.all(14),
@@ -453,12 +402,19 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
 
   Future<void> _submitQuery(dynamic user) async {
     if (_queryCtrl.text.trim().isEmpty || _sendingQuery) return;
+    final q = StudentQuery(
+      id: '', // Firestore auto-gen
+      academyId: user.academyId,
+      classId: widget.classEntity.id,
+      studentId: user.uid,
+      studentName: user.fullName,
+      teacherId: widget.classEntity.primaryTeacherId,
+      question: _queryCtrl.text.trim(),
+      createdAt: DateTime.now(),
+    );
     setState(() => _sendingQuery = true);
     try {
-      await _classroomService.postQuery(
-        offeringId: widget.classEntity.id,
-        question: _queryCtrl.text.trim(),
-      );
+      await _classroomService.postQuery(q);
       _queryCtrl.clear();
     } catch (e) {
       if (mounted) {

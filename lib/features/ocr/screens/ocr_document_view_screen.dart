@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../logic/auth_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
 import '../models/ocr_document_model.dart';
-import '../services/ocr_documents_service.dart';
+import '../services/ocr_firestore_service.dart';
 
 class OcrDocumentViewScreen extends StatefulWidget {
   final OcrDocumentModel document;
@@ -22,7 +20,7 @@ class OcrDocumentViewScreen extends StatefulWidget {
 class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
   late TextEditingController _textController;
   late TextEditingController _titleController;
-  final OcrDocumentsService _documentsService = OcrDocumentsService();
+  final OcrFirestoreService _firestoreService = OcrFirestoreService();
 
   bool _isEditing = false;
   bool _isSaving = false;
@@ -51,7 +49,7 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
     setState(() => _isSaving = true);
 
     try {
-      await _documentsService.updateDocument(
+      await _firestoreService.updateDocument(
         documentId: widget.document.id,
         title: _titleController.text,
         extractedText: _textController.text,
@@ -87,8 +85,6 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
   Widget build(BuildContext context) {
     final dateStr =
         DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
-    // Documents are owner-only, so "created by" is always the current user.
-    final currentUserName = context.watch<AuthProvider>().currentUser?.fullName;
 
     return Scaffold(
       appBar: AppBar(
@@ -141,16 +137,14 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                           style: const TextStyle(
                               color: AppColors.textMuted, fontSize: 13),
                         ),
-                        if (currentUserName != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            "By $currentUserName",
-                            style: const TextStyle(
-                                color: AppColors.accent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                        const SizedBox(height: 8),
+                        Text(
+                          "By ${widget.document.createdByName}",
+                          style: const TextStyle(
+                              color: AppColors.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
+                        ),
                       ] else ...[
                         const Text(
                           "DOCUMENT TITLE",

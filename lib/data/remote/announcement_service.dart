@@ -1,35 +1,91 @@
-import 'api_client.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/constants/app_constants.dart';
 import '../models/announcement.dart';
+import 'auth_service.dart';
+import 'notification_service.dart';
 
-/// Backed by the Node API's `/announcements` endpoints instead of Firestore.
-///
-/// Notification fan-out to targeted users now happens entirely server-side
-/// as part of `POST /announcements` (see the backend's `announcementsService
-/// .notifyTargets`), so this no longer orchestrates `AuthService` +
-/// `NotificationService` calls itself.
 class AnnouncementService {
-  final ApiClient _api;
-  AnnouncementService({ApiClient? api}) : _api = api ?? ApiClient.instance;
+  final FirebaseFirestore _db;
+  final AuthService _authService;
+  final NotificationService _notificationService;
+  AnnouncementService({
+    FirebaseFirestore? db,
+    AuthService? authService,
+    NotificationService? notificationService,
+  })  : _db = db ?? FirebaseFirestore.instance,
+        _authService = authService ?? AuthService(),
+        _notificationService = notificationService ?? NotificationService();
 
-  /// `targetRoles` uses `['all']` as a sentinel for "everyone" (matching
-  /// every existing caller's convention) rather than a separate `isForAll`
-  /// parameter.
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('announcements');
+
+  /// Admin/Teacher: create a new broadcast tied to an academy, and notify
+  /// every approved user in the targeted role(s) so they see a badge/alert
+  /// instead of only finding out if they happen to open Announcements.
   Future<void> create({
     required String title,
     required String message,
     required List<String> targetRoles,
     required String createdByUid,
     required String createdByName,
-    required String academyId,
+    required String academyId, // NEW
   }) async {
-    final isForAll = targetRoles.any((r) => r.toLowerCase() == 'all');
-    await _api.post('/announcements', data: {
+    await _col.add({
       'title': title.trim(),
       'message': message.trim(),
-      'isForAll': isForAll,
-      'targetRoles':
-          isForAll ? [] : targetRoles.map((r) => r.toUpperCase()).toList(),
+      'target_roles': targetRoles,
+      'created_by_uid': createdByUid,
+      'created_by_name': createdByName,
+      'academy_id': academyId, // NEW
+      'created_at': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
     });
+
+    await _notifyTargets(
+      title: title.trim(),
+      targetRoles: targetRoles,
+      academyId: academyId,
+      excludeUid: createdByUid,
+    );
+  }
+
+  /// Best-effort: a notification-delivery failure shouldn't block the
+  /// announcement itself from being posted (it already saved successfully).
+  Future<void> _notifyTargets({
+    required String title,
+    required List<String> targetRoles,
+    required String academyId,
+    required String excludeUid,
+  }) async {
+    try {
+      final isForAll = targetRoles.any((r) => r.toLowerCase() == 'all');
+      final roles = isForAll
+          ? [UserRole.teacher, UserRole.student, UserRole.parent]
+          : targetRoles
+              .map((r) => UserRoleX.fromValue(r.toLowerCase()))
+              .toSet()
+              .toList();
+
+      final recipientIds = <String>{};
+      for (final role in roles) {
+        final users = await _authService.getApprovedByRole(role, academyId);
+        recipientIds
+            .addAll(users.map((u) => u.uid).where((uid) => uid != excludeUid));
+      }
+
+      if (recipientIds.isNotEmpty) {
+        await _notificationService.sendToMany(
+          academyId: academyId,
+          recipientIds: recipientIds.toList(),
+          title: 'New Announcement',
+          message: title,
+          type: 'announcement',
+        );
+      }
+    } catch (e) {
+      debugPrint('Announcement notification error: $e');
+    }
   }
 
   Future<void> update({
@@ -38,37 +94,41 @@ class AnnouncementService {
     required String message,
     required List<String> targetRoles,
   }) async {
-    final isForAll = targetRoles.any((r) => r.toLowerCase() == 'all');
-    await _api.patch('/announcements/$id', data: {
+    await _col.doc(id).update({
       'title': title.trim(),
       'message': message.trim(),
-      'isForAll': isForAll,
-      'targetRoles':
-          isForAll ? [] : targetRoles.map((r) => r.toUpperCase()).toList(),
+      'target_roles': targetRoles,
+      'updated_at': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<void> delete(String id) async {
-    await _api.delete('/announcements/$id');
+  Future<void> delete(String id) => _col.doc(id).delete();
+
+  /// Admin: real-time list of academy-specific announcements.
+  Stream<List<Announcement>> watchAll(String academyId) {
+    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
+      (snap) {
+        final list =
+            snap.docs.map((d) => Announcement.fromMap(d.id, d.data())).toList();
+        // Client-side sorting (Newest First) to avoid mandatory composite index
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      },
+    );
   }
 
-  Future<List<Announcement>> _fetchList() async {
-    final response =
-        await _api.get('/announcements', queryParameters: {'limit': 100});
-    final items = response.data['data'] as List<dynamic>;
-    return items
-        .map((a) => Announcement.fromJson(a as Map<String, dynamic>))
-        .toList();
+  /// Teacher/Student/Parent: real-time list for their role in their academy.
+  Stream<List<Announcement>> watchForRole(String role, String academyId) {
+    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
+      (snap) {
+        final list = snap.docs
+            .map((d) => Announcement.fromMap(d.id, d.data()))
+            .where((a) => a.isForRole(role))
+            .toList();
+        // Client-side sorting (Newest First) to avoid mandatory composite index
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      },
+    );
   }
-
-  /// Admin: every announcement in the academy. Teacher: the backend scopes
-  /// this down to what targets them automatically (same call as
-  /// [watchForRole]) — kept as a separate method only so call sites don't
-  /// need to change.
-  Stream<List<Announcement>> watchAll(String academyId) =>
-      Stream.fromFuture(_fetchList());
-
-  /// Teacher/Student/Parent: announcements targeting their own role.
-  Stream<List<Announcement>> watchForRole(String role, String academyId) =>
-      Stream.fromFuture(_fetchList());
 }

@@ -1,7 +1,5 @@
-/// A note/link a teacher shared with one class offering. `classId` is the
-/// offering id (the backend calls it `offeringId`, same convention as
-/// `QuizModel.classId`). `fileUrl` maps to the backend's `linkUrl` — it was
-/// always just a pasted link, never an uploaded file.
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class SharedResource {
   final String id;
   final String academyId;
@@ -25,18 +23,28 @@ class SharedResource {
     required this.createdAt,
   });
 
-  factory SharedResource.fromJson(Map<String, dynamic> json) {
-    final teacher = json['teacher'] as Map<String, dynamic>?;
+  Map<String, dynamic> toMap() => {
+        'academy_id': academyId,
+        'class_id': classId,
+        'teacher_id': teacherId,
+        'teacher_name': teacherName,
+        'title': title.trim(),
+        'description': description.trim(),
+        'file_url': fileUrl,
+        'created_at': FieldValue.serverTimestamp(),
+      };
+
+  factory SharedResource.fromMap(String id, Map<String, dynamic> map) {
     return SharedResource(
-      id: json['id'] as String,
-      academyId: json['academyId'] as String,
-      classId: json['offeringId'] as String,
-      teacherId: json['teacherId'] as String,
-      teacherName: (teacher?['fullName'] as String?) ?? 'Teacher',
-      title: json['title'] as String,
-      description: (json['description'] as String?) ?? '',
-      fileUrl: json['linkUrl'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: id,
+      academyId: map['academy_id'] ?? '',
+      classId: map['class_id'] ?? '',
+      teacherId: map['teacher_id'] ?? '',
+      teacherName: map['teacher_name'] ?? 'Teacher',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      fileUrl: map['file_url'],
+      createdAt: (map['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }

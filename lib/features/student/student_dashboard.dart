@@ -278,7 +278,11 @@ class StudentDashboard extends StatelessWidget {
                           await session.authenticateWithBiometrics();
                       if (!context.mounted) return;
                       if (authenticated) {
-                        await session.setBiometricEnabled(true);
+                        final pass = await _promptForPassword(context);
+                        if (pass != null) {
+                          await session.setBiometricEnabled(true,
+                              password: pass);
+                        }
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -339,7 +343,6 @@ class StudentDashboard extends StatelessWidget {
   }
 
   void _showChangePasswordDialog(BuildContext context) {
-    final currentPassCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
 
@@ -351,17 +354,12 @@ class StudentDashboard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter your current password and a new one.",
+            const Text("Enter a new password for your account.",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 20),
             LabeledField(
-                label: "Current Password",
-                hint: "Required",
-                controller: currentPassCtrl,
-                obscure: true),
-            LabeledField(
                 label: "New Password",
-                hint: "Min 8 chars, incl. upper/lower/digit",
+                hint: "Min 6 chars",
                 controller: passCtrl,
                 obscure: true),
             LabeledField(
@@ -381,28 +379,19 @@ class StudentDashboard extends StatelessWidget {
                     const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
-              if (passCtrl.text.length < 8) {
+              if (passCtrl.text.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Minimum 8 characters required!")));
+                    content: Text("Minimum 6 characters required!")));
                 return;
               }
               try {
-                await AuthService()
-                    .directUpdatePassword(currentPassCtrl.text, passCtrl.text);
+                await AuthService().directUpdatePassword(passCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                 }
                 if (context.mounted) {
-                  // Changing the password revokes every session, including
-                  // this one — send the user back to Login to re-authenticate.
-                  await context.read<AuthProvider>().signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                        AppRoutes.login, (route) => false);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content:
-                            Text("Password updated. Please log in again.")));
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Password updated successfully!")));
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -415,6 +404,70 @@ class StudentDashboard extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<String?> _promptForPassword(BuildContext context) async {
+    final ctrl = TextEditingController();
+    String? error;
+    bool verifying = false;
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.appColors.surface,
+          title: const Text("Verify Password"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                  "Enter your account password to enable biometric login.",
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              LabeledField(
+                  label: "Current Password",
+                  hint: "Required",
+                  controller: ctrl,
+                  obscure: true),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(error!,
+                      style: const TextStyle(
+                          color: AppColors.danger, fontSize: 12)),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("CANCEL")),
+            TextButton(
+              onPressed: verifying
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        verifying = true;
+                        error = null;
+                      });
+                      final ok = await AuthService().verifyPassword(ctrl.text);
+                      if (!ok) {
+                        setDialogState(() {
+                          verifying = false;
+                          error = "Incorrect password.";
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx, ctrl.text);
+                    },
+              child: Text(verifying ? "VERIFYING..." : "VERIFY",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.accent)),
+            ),
+          ],
+        ),
       ),
     );
   }

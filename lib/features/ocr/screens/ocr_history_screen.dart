@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../models/ocr_document_model.dart';
-import '../services/ocr_documents_service.dart';
+import '../services/ocr_firestore_service.dart';
 import 'ocr_document_view_screen.dart';
 
 class OcrHistoryScreen extends StatelessWidget {
@@ -12,7 +14,8 @@ class OcrHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final OcrDocumentsService documentsService = OcrDocumentsService();
+    final OcrFirestoreService firestoreService = OcrFirestoreService();
+    final user = context.watch<AuthProvider>().currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -22,65 +25,71 @@ class OcrHistoryScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: GradientBackground(
-        child: StreamBuilder<List<OcrDocumentModel>>(
-          stream: documentsService.getDocuments(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent));
-            }
+        child: user == null
+            ? const Center(
+                child: Text("Please login to view history",
+                    style: TextStyle(color: AppColors.textSecondary)))
+            : StreamBuilder<List<OcrDocumentModel>>(
+                stream: firestoreService.getDocuments(user.uid),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent));
+                  }
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    "Error loading history: ${snapshot.error}",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.danger),
-                  ),
-                ),
-              );
-            }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          "Error loading history: ${snapshot.error}",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.danger),
+                        ),
+                      ),
+                    );
+                  }
 
-            final docs = snapshot.data ?? [];
+                  final docs = snapshot.data ?? [];
 
-            if (docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.history_rounded,
-                        size: 64,
-                        color: AppColors.textMuted.withValues(alpha: 0.3)),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "No scanned documents yet.",
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 16),
-                    ),
-                  ],
-                ),
-              );
-            }
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history_rounded,
+                              size: 64,
+                              color:
+                                  AppColors.textMuted.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "No scanned documents yet.",
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: docs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final doc = docs[index];
-                return _documentTile(context, doc, documentsService);
-              },
-            );
-          },
-        ),
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: docs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      return _documentTile(context, doc, firestoreService);
+                    },
+                  );
+                },
+              ),
       ),
     );
   }
 
   Widget _documentTile(
-      BuildContext context, OcrDocumentModel doc, OcrDocumentsService service) {
+      BuildContext context, OcrDocumentModel doc, OcrFirestoreService service) {
     final dateStr = DateFormat('MMM d, yyyy • h:mm a').format(doc.createdAt);
 
     return Material(
@@ -155,7 +164,7 @@ class OcrHistoryScreen extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, OcrDocumentModel doc,
-      OcrDocumentsService service) async {
+      OcrFirestoreService service) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

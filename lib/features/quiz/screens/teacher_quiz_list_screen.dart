@@ -261,8 +261,7 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
                     onPressed: _pdfBusy
                         ? null
                         : () => _runPdfAction(
-                              () => PdfGeneratorService.printTestPaper(quiz,
-                                  context.read<AuthProvider>().currentUser),
+                              () => PdfGeneratorService.printTestPaper(quiz),
                               'Could not open print preview',
                             ),
                     icon: const Icon(Icons.print_rounded, size: 18),
@@ -282,8 +281,7 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
                     onPressed: _pdfBusy
                         ? null
                         : () => _runPdfAction(
-                              () => PdfGeneratorService.shareTestPaper(quiz,
-                                  context.read<AuthProvider>().currentUser),
+                              () => PdfGeneratorService.shareTestPaper(quiz),
                               'Could not share PDF',
                             ),
                     icon: const Icon(Icons.share_rounded, size: 18),

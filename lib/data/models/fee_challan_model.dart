@@ -1,15 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class FeeChallanModel {
   final String id;
-  final String academyId;
+  final String academyId; // NEW
   final String challanNumber;
   final String studentId;
   final String studentName;
-  final String fatherName; // not modeled by the backend; always empty
+  final String fatherName;
   final String classLabel;
-  final String
-      rollNumber; // best-effort: the student's free-text extraInfo note
-  final int billingYear;
-  final int billingMonth;
+  final String rollNumber;
   final DateTime issueDate;
   final DateTime dueDate;
   final double monthlyFee;
@@ -17,22 +16,19 @@ class FeeChallanModel {
   final double examFee;
   final double transportFee;
   final double fine;
-  final double totalAmount;
-  final String status; // 'pending' | 'paid' | 'overdue'
+  final String status; // 'pending', 'paid', 'overdue'
   final DateTime createdAt;
   final DateTime updatedAt;
 
   FeeChallanModel({
     required this.id,
-    required this.academyId,
+    required this.academyId, // NEW
     required this.challanNumber,
     required this.studentId,
     required this.studentName,
-    this.fatherName = '',
+    required this.fatherName,
     required this.classLabel,
-    this.rollNumber = '',
-    required this.billingYear,
-    required this.billingMonth,
+    required this.rollNumber,
     required this.issueDate,
     required this.dueDate,
     required this.monthlyFee,
@@ -40,42 +36,68 @@ class FeeChallanModel {
     required this.examFee,
     required this.transportFee,
     required this.fine,
-    required this.totalAmount,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  bool get isPaid => status == 'paid';
+  double get totalAmount =>
+      monthlyFee + admissionFee + examFee + transportFee + fine;
 
-  /// Computed client-side (the backend never auto-flips status past the due
-  /// date) rather than trusting a stored 'overdue' status, matching the
-  /// original app's behavior.
+  bool get isPaid => status == 'paid';
   bool get isOverdue => !isPaid && DateTime.now().isAfter(dueDate);
 
-  factory FeeChallanModel.fromJson(Map<String, dynamic> json) {
-    final student = json['student'] as Map<String, dynamic>?;
+  Map<String, dynamic> toMap() {
+    return {
+      'academy_id': academyId,
+      'challan_number': challanNumber,
+      'student_id': studentId,
+      'student_name': studentName,
+      'father_name': fatherName,
+      'class_label': classLabel,
+      'roll_number': rollNumber,
+      'issue_date': Timestamp.fromDate(issueDate),
+      'due_date': Timestamp.fromDate(dueDate),
+      'monthly_fee': monthlyFee,
+      'admission_fee': admissionFee,
+      'exam_fee': examFee,
+      'transport_fee': transportFee,
+      'fine': fine,
+      'total_amount': totalAmount,
+      'status': status,
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': FieldValue.serverTimestamp(),
+    };
+  }
+
+  factory FeeChallanModel.fromMap(String id, Map<String, dynamic> map) {
     return FeeChallanModel(
-      id: json['id'] as String,
-      academyId: json['academyId'] as String,
-      challanNumber: json['challanNumber'] as String,
-      studentId: (student?['id'] as String?) ?? '',
-      studentName: (student?['fullName'] as String?) ?? 'Student',
-      classLabel: (json['classLabelSnapshot'] as String?) ?? '',
-      rollNumber: (student?['extraInfo'] as String?) ?? '',
-      billingYear: json['billingYear'] as int,
-      billingMonth: json['billingMonth'] as int,
-      issueDate: DateTime.parse(json['issueDate'] as String),
-      dueDate: DateTime.parse(json['dueDate'] as String),
-      monthlyFee: (json['monthlyFee'] as num).toDouble(),
-      admissionFee: (json['admissionFee'] as num).toDouble(),
-      examFee: (json['examFee'] as num).toDouble(),
-      transportFee: (json['transportFee'] as num).toDouble(),
-      fine: (json['fine'] as num).toDouble(),
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      status: (json['status'] as String).toLowerCase(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: id,
+      academyId: (map['academy_id'] ?? '') as String,
+      challanNumber: map['challan_number'] ?? '',
+      studentId: map['student_id'] ?? '',
+      studentName: map['student_name'] ?? '',
+      fatherName: map['father_name'] ?? '',
+      classLabel: map['class_label'] ?? '',
+      rollNumber: map['roll_number'] ?? '',
+      issueDate: map['issue_date'] is Timestamp
+          ? (map['issue_date'] as Timestamp).toDate()
+          : DateTime.now(),
+      dueDate: map['due_date'] is Timestamp
+          ? (map['due_date'] as Timestamp).toDate()
+          : DateTime.now(),
+      monthlyFee: (map['monthly_fee'] ?? 0).toDouble(),
+      admissionFee: (map['admission_fee'] ?? 0).toDouble(),
+      examFee: (map['exam_fee'] ?? 0).toDouble(),
+      transportFee: (map['transport_fee'] ?? 0).toDouble(),
+      fine: (map['fine'] ?? 0).toDouble(),
+      status: map['status'] ?? 'pending',
+      createdAt: map['created_at'] is Timestamp
+          ? (map['created_at'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: map['updated_at'] is Timestamp
+          ? (map['updated_at'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

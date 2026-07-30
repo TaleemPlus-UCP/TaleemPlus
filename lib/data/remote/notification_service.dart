@@ -1,42 +1,94 @@
-import 'api_client.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
 
-/// Backed by the Node API's `/notifications` endpoints instead of Firestore.
-///
-/// There is no client-callable "send a notification" endpoint anymore —
-/// every notification is now created server-side as a side effect of the
-/// action that warrants it (approving/rejecting a user, posting an
-/// announcement, etc.), so `send`/`sendToMany` have no REST equivalent and
-/// are intentionally not carried over. Callers that used to invoke them
-/// directly (see `approval_requests_screen.dart`) no longer need to —
-/// `AuthService().approveUser`/`.rejectUser` already trigger the backend's
-/// own notification.
 class NotificationService {
-  final ApiClient _api;
-  NotificationService({ApiClient? api}) : _api = api ?? ApiClient.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  CollectionReference get _col => _db.collection('notifications');
 
-  /// Most recent 50 notifications for the current user (matches the old
-  /// Firestore query's cap). `userId`/`academyId` are unused — the backend
-  /// scopes to the caller via the JWT — kept only so call sites don't need
-  /// to change.
+  /// Send a notification to a specific user
+  Future<void> send({
+    required String academyId,
+    required String recipientId,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    final doc = _col.doc();
+    final notif = NotificationModel(
+      id: doc.id,
+      academyId: academyId,
+      recipientId: recipientId,
+      title: title,
+      message: message,
+      type: type,
+      createdAt: DateTime.now(),
+    );
+    await doc.set(notif.toMap());
+  }
+
+  /// Watch notifications for a specific user (Real-time)
   Stream<List<NotificationModel>> watchForUser(
       String userId, String academyId) {
-    return Stream.fromFuture(() async {
-      final response =
-          await _api.get('/notifications', queryParameters: {'limit': 50});
-      final items = response.data['data'] as List<dynamic>;
-      return items
-          .map((n) => NotificationModel.fromJson(n as Map<String, dynamic>))
-          .toList();
-    }());
+    return _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('recipient_id', isEqualTo: userId)
+        .orderBy('created_at', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => NotificationModel.fromMap(
+                d.id, d.data() as Map<String, dynamic>))
+            .toList());
+  }
+
+  /// Sends the same notification to many recipients as a small number of
+  /// batched writes instead of one sequential awaited `.add()` per
+  /// recipient. Firestore batches cap at 500 ops, so chunk conservatively.
+  Future<void> sendToMany({
+    required String academyId,
+    required List<String> recipientIds,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    const chunkSize = 450;
+    for (var i = 0; i < recipientIds.length; i += chunkSize) {
+      final end = i + chunkSize > recipientIds.length
+          ? recipientIds.length
+          : i + chunkSize;
+      final batch = _db.batch();
+      for (final recipientId in recipientIds.sublist(i, end)) {
+        final doc = _col.doc();
+        final notif = NotificationModel(
+          id: doc.id,
+          academyId: academyId,
+          recipientId: recipientId,
+          title: title,
+          message: message,
+          type: type,
+          createdAt: DateTime.now(),
+        );
+        batch.set(doc, notif.toMap());
+      }
+      await batch.commit();
+    }
   }
 
   Future<void> markAsRead(String id) async {
-    await _api.patch('/notifications/$id/read');
+    await _col.doc(id).update({'is_read': true});
   }
 
-  /// `academyId` is unused — kept only so call sites don't need to change.
   Future<void> markAllAsRead(String userId, String academyId) async {
-    await _api.post('/notifications/mark-all-read');
+    final batch = _db.batch();
+    final snap = await _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('recipient_id', isEqualTo: userId)
+        .where('is_read', isEqualTo: false)
+        .get();
+
+    for (var doc in snap.docs) {
+      batch.update(doc.reference, {'is_read': true});
+    }
+    await batch.commit();
   }
 }

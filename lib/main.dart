@@ -1,10 +1,13 @@
 // Taleem Plus - Academy Management System
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'logic/auth_provider.dart';
 import 'logic/member_provider.dart';
+import 'logic/fee_provider.dart';
 import 'logic/class_provider.dart';
 import 'logic/class_section_provider.dart';
 import 'logic/attendance_provider.dart';
@@ -25,12 +28,17 @@ import 'features/parent/parent_dashboard.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MemberProvider()),
+        ChangeNotifierProvider(create: (_) => FeeProvider()),
         ChangeNotifierProvider(create: (_) => ClassProvider()),
         ChangeNotifierProvider(create: (_) => ClassSectionProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),

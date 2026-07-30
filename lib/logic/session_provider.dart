@@ -8,6 +8,7 @@ import 'auth_provider.dart';
 class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const int _timeoutSeconds = 150; // 2 minutes 30 seconds
   static const String _biometricKey = 'biometric_enabled';
+  static const String _savedPassKey = 'saved_pass_v1';
 
   static const int _backgroundGraceSeconds = 15;
 
@@ -86,17 +87,23 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Toggling this on/off never touches the password: biometric unlock
-  /// resumes the existing session via the securely-stored refresh token
-  /// (see [TokenStorage]/[AuthProvider.tryRestoreSession]) rather than
-  /// caching a credential of its own to replay later — see [TokenStorage]'s
-  /// doc comment for why that's a deliberate change from the legacy
-  /// Firebase-backed flow, not just a port.
-  Future<void> setBiometricEnabled(bool value) async {
+  Future<void> setBiometricEnabled(bool value, {String? password}) async {
     _biometricEnabled = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, value);
+
+    if (value && password != null) {
+      await prefs.setString(_savedPassKey, password);
+    } else if (!value) {
+      await prefs.remove(_savedPassKey);
+    }
+
     notifyListeners();
+  }
+
+  Future<String?> getSavedPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedPassKey);
   }
 
   void resetTimer(BuildContext context, AuthProvider auth) {
