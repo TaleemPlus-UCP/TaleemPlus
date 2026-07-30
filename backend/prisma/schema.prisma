@@ -8,8 +8,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Prisma Migrate needs a direct (non-pooled) connection for DDL/advisory
+  // locks — PgBouncer's transaction pooling mode (what DATABASE_URL points
+  // at on serverless platforms) isn't reliable for `migrate deploy`.
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
