@@ -268,6 +268,82 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
+  // Common words that carry no grading signal on their own — excluded so
+  // the AI Smart Grader's keyword match only counts topic-bearing words.
+  static const _stopWords = {
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'to',
+    'of',
+    'in',
+    'on',
+    'at',
+    'by',
+    'for',
+    'with',
+    'about',
+    'as',
+    'into',
+    'through',
+    'this',
+    'that',
+    'these',
+    'those',
+    'it',
+    'its',
+    'their',
+    'his',
+    'her',
+    'they',
+    'them',
+    'which',
+    'who',
+    'whom',
+    'refers',
+    'also',
+    'can',
+    'may',
+    'not',
+    'from',
+    'such',
+    'than',
+    'then',
+    'so',
+    'if',
+    'when',
+    'while',
+    'has',
+    'have',
+    'had',
+    'will',
+  };
+
+  /// Pulls topic words out of a source sentence so auto-generated Short/Long
+  /// questions still carry `gradingKeywords` — otherwise the AI Smart Grader
+  /// (which scores purely by keyword match) has nothing to check answers
+  /// against and every auto-generated question silently grades as 0.
+  List<String> _extractKeywords(String sentence, {int max = 6}) {
+    final words = sentence
+        .toLowerCase()
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((w) => w.length > 3 && !_stopWords.contains(w))
+        .toSet() // de-duplicate
+        .toList()
+      ..sort((a, b) => b.length.compareTo(a.length)); // longest = most specific
+    return words.take(max).toList();
+  }
+
   void _generateQuestionsLocally(
       String extractedText, String diff, int mcqs, int sqs, int lqs) {
     // 100% Offline Heuristic Question Generation.
@@ -337,6 +413,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         text: "Discuss in detail the following concept: $preview",
         type: QuestionType.long,
         marks: 5.0,
+        gradingKeywords: _extractKeywords(sentence),
       ));
       usedSentences.add(sentence);
       lGenerated++;
@@ -353,6 +430,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         text: "Briefly explain: $sentence",
         type: QuestionType.short,
         marks: 2.0,
+        gradingKeywords: _extractKeywords(sentence),
       ));
       usedSentences.add(sentence);
       sGenerated++;
