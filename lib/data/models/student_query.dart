@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+/// A student's question posted to their class offering's shared discussion
+/// wall. `classId` is the offering id (same `offeringId` convention as
+/// `QuizModel.classId`).
 class StudentQuery {
   final String id;
   final String academyId;
@@ -27,33 +28,22 @@ class StudentQuery {
     this.answeredAt,
   });
 
-  Map<String, dynamic> toMap() => {
-        'academy_id': academyId,
-        'class_id': classId,
-        'student_id': studentId,
-        'student_name': studentName,
-        'teacher_id': teacherId,
-        'question': question.trim(),
-        'answer': answer,
-        'is_resolved': isResolved,
-        'created_at': FieldValue.serverTimestamp(),
-        'answered_at':
-            answeredAt != null ? Timestamp.fromDate(answeredAt!) : null,
-      };
-
-  factory StudentQuery.fromMap(String id, Map<String, dynamic> map) {
+  factory StudentQuery.fromJson(Map<String, dynamic> json) {
+    final student = json['student'] as Map<String, dynamic>?;
     return StudentQuery(
-      id: id,
-      academyId: map['academy_id'] ?? '',
-      classId: map['class_id'] ?? '',
-      studentId: map['student_id'] ?? '',
-      studentName: map['student_name'] ?? 'Student',
-      teacherId: map['teacher_id'] ?? '',
-      question: map['question'] ?? '',
-      answer: map['answer'],
-      isResolved: map['is_resolved'] ?? false,
-      createdAt: (map['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      answeredAt: (map['answered_at'] as Timestamp?)?.toDate(),
+      id: json['id'] as String,
+      academyId: json['academyId'] as String,
+      classId: json['offeringId'] as String,
+      studentId: json['studentId'] as String,
+      studentName: (student?['fullName'] as String?) ?? 'Student',
+      teacherId: json['teacherId'] as String,
+      question: json['question'] as String,
+      answer: json['answer'] as String?,
+      isResolved: json['isResolved'] as bool? ?? false,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      answeredAt: json['answeredAt'] != null
+          ? DateTime.parse(json['answeredAt'] as String)
+          : null,
     );
   }
 }

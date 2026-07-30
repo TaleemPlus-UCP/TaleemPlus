@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
-import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
 
 class ClassFeeStatusScreen extends StatefulWidget {
@@ -37,9 +35,6 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final academyId =
-        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
-            '';
     final studentIds = widget.classEntity.studentIds;
 
     return Scaffold(
@@ -57,8 +52,8 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
                 child: studentIds.isEmpty
                     ? _buildEmptyState("No students enrolled in this class.")
                     : FutureBuilder<Map<String, FeeChallanModel?>>(
-                        future: _repo.getLatestForStudents(
-                            studentIds, academyId,
+                        future: _repo.getSectionStatus(
+                            widget.classEntity.sectionId,
                             month: _selectedMonth),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==

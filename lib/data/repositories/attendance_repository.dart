@@ -1,62 +1,79 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../data/remote/api_client.dart';
 import '../models/attendance_record.dart';
 
+/// Backed by the Node API's `/attendance` endpoints instead of Firestore.
+///
+/// Attendance is tracked per subject *offering* (each teacher marks their
+/// own class), but a student's monthly/yearly history is a cross-offering
+/// rollup for the whole academy — the backend has no per-offering history
+/// query, only a day sheet for marking and month/year summaries for
+/// viewing. See [AttendanceProvider] and the screens under
+/// `features/student/screens` and `features/parent/screens` for how each
+/// is used.
 class AttendanceRepository {
-  final FirebaseFirestore _db;
-  AttendanceRepository({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+  final ApiClient _api;
+  AttendanceRepository({ApiClient? api}) : _api = api ?? ApiClient.instance;
 
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('attendance_records');
-
-  /// Save (upsert) many records atomically using a Firestore WriteBatch.
-  /// Deterministic doc ids ensure re-saves overwrite the same day's data.
-  Future<void> saveAll(List<AttendanceRecord> records) async {
-    if (records.isEmpty) return;
-    final batch = _db.batch();
-    for (final r in records) {
-      final docId = AttendanceRecord.buildId(
-        classId: r.classId,
-        studentId: r.studentId,
-        date: r.logDate,
-      );
-      batch.set(_col.doc(docId), r.toMap());
-    }
-    await batch.commit();
-  }
-
-  /// Fetch all records for a class on a given date (one-time) for an academy.
-  Future<List<AttendanceRecord>> forClassOnDate({
-    required String classId,
-    required DateTime date,
-    required String academyId, // NEW
+  /// One class offering's attendance sheet for one day: studentId -> status
+  /// (lowercased), defaulted to 'absent' for every enrolled student unless
+  /// already marked.
+  Future<Map<String, String>> getDaySheet({
+    required String offeringId,
+    required DateTime logDate,
   }) async {
-    final key = _dateOnly(date);
-    final snap = await _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .where('log_date', isEqualTo: key)
-        .get();
-    return snap.docs
-        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-        .toList();
+    final response = await _api.get('/attendance', queryParameters: {
+      'offeringId': offeringId,
+      'logDate': _dateOnly(logDate),
+    });
+    final students = (response.data['data'] as Map<String, dynamic>)['students']
+        as List<dynamic>;
+    return {
+      for (final s in students)
+        (s as Map<String, dynamic>)['studentId'] as String:
+            (s['status'] as String).toLowerCase(),
+    };
   }
 
-  static String _dateOnly(DateTime d) {
-    final iso = DateTime(d.year, d.month, d.day).toIso8601String();
-    return iso.substring(0, 10);
+  /// Upserts a full day's attendance sheet for a class offering.
+  Future<void> markSheet({
+    required String offeringId,
+    required DateTime logDate,
+    required Map<String, String> statuses,
+  }) async {
+    await _api.post('/attendance', data: {
+      'offeringId': offeringId,
+      'logDate': _dateOnly(logDate),
+      'records': statuses.entries
+          .map((e) => {'studentId': e.key, 'status': e.value.toUpperCase()})
+          .toList(),
+    });
   }
 
-  /// Watch all attendance records for a specific student in an academy.
-  Stream<List<AttendanceRecord>> watchForStudent(
-      String studentId, String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('student_id', isEqualTo: studentId)
-        .orderBy('log_date', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-            .toList());
+  /// One student's daily records + summary for a month (defaults to the
+  /// current month server-side when [year]/[month] are omitted).
+  Future<AttendanceMonthlyReport> getStudentMonthly(String studentId,
+      {int? year, int? month}) async {
+    final response = await _api
+        .get('/attendance/students/$studentId/monthly', queryParameters: {
+      if (year != null) 'year': year,
+      if (month != null) 'month': month,
+    });
+    return AttendanceMonthlyReport.fromJson(
+        response.data['data'] as Map<String, dynamic>);
   }
+
+  /// One student's month-by-month summary for a year (defaults to the
+  /// current year server-side when [year] is omitted).
+  Future<AttendanceYearlyReport> getStudentYearly(String studentId,
+      {int? year}) async {
+    final response = await _api
+        .get('/attendance/students/$studentId/yearly', queryParameters: {
+      if (year != null) 'year': year,
+    });
+    return AttendanceYearlyReport.fromJson(
+        response.data['data'] as Map<String, dynamic>);
+  }
+
+  static String _dateOnly(DateTime d) =>
+      DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
 }

@@ -3,22 +3,15 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fee_challan_model.dart';
 import '../models/app_user.dart';
 
 class ChallanPdfService {
-  static Future<pw.Document> _buildDocument(FeeChallanModel challan) async {
-    // 1. Fetch Academy Details for Branding
-    final academyDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(challan.academyId)
-        .get();
-    AppUser? academy;
-    if (academyDoc.exists && academyDoc.data() != null) {
-      academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
-    }
-
+  /// [academy] is the currently logged-in user (whose own academy branding
+  /// fields apply, since a user only ever sees challans in their own
+  /// academy) — no separate per-academy lookup is needed.
+  static Future<pw.Document> _buildDocument(
+      FeeChallanModel challan, AppUser? academy) async {
     final doc = pw.Document();
 
     // Load network image if logo exists
@@ -54,9 +47,10 @@ class ChallanPdfService {
     return doc;
   }
 
-  static Future<void> generateAndPrint(FeeChallanModel challan) async {
+  static Future<void> generateAndPrint(
+      FeeChallanModel challan, AppUser? academy) async {
     try {
-      final doc = await _buildDocument(challan);
+      final doc = await _buildDocument(challan, academy);
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => doc.save(),
         name: 'Challan_${challan.challanNumber}',
@@ -67,9 +61,10 @@ class ChallanPdfService {
     }
   }
 
-  static Future<void> generateAndShare(FeeChallanModel challan) async {
+  static Future<void> generateAndShare(
+      FeeChallanModel challan, AppUser? academy) async {
     try {
-      final doc = await _buildDocument(challan);
+      final doc = await _buildDocument(challan, academy);
       final bytes = await doc.save();
       await Printing.sharePdf(
         bytes: bytes,

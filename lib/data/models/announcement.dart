@@ -1,12 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-/// A broadcast message from an admin to one or more user roles.
+/// A broadcast message from an admin/teacher to one or more user roles.
 class Announcement {
   final String id;
-  final String academyId; // NEW
+  final String academyId;
   final String title;
   final String message;
-  final List<String> targetRoles;
+  final bool isForAll;
+  final List<String> targetRoles; // lowercase role names; empty when isForAll
   final String createdByUid;
   final String createdByName;
   final DateTime createdAt;
@@ -17,14 +16,13 @@ class Announcement {
     required this.academyId,
     required this.title,
     required this.message,
+    required this.isForAll,
     required this.targetRoles,
     required this.createdByUid,
     required this.createdByName,
     required this.createdAt,
     this.updatedAt,
   });
-
-  bool get isForAll => targetRoles.any((r) => r.toLowerCase() == 'all');
 
   bool isForRole(String role) {
     if (isForAll) return true;
@@ -54,35 +52,22 @@ class Announcement {
     return labels.join(', ');
   }
 
-  Map<String, dynamic> toMap() => {
-        'academy_id': academyId,
-        'title': title,
-        'message': message,
-        'target_roles': targetRoles,
-        'created_by_uid': createdByUid,
-        'created_by_name': createdByName,
-        'created_at': createdAt.millisecondsSinceEpoch == 0
-            ? FieldValue.serverTimestamp()
-            : Timestamp.fromDate(createdAt),
-        'updated_at': FieldValue.serverTimestamp(),
-      };
-
-  factory Announcement.fromMap(String id, Map<String, dynamic> map) {
-    final rolesRaw = map['target_roles'];
-    final roles =
-        (rolesRaw is List) ? rolesRaw.cast<String>() : <String>['all'];
-    final ts = map['created_at'];
-    final ts2 = map['updated_at'];
+  factory Announcement.fromJson(Map<String, dynamic> json) {
+    final roles = (json['targetRoles'] as List<dynamic>?) ?? const [];
+    final createdBy = json['createdBy'] as Map<String, dynamic>?;
     return Announcement(
-      id: id,
-      academyId: (map['academy_id'] ?? '') as String,
-      title: (map['title'] ?? '') as String,
-      message: (map['message'] ?? '') as String,
-      targetRoles: roles,
-      createdByUid: (map['created_by_uid'] ?? '') as String,
-      createdByName: (map['created_by_name'] ?? 'Admin') as String,
-      createdAt: ts is Timestamp ? ts.toDate() : DateTime.now(),
-      updatedAt: ts2 is Timestamp ? ts2.toDate() : null,
+      id: json['id'] as String,
+      academyId: json['academyId'] as String,
+      title: json['title'] as String,
+      message: json['message'] as String,
+      isForAll: json['isForAll'] as bool,
+      targetRoles: roles.map((r) => (r as String).toLowerCase()).toList(),
+      createdByUid: (createdBy?['id'] as String?) ?? '',
+      createdByName: (createdBy?['fullName'] as String?) ?? 'Admin',
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
     );
   }
 }

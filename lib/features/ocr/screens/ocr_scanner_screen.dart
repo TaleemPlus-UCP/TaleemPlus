@@ -4,12 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../logic/auth_provider.dart';
 import '../../../logic/session_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
 import '../services/ocr_service.dart';
-import '../services/ocr_firestore_service.dart';
+import '../services/ocr_documents_service.dart';
 
 class OcrScannerScreen extends StatefulWidget {
   const OcrScannerScreen({super.key});
@@ -20,7 +19,7 @@ class OcrScannerScreen extends StatefulWidget {
 
 class _OcrScannerScreenState extends State<OcrScannerScreen> {
   final OcrService _ocrService = OcrService();
-  final OcrFirestoreService _firestoreService = OcrFirestoreService();
+  final OcrDocumentsService _documentsService = OcrDocumentsService();
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
@@ -93,14 +92,10 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
 
     try {
       if (!mounted) return;
-      final user = context.read<AuthProvider>().currentUser;
-      if (user == null) throw Exception("User not logged in");
 
-      await _firestoreService.saveDocument(
+      await _documentsService.saveDocument(
         title: title,
         extractedText: _textController.text,
-        createdByUid: user.uid,
-        createdByName: user.fullName,
       );
 
       _showSnackBar("Document saved successfully!");

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   qa:
-    name: Lint & Test 🧪
+    name: Lint & Test (Flutter) 🧪
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,13 +23,6 @@ jobs:
         with:
           channel: 'stable'
           cache: true
-
-      - name: Inject Secrets
-        env:
-          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
-        run: |
-          echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
-          dart format lib/firebase_options.dart
 
       - name: Install Dependencies
         run: flutter pub get
@@ -42,6 +35,48 @@ jobs:
 
       - name: Run Unit Tests
         run: flutter test --coverage
+
+  backend-qa:
+    name: Lint, Build & Test (Backend) 🧪
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: taleemplus_app
+          POSTGRES_PASSWORD: TaleemPlus_Dev_2026!
+          POSTGRES_DB: taleemplus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type Check / Build
+        run: npm run build
+
+      - name: Run Tests
+        run: npm test
 
   build-android:
     name: Android Release 🤖
@@ -64,26 +99,26 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Inject Secrets
-        env:
-          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          mkdir -p android/app
-          echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
-          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build APK (direct-download artifact)
         run: flutter build apk --release --split-per-abi
+
+      - name: Build App Bundle (Play Store artifact)
+        run: flutter build appbundle --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-release
+          name: android-release-apk
           path: build/app/outputs/flutter-apk/*.apk
+
+      - name: Upload App Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab
+          path: build/app/outputs/bundle/release/*.aab
 
   build-web:
     name: Web Deployment 🌐
@@ -99,17 +134,15 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Inject Secrets
-        env:
-          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
-        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
-
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=API_BASE_URL=${{ vars.PRODUCTION_API_BASE_URL }}
 
+      # Static hosting only (no Firestore/Firebase Auth dependency left in
+      # the app) — keep, switch, or drop this step per wherever the web
+      # build actually gets hosted; unrelated to the backend migration.
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -120,7 +153,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release 📦
-    needs: [build-android, build-web]
+    needs: [build-android, build-web, backend-qa]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -129,13 +162,21 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: android-release
+          name: android-release-apk
+          path: apk
+
+      - name: Download App Bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-aab
+          path: aab
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            *.apk
+            apk/*.apk
+            aab/*.aab
           draft: false
           prerelease: false
           generate_release_notes: true

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/app_user.dart';
+import '../../data/remote/academy_service.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
@@ -46,43 +46,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final user = auth.currentUser;
         if (user != null) {
           members.load(user.uid);
-          _verifyLegacyAdminData(user);
         }
       }
     });
-  }
-
-  /// Ensures old admins get an Academy Code and ID if they don't have one.
-  /// Best-effort: a failure here shouldn't surface as an unhandled Future
-  /// rejection since this runs unawaited from initState — it'll simply be
-  /// retried the next time the dashboard loads.
-  Future<void> _verifyLegacyAdminData(AppUser user) async {
-    if (user.academyCode == null || user.academyId == null) {
-      try {
-        final newCode = "TP-${user.uid.substring(0, 5).toUpperCase()}";
-        await AuthService().updateAcademyProfile(
-          uid: user.uid,
-          name: user.academyName ?? "My Academy",
-          address: user.academyAddress ?? "N/A",
-          phone: user.academyPhone ?? user.phoneNumber,
-        );
-        // Update firestore directly for the missing fields
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          'academy_code': newCode,
-          'academy_id': user.uid,
-          'joining_date': user.createdAt ?? FieldValue.serverTimestamp(),
-        });
-        if (mounted) {
-          // Refresh local user state
-          context.read<AuthProvider>().tryRestoreSession();
-        }
-      } catch (e) {
-        debugPrint('Legacy admin data migration failed: $e');
-      }
-    }
   }
 
   Future<void> _logout() async {
@@ -133,11 +99,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           await session.authenticateWithBiometrics();
                       if (!context.mounted) return;
                       if (authenticated) {
-                        final pass = await _promptForPassword(context);
-                        if (pass != null) {
-                          await session.setBiometricEnabled(true,
-                              password: pass);
-                        }
+                        await session.setBiometricEnabled(true);
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -185,6 +147,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   void _showChangePasswordDialog(BuildContext context) {
+    final currentPassCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -199,13 +162,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Enter a new password for your account.",
+              const Text("Enter your current password and a new one.",
                   style:
                       TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 20),
               LabeledField(
+                  label: "Current Password",
+                  hint: "Required",
+                  controller: currentPassCtrl,
+                  obscure: true),
+              LabeledField(
                   label: "New Password",
-                  hint: "Min 6 chars",
+                  hint: "Min 8 chars, incl. upper/lower/digit",
                   controller: passCtrl,
                   obscure: true),
               LabeledField(
@@ -226,20 +194,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
-              if (passCtrl.text.length < 6) {
+              if (passCtrl.text.length < 8) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Minimum 6 characters required!")));
+                    content: Text("Minimum 8 characters required!")));
                 return;
               }
 
               try {
-                await AuthService().directUpdatePassword(passCtrl.text);
+                await AuthService()
+                    .directUpdatePassword(currentPassCtrl.text, passCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                 }
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Password updated successfully!")));
+                  // Changing the password revokes every session, including
+                  // this one — send the user back to Login to re-authenticate.
+                  await context.read<AuthProvider>().signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                        AppRoutes.login, (route) => false);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content:
+                            Text("Password updated. Please log in again.")));
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -252,70 +229,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<String?> _promptForPassword(BuildContext context) async {
-    final ctrl = TextEditingController();
-    String? error;
-    bool verifying = false;
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: context.appColors.surface,
-          title: const Text("Verify Password"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                  "Enter your account password to enable biometric login.",
-                  style:
-                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              const SizedBox(height: 16),
-              LabeledField(
-                  label: "Current Password",
-                  hint: "Required",
-                  controller: ctrl,
-                  obscure: true),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(error!,
-                      style: const TextStyle(
-                          color: AppColors.danger, fontSize: 12)),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("CANCEL")),
-            TextButton(
-              onPressed: verifying
-                  ? null
-                  : () async {
-                      setDialogState(() {
-                        verifying = true;
-                        error = null;
-                      });
-                      final ok = await AuthService().verifyPassword(ctrl.text);
-                      if (!ok) {
-                        setDialogState(() {
-                          verifying = false;
-                          error = "Incorrect password.";
-                        });
-                        return;
-                      }
-                      if (ctx.mounted) Navigator.pop(ctx, ctrl.text);
-                    },
-              child: Text(verifying ? "VERIFYING..." : "VERIFY",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: AppColors.accent)),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -384,12 +297,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             PrimaryButton(
               label: "SAVE CHANGES",
               onPressed: () async {
-                await AuthService().updateAcademyProfile(
-                  uid: user.uid,
+                await AcademyService().updateMine(
                   name: nameCtrl.text,
                   address: addressCtrl.text,
                   phone: phoneCtrl.text,
                 );
+                if (context.mounted) {
+                  await context.read<AuthProvider>().tryRestoreSession();
+                }
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

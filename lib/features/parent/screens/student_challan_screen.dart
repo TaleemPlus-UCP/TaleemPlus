@@ -303,7 +303,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
   Future<void> _handlePrint(FeeChallanModel c) async {
     try {
-      await ChallanPdfService.generateAndPrint(c);
+      final academy = context.read<AuthProvider>().currentUser;
+      await ChallanPdfService.generateAndPrint(c, academy);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -317,7 +318,8 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
   Future<void> _handleShare(FeeChallanModel c) async {
     try {
-      await ChallanPdfService.generateAndShare(c);
+      final academy = context.read<AuthProvider>().currentUser;
+      await ChallanPdfService.generateAndShare(c, academy);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

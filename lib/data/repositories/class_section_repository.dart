@@ -1,114 +1,78 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+import '../../data/remote/api_client.dart';
 import '../models/app_user.dart';
 import '../models/class_section.dart';
-import 'class_repository.dart';
 
-/// Owns the canonical class+section roster (`class_sections` collection).
+/// Backed by the Node API's `/class-sections` endpoints (see the backend's
+/// Classes & Sections module) instead of Firestore.
 ///
-/// Subject offerings in `classes` (see [ClassRepository]) mirror this
-/// roster rather than keeping their own copy, so enrolling a student
-/// happens exactly once per section regardless of how many subjects or
-/// teachers are assigned to it.
+/// `watchAll` is no longer a true real-time stream — the backend has no
+/// push/live-update channel yet (Socket.IO wasn't built for this module).
+/// It's a one-shot fetch wrapped in a single-emission [Stream] so every
+/// existing `.listen(...)` call site (see [ClassSectionProvider.listenAll])
+/// keeps compiling and working unchanged; screens just no longer see
+/// another device's edits appear automatically, only after they reload.
+///
+/// [ClassSectionEntity.studentNames] is intentionally left empty here — no
+/// screen actually reads it off a *section* (only off [ClassEntity], via
+/// [ClassRepository]); the "Manage Enrollment" sheet only needs
+/// `studentIds` to pre-check existing selections, and fetches the full
+/// student list itself for display.
 class ClassSectionRepository {
-  final FirebaseFirestore _db;
-  final ClassRepository _classRepo;
-  ClassSectionRepository({FirebaseFirestore? db, ClassRepository? classRepo})
-      : _db = db ?? FirebaseFirestore.instance,
-        _classRepo = classRepo ?? ClassRepository(db: db);
-
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('class_sections');
-
-  // ---------- Reads ----------
+  final ApiClient _api;
+  ClassSectionRepository({ApiClient? api}) : _api = api ?? ApiClient.instance;
 
   Stream<List<ClassSectionEntity>> watchAll(String academyId) {
-    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
-      (snap) {
-        final list = snap.docs
-            .map((d) => ClassSectionEntity.fromMap(d.id, d.data()))
-            .toList();
-        list.sort((a, b) {
-          final byClass = a.className.compareTo(b.className);
-          return byClass != 0 ? byClass : a.section.compareTo(b.section);
-        });
-        return list;
-      },
-    );
+    return Stream.fromFuture(fetchAll());
   }
 
-  // ---------- Writes ----------
+  Future<List<ClassSectionEntity>> fetchAll() async {
+    final response = await _api.get('/class-sections');
+    final items = response.data['data'] as List<dynamic>;
+    final list =
+        items.map((s) => _fromJson(s as Map<String, dynamic>)).toList();
+    list.sort((a, b) {
+      final byClass = a.className.compareTo(b.className);
+      return byClass != 0 ? byClass : a.section.compareTo(b.section);
+    });
+    return list;
+  }
+
+  ClassSectionEntity _fromJson(Map<String, dynamic> json) {
+    return ClassSectionEntity(
+      id: json['id'] as String,
+      academyId: json['academyId'] as String,
+      className: json['className'] as String,
+      section: json['sectionLabel'] as String,
+      studentIds: (json['studentIds'] as List<dynamic>)
+          .map((e) => e.toString())
+          .toList(),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
 
   Future<String> createSection({
     required String academyId,
     required String className,
     required String section,
   }) async {
-    final docRef = _col.doc();
-    final entity = ClassSectionEntity(
-      id: docRef.id,
-      academyId: academyId,
-      className: className.trim(),
-      section: section.trim(),
-      createdAt: DateTime.now(),
-    );
-    await docRef.set(entity.toMap());
-    return docRef.id;
+    final response = await _api.post('/class-sections', data: {
+      'className': className.trim(),
+      'sectionLabel': section.trim(),
+    });
+    return response.data['data']['id'] as String;
   }
 
-  /// Updates the section's roster and cascades it to every subject
-  /// offering under the same academy/class/section, so a single
-  /// enrollment edit keeps every `classes` document in sync.
   Future<void> updateEnrollment({
     required ClassSectionEntity section,
     required List<AppUser> students,
   }) async {
-    final studentIds = students.map((s) => s.uid).toList();
-    final studentNames = {for (final s in students) s.uid: s.fullName};
-
-    await _col.doc(section.id).update({
-      'student_ids': studentIds,
-      'student_names': studentNames,
-      'updated_at': FieldValue.serverTimestamp(),
+    await _api.put('/class-sections/${section.id}/enrollment', data: {
+      'studentIds': students.map((s) => s.uid).toList(),
     });
-
-    final offerings = await _offeringsFor(section);
-
-    const chunkSize = 450;
-    final docs = offerings.docs;
-    for (var i = 0; i < docs.length; i += chunkSize) {
-      final end = i + chunkSize > docs.length ? docs.length : i + chunkSize;
-      final batch = _db.batch();
-      for (final doc in docs.sublist(i, end)) {
-        batch.update(doc.reference, {
-          'student_ids': studentIds,
-          'student_names': studentNames,
-          'updated_at': FieldValue.serverTimestamp(),
-        });
-      }
-      await batch.commit();
-    }
   }
 
-  /// Deletes the section and cascades: every subject offering under it
-  /// (and their attendance/timetable records, via
-  /// [ClassRepository.deleteClass]) is removed too, since a subject
-  /// offering can't exist without its section.
   Future<void> deleteSection(ClassSectionEntity section) async {
-    final offerings = await _offeringsFor(section);
-    for (final doc in offerings.docs) {
-      await _classRepo.deleteClass(doc.id, section.academyId);
-    }
-    await _col.doc(section.id).delete();
-  }
-
-  Future<QuerySnapshot<Map<String, dynamic>>> _offeringsFor(
-      ClassSectionEntity section) {
-    return _db
-        .collection('classes')
-        .where('academy_id', isEqualTo: section.academyId)
-        .where('class_name', isEqualTo: section.className)
-        .where('section', isEqualTo: section.section)
-        .get();
+    await _api.delete('/class-sections/${section.id}');
   }
 }

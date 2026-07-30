@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/models/app_user.dart';
-import '../../../data/remote/auth_service.dart';
-import '../../../logic/auth_provider.dart';
+import '../../../data/remote/api_exception.dart';
 import '../../../logic/class_provider.dart';
-import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
@@ -252,82 +247,39 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
     try {
       final cp = context.read<ClassProvider>();
       final cls = cp.classes.firstWhere((c) => c.id == _selectedClassId);
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final admin = auth.currentUser;
-      if (admin == null) return;
 
       if (cls.studentIds.isEmpty) {
         throw Exception("No students are enrolled in this class.");
       }
 
-      // Fetching all approved students from Firebase to ensure we have father names/extra data
-      final authService = AuthService();
-      final allStudents =
-          await authService.getApprovedByRole(UserRole.student, admin.uid);
-
-      // Avoid creating a second challan for a student who already has one
-      // for this billing month.
-      final monthPrefix = "CH-${_selectedMonth.substring(0, 3).toUpperCase()}";
-      final existingChallans = await _repo.getAll(admin.uid);
-      final studentsAlreadyBilled = existingChallans
-          .where((c) => c.challanNumber.startsWith(monthPrefix))
-          .map((c) => c.studentId)
-          .toSet();
-
-      int count = 0;
-      int skipped = 0;
-      for (var studentId in cls.studentIds) {
-        if (studentsAlreadyBilled.contains(studentId)) {
-          skipped++;
-          continue;
-        }
-        // Find student in our fresh list, or fallback to class records
-        final student = allStudents.firstWhere((s) => s.uid == studentId,
-            orElse: () => AppUser(
-                  uid: studentId,
-                  fullName: cls.studentNames[studentId] ?? "Student",
-                  email: "",
-                  phoneNumber: "",
-                  role: UserRole.student,
-                  academyName: "N/A",
-                  academyId: admin.uid,
-                ));
-
-        final challan = FeeChallanModel(
-          id: const Uuid().v4(),
-          academyId: admin.uid,
-          challanNumber:
-              "CH-${_selectedMonth.substring(0, 3).toUpperCase()}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
-          studentId: studentId,
-          studentName: student.fullName,
-          fatherName: student.academyName ??
-              "N/A", // We reuse academyName for student bio sometimes
-          classLabel: cls.displayLabel,
-          rollNumber: cls.id.substring(0, 4), // Fallback or extra data
-          issueDate: DateTime.now(),
-          dueDate: _dueDateForMonth(_selectedMonth),
-          monthlyFee: double.tryParse(_monthlyFeeCtrl.text) ?? 0,
-          admissionFee: double.tryParse(_admissionFeeCtrl.text) ?? 0,
-          examFee: double.tryParse(_examFeeCtrl.text) ?? 0,
-          transportFee: 0,
-          fine: double.tryParse(_fineCtrl.text) ?? 0,
-          status: 'pending',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        await _repo.createChallan(challan);
-        count++;
-      }
+      final dueDate = _dueDateForMonth(_selectedMonth);
+      final result = await _repo.generateForSection(
+        sectionId: cls.sectionId,
+        billingYear: dueDate.year,
+        billingMonth: _months.indexOf(_selectedMonth) + 1,
+        monthlyFee: double.tryParse(_monthlyFeeCtrl.text) ?? 0,
+        admissionFee: double.tryParse(_admissionFeeCtrl.text) ?? 0,
+        examFee: double.tryParse(_examFeeCtrl.text) ?? 0,
+        fine: double.tryParse(_fineCtrl.text) ?? 0,
+        dueDate: dueDate,
+      );
 
       if (mounted) {
-        final skippedNote =
-            skipped > 0 ? " ($skipped already had one, skipped)" : "";
+        final generated = result['generatedCount'];
+        final skipped = result['skippedCount'];
+        final skippedNote = (skipped is int && skipped > 0)
+            ? " ($skipped already had one, skipped)"
+            : "";
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
-                "Generated $count challans for $_selectedMonth!$skippedNote"),
+                "Generated $generated challans for $_selectedMonth!$skippedNote"),
             backgroundColor: AppColors.success));
         Navigator.pop(context);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message), backgroundColor: AppColors.danger));
       }
     } catch (e) {
       if (mounted) {

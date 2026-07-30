@@ -8,12 +8,44 @@ import '../../../logic/attendance_provider.dart';
 import '../../../data/models/attendance_record.dart';
 import '../../../widgets/gradient_background.dart';
 
-class ChildAlertsScreen extends StatelessWidget {
+class ChildAlertsScreen extends StatefulWidget {
   final String childName;
   final String childUid;
 
   const ChildAlertsScreen(
       {super.key, required this.childName, required this.childUid});
+
+  @override
+  State<ChildAlertsScreen> createState() => _ChildAlertsScreenState();
+}
+
+class _ChildAlertsScreenState extends State<ChildAlertsScreen> {
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  Future<AttendanceMonthlyReport>? _monthlyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    setState(() {
+      _monthlyFuture = context.read<AttendanceProvider>().loadStudentMonthly(
+            widget.childUid,
+            year: _selectedMonth.year,
+            month: _selectedMonth.month,
+          );
+    });
+  }
+
+  void _shiftMonth(int delta) {
+    setState(() {
+      _selectedMonth =
+          DateTime(_selectedMonth.year, _selectedMonth.month + delta);
+    });
+    _load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +56,7 @@ class ChildAlertsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('$childName\'s Alerts',
+        title: Text('${widget.childName}\'s Alerts',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
       ),
@@ -32,62 +64,101 @@ class ChildAlertsScreen extends StatelessWidget {
         child: SafeArea(
           child: academyId.isEmpty
               ? const Center(child: Text("Session error"))
-              : StreamBuilder<List<AttendanceRecord>>(
-                  stream: context
-                      .read<AttendanceProvider>()
-                      .watchStudentAttendance(childUid, academyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
+              : Column(
+                  children: [
+                    _monthHeader(),
+                    Expanded(
+                      child: FutureBuilder<AttendanceMonthlyReport>(
+                        future: _monthlyFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    color: AppColors.accent));
+                          }
 
-                    if (snapshot.hasError) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline_rounded,
-                                  size: 48, color: AppColors.danger),
-                              SizedBox(height: 12),
-                              Text(
-                                  "Could not load attendance alerts. "
-                                  "Check your connection.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppColors.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
+                          if (snapshot.hasError) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.error_outline_rounded,
+                                        size: 48, color: AppColors.danger),
+                                    SizedBox(height: 12),
+                                    Text(
+                                        "Could not load attendance alerts. "
+                                        "Check your connection.",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: AppColors.textSecondary)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
 
-                    final absences = (snapshot.data ?? [])
-                        .where((r) => r.status == 'absent')
-                        .toList();
+                          final absences = snapshot.data!.records
+                              .where((r) => r.status == 'absent')
+                              .toList()
+                              .reversed
+                              .toList();
 
-                    if (absences.isEmpty) {
-                      return _buildEmptyState(context);
-                    }
+                          if (absences.isEmpty) {
+                            return _buildEmptyState(context);
+                          }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: absences.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) =>
-                          _alertTile(context, absences[i]),
-                    );
-                  },
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            itemCount: absences.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, i) =>
+                                _alertTile(context, absences[i]),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ),
     );
   }
 
-  Widget _alertTile(BuildContext context, AttendanceRecord r) {
+  Widget _monthHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded,
+                color: AppColors.textSecondary),
+            onPressed: () => _shiftMonth(-1),
+          ),
+          Expanded(
+            child: Text(
+              DateFormat('MMMM yyyy').format(_selectedMonth),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textSecondary),
+            onPressed: () => _shiftMonth(1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _alertTile(BuildContext context, AttendanceDayRecord r) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -110,7 +181,7 @@ class ChildAlertsScreen extends StatelessWidget {
                         fontSize: 13,
                         letterSpacing: 0.5)),
                 const SizedBox(height: 2),
-                Text('$childName was marked Absent.',
+                Text('${widget.childName} was marked Absent.',
                     style: TextStyle(
                         color: context.appColors.textPrimary,
                         fontWeight: FontWeight.bold)),
@@ -137,7 +208,7 @@ class ChildAlertsScreen extends StatelessWidget {
           const Text('No new alerts',
               style: TextStyle(
                   color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-          const Text('Your child has been regular!',
+          const Text('Your child has been regular this month!',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
         ],
       ),

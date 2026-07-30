@@ -81,25 +81,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final authenticated = await session.authenticateWithBiometrics();
-    if (authenticated) {
-      final email = await auth.loadSavedEmail();
-      final password = await session.getSavedPassword();
+    if (!authenticated) return;
 
-      if (email != null && password != null) {
-        final ok = await auth.signIn(
-          email: email,
-          password: password,
-          rememberMe: true,
-        );
-        if (mounted && ok && auth.currentUser != null) {
-          Navigator.pushReplacementNamed(
-              context, auth.currentUser!.role.dashboardRoute);
-        } else if (auth.errorMessage != null) {
-          _showError(auth.errorMessage!);
-        }
-      } else {
-        _showError("Credentials not found. Please login with password once.");
-      }
+    // Resumes the existing session via the securely-stored refresh token
+    // instead of replaying a cached password — see TokenStorage's doc
+    // comment. Only works if a prior full login is still on this device
+    // (never explicitly logged out, and the refresh token hasn't expired).
+    final user = await auth.tryRestoreSession();
+    if (!mounted) return;
+    if (user != null) {
+      Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
+    } else {
+      _showError(
+          "Your saved session has expired. Please log in with your password.");
     }
   }
 

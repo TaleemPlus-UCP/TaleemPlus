@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/shared_resource.dart';
 import '../../../data/models/student_query.dart';
 import '../../../data/remote/classroom_service.dart';
-import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
 
@@ -173,6 +171,7 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
                 if (ctrl.text.isEmpty) return;
                 try {
                   await _classroomService.answerQuery(q.id, ctrl.text);
+                  if (mounted) setState(() {});
                   if (ctx.mounted) Navigator.pop(ctx);
                 } catch (e) {
                   if (ctx.mounted) {
@@ -254,8 +253,6 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
           bool saving = false;
 
           Future<void> submit() async {
-            final user = context.read<AuthProvider>().currentUser;
-            if (user?.academyId == null) return;
             if (titleCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
                   content: Text('Title is required.'),
@@ -265,19 +262,14 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
 
             setSheetState(() => saving = true);
             try {
-              final res = SharedResource(
-                id: '',
-                academyId: user!.academyId!,
-                classId: widget.classEntity.id,
-                teacherId: user.uid,
-                teacherName: user.fullName,
+              await _classroomService.uploadResource(
+                offeringId: widget.classEntity.id,
                 title: titleCtrl.text.trim(),
                 description: descCtrl.text.trim(),
-                fileUrl:
+                linkUrl:
                     linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim(),
-                createdAt: DateTime.now(),
               );
-              await _classroomService.uploadResource(res);
+              if (mounted) setState(() {});
               if (ctx.mounted) Navigator.pop(ctx);
             } catch (e) {
               setSheetState(() => saving = false);

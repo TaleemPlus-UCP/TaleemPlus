@@ -3,15 +3,28 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../widgets/gradient_background.dart';
-import '../../../data/models/app_user.dart';
-import '../../../data/remote/auth_service.dart';
 
+/// Shows the academy branding/contact info already carried on the linked
+/// child's [AppUser] (`academyName`/`academyAddress`/`academyPhone`) — no
+/// separate fetch needed.
 class AcademyContactScreen extends StatelessWidget {
-  final String academyId;
-  const AcademyContactScreen({super.key, required this.academyId});
+  final String? academyName;
+  final String? academyAddress;
+  final String? academyPhone;
+
+  const AcademyContactScreen({
+    super.key,
+    this.academyName,
+    this.academyAddress,
+    this.academyPhone,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final name = academyName ?? "SRS Tech Matrix";
+    final address = academyAddress ?? "123 Education Lane, Lahore";
+    final phone = academyPhone ?? "03014334151";
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Academy Support',
@@ -20,54 +33,38 @@ class AcademyContactScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: FutureBuilder<AppUser?>(
-            future: AuthService().getProfile(academyId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent));
-              }
-
-              final academy = snapshot.data;
-              final name = academy?.academyName ?? "SRS Tech Matrix";
-              final address =
-                  academy?.academyAddress ?? "123 Education Lane, Lahore";
-              final phone = academy?.academyPhone ?? "03014334151";
-
-              return ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  _buildHeader(context, name),
-                  const SizedBox(height: 32),
-                  const Text('CONTACT CHANNELS',
-                      style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2)),
-                  const SizedBox(height: 16),
-                  _contactTile(
-                    context,
-                    'Official WhatsApp',
-                    phone,
-                    Icons.chat_bubble_rounded,
-                    AppColors.success,
-                    () => _openWhatsApp(context, phone),
-                  ),
-                  const SizedBox(height: 12),
-                  _contactTile(
-                    context,
-                    'Helpline / Call',
-                    phone,
-                    Icons.call_rounded,
-                    AppColors.accent,
-                    () => _callNumber(context, phone),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildLocationCard(context, address),
-                ],
-              );
-            },
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              _buildHeader(context, name),
+              const SizedBox(height: 32),
+              const Text('CONTACT CHANNELS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2)),
+              const SizedBox(height: 16),
+              _contactTile(
+                context,
+                'Official WhatsApp',
+                phone,
+                Icons.chat_bubble_rounded,
+                AppColors.success,
+                () => _openWhatsApp(context, phone),
+              ),
+              const SizedBox(height: 12),
+              _contactTile(
+                context,
+                'Helpline / Call',
+                phone,
+                Icons.call_rounded,
+                AppColors.accent,
+                () => _callNumber(context, phone),
+              ),
+              const SizedBox(height: 32),
+              _buildLocationCard(context, address),
+            ],
           ),
         ),
       ),

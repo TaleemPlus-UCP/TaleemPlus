@@ -1,10 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// A single recurring weekly period in a class's schedule — e.g. "Class 9-B
 /// has Physics with Teacher X every Monday 8:00-8:45 in Room 101, Fall 2026."
 /// `classId`/`className`/`section`/`subject`/`teacherId`/`teacherName` are all
 /// empty when [isBreak] is true (a break has no class or teacher attached).
+///
+/// `classId` here is the subject *offering* id (`ClassEntity.id`) — the
+/// backend calls it `offeringId`.
 class TimetableSlot {
   final String id;
   final String academyId;
@@ -75,56 +77,53 @@ class TimetableSlot {
       : '$className${section.isNotEmpty ? '-$section' : ''}'
           '${subject.isNotEmpty ? ' ($subject)' : ''}';
 
-  Map<String, dynamic> toMap() {
+  /// Request body for `POST /timetable` and `PATCH /timetable/:id`.
+  Map<String, dynamic> toJson() {
     return {
-      'academy_id': academyId,
-      'is_break': isBreak,
-      'class_id': classId,
-      'class_name': className,
-      'section': section,
-      'subject': subject,
-      'teacher_id': teacherId,
-      'teacher_name': teacherName,
-      'day_of_week': dayOfWeek,
-      'start_minutes': startMinutes,
-      'end_minutes': endMinutes,
+      'isBreak': isBreak,
+      if (!isBreak) 'offeringId': classId,
+      'dayOfWeek': dayOfWeek,
+      'startMinutes': startMinutes,
+      'endMinutes': endMinutes,
       'room': room,
       'semester': semester,
-      'effective_from': Timestamp.fromDate(effectiveFrom),
-      'effective_to':
-          effectiveTo != null ? Timestamp.fromDate(effectiveTo!) : null,
-      'created_at': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'updated_at': FieldValue.serverTimestamp(),
+      'effectiveFrom': _dateOnly(effectiveFrom),
+      'effectiveTo': effectiveTo != null ? _dateOnly(effectiveTo!) : null,
     };
   }
 
-  factory TimetableSlot.fromMap(String id, Map<String, dynamic> map) {
-    final effectiveFrom = map['effective_from'];
-    final effectiveTo = map['effective_to'];
-    final createdAt = map['created_at'];
-    final updatedAt = map['updated_at'];
+  factory TimetableSlot.fromJson(Map<String, dynamic> json) {
+    final offering = json['offering'] as Map<String, dynamic>?;
+    final section = offering?['section'] as Map<String, dynamic>?;
+    final teacher = offering?['teacher'] as Map<String, dynamic>?;
     return TimetableSlot(
-      id: id,
-      academyId: map['academy_id'] ?? '',
-      isBreak: map['is_break'] ?? false,
-      classId: map['class_id'] ?? '',
-      className: map['class_name'] ?? '',
-      section: map['section'] ?? '',
-      subject: map['subject'] ?? '',
-      teacherId: map['teacher_id'] ?? '',
-      teacherName: map['teacher_name'] ?? '',
-      dayOfWeek: (map['day_of_week'] ?? DateTime.monday) as int,
-      startMinutes: (map['start_minutes'] ?? 0) as int,
-      endMinutes: (map['end_minutes'] ?? 0) as int,
-      room: map['room'] ?? '',
-      semester: map['semester'] ?? '',
-      effectiveFrom:
-          effectiveFrom is Timestamp ? effectiveFrom.toDate() : DateTime.now(),
-      effectiveTo: effectiveTo is Timestamp ? effectiveTo.toDate() : null,
-      createdAt: createdAt is Timestamp ? createdAt.toDate() : null,
-      updatedAt: updatedAt is Timestamp ? updatedAt.toDate() : null,
+      id: json['id'] as String,
+      academyId: json['academyId'] as String,
+      isBreak: json['isBreak'] as bool,
+      classId: (offering?['id'] as String?) ?? '',
+      className: (section?['className'] as String?) ?? '',
+      section: (section?['sectionLabel'] as String?) ?? '',
+      subject: (offering?['subject'] as String?) ?? '',
+      teacherId: (teacher?['id'] as String?) ?? '',
+      teacherName: (teacher?['fullName'] as String?) ?? '',
+      dayOfWeek: json['dayOfWeek'] as int,
+      startMinutes: json['startMinutes'] as int,
+      endMinutes: json['endMinutes'] as int,
+      room: (json['room'] as String?) ?? '',
+      semester: (json['semester'] as String?) ?? '',
+      effectiveFrom: DateTime.parse(json['effectiveFrom'] as String),
+      effectiveTo: json['effectiveTo'] != null
+          ? DateTime.tryParse(json['effectiveTo'] as String)
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
     );
   }
+
+  static String _dateOnly(DateTime d) =>
+      DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
 }

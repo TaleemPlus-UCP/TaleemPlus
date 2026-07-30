@@ -24,7 +24,6 @@ class AiPaperGraderScreen extends StatefulWidget {
 
 class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   String? _selectedStudentId;
-  String? _selectedStudentName;
   bool _isProcessing = false;
 
   // Grading state
@@ -102,7 +101,6 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
                 onChanged: (val) {
                   setState(() {
                     _selectedStudentId = val;
-                    _selectedStudentName = cls.studentNames[val];
                     _suggestedMarks.clear();
                     _extractedText.clear();
                   });
@@ -306,24 +304,14 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
       double obtained = 0;
       _suggestedMarks.forEach((_, score) => obtained += score);
 
-      final mark = TestMarkModel(
-        id: "${widget.quiz.id}_$_selectedStudentId",
-        academyId: widget.quiz.academyId,
-        quizId: widget.quiz.id,
+      final record = MarkRecordInput(
         studentId: _selectedStudentId!,
-        studentName: _selectedStudentName!,
-        classId: widget.quiz.classId,
-        subject: widget.quiz.subject,
-        month: widget.quiz.month,
         marksObtained: obtained,
-        totalMarks: widget.quiz.totalMarks,
-        percentage: (obtained / widget.quiz.totalMarks) * 100,
-        gradeLetter: TestMarkModel.calculateGrade(
-            (obtained / widget.quiz.totalMarks) * 100),
-        updatedAt: DateTime.now(),
       );
 
-      await context.read<QuizProvider>().uploadBulkMarks([mark]);
+      await context
+          .read<QuizProvider>()
+          .uploadBulkMarks(widget.quiz.id, [record]);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

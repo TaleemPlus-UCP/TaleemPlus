@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 enum QuestionType { mcq, short, long }
 
@@ -9,10 +9,10 @@ class QuizQuestion {
   final List<String>? options; // For MCQ
   final int? correctIndex; // For MCQ (Teacher reference)
   final double marks;
-  final List<String> gradingKeywords; // NEW: For 100% Offline AI Checking
+  final List<String> gradingKeywords; // For 100% offline AI checking
 
   QuizQuestion({
-    required this.id,
+    this.id = '',
     required this.text,
     required this.type,
     this.options,
@@ -21,49 +21,54 @@ class QuizQuestion {
     this.gradingKeywords = const [],
   });
 
-  Map<String, dynamic> toMap() {
+  /// Request body shape for `POST /quizzes` / `PATCH /quizzes/:id` — no `id`,
+  /// the backend assigns one.
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'text': text,
-      'type': type.name,
-      'options': options,
-      'correct_index': correctIndex,
+      'type': type.name.toUpperCase(),
+      if (options != null) 'options': options,
+      if (correctIndex != null) 'correctIndex': correctIndex,
       'marks': marks,
-      'grading_keywords': gradingKeywords,
+      'gradingKeywords': gradingKeywords,
     };
   }
 
-  factory QuizQuestion.fromMap(Map<String, dynamic> map) {
+  factory QuizQuestion.fromJson(Map<String, dynamic> json) {
     return QuizQuestion(
-      id: map['id'] ?? '',
-      text: map['text'] ?? '',
+      id: json['id'] as String,
+      text: json['text'] as String,
       type: QuestionType.values.firstWhere(
-        (t) => t.name == map['type'],
+        (t) => t.name == (json['type'] as String).toLowerCase(),
         orElse: () => QuestionType.short,
       ),
       options:
-          map['options'] != null ? List<String>.from(map['options']) : null,
-      correctIndex: map['correct_index'],
-      marks: (map['marks'] ?? 0).toDouble(),
-      gradingKeywords: (map['grading_keywords'] as List<dynamic>?)
-              ?.map((e) => e.toString())
+          (json['options'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      correctIndex: json['correctIndex'] as int?,
+      marks: (json['marks'] as num).toDouble(),
+      gradingKeywords: (json['gradingKeywords'] as List<dynamic>?)
+              ?.map((e) => e as String)
               .toList() ??
           [],
     );
   }
 }
 
+/// A test/quiz for one class offering. `classId` is the offering id (the
+/// backend calls it `offeringId`). `classLabel`/`month` are derived, not
+/// stored — the backend has no denormalized copies of them (`classLabel`
+/// comes from the offering's section, `month` from `testDate`).
 class QuizModel {
   final String id;
   final String academyId;
   final String classId;
-  final String classLabel;
+  final String className;
+  final String section;
   final String title;
   final String subject;
-  final String month;
   final String session;
   final String chapter;
-  final String difficulty;
+  final String difficulty; // 'Easy' | 'Medium' | 'Hard'
   final double totalMarks;
   final DateTime testDate;
   final String instructions;
@@ -76,69 +81,55 @@ class QuizModel {
     required this.id,
     required this.academyId,
     required this.classId,
-    required this.classLabel,
+    this.className = '',
+    this.section = '',
     required this.title,
     required this.subject,
-    required this.month,
-    required this.session,
-    required this.chapter,
-    required this.difficulty,
+    this.session = '',
+    this.chapter = '',
+    this.difficulty = 'Medium',
     required this.totalMarks,
     required this.testDate,
-    required this.instructions,
-    required this.createdByUid,
-    required this.createdByName,
+    this.instructions = '',
+    this.createdByUid = '',
+    this.createdByName = '',
     this.createdAt,
     required this.questions,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'academy_id': academyId,
-      'class_id': classId,
-      'class_label': classLabel,
-      'title': title,
-      'subject': subject,
-      'month': month,
-      'session': session,
-      'chapter': chapter,
-      'difficulty': difficulty,
-      'total_marks': totalMarks,
-      'test_date': Timestamp.fromDate(testDate),
-      'instructions': instructions,
-      'created_by_uid': createdByUid,
-      'created_by_name': createdByName,
-      'created_at': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'questions': questions.map((q) => q.toMap()).toList(),
-    };
-  }
+  String get classLabel =>
+      section.isNotEmpty ? '$className ($section)' : className;
 
-  factory QuizModel.fromMap(String id, Map<String, dynamic> map) {
+  String get month => DateFormat('MMMM').format(testDate);
+
+  static String _titleCase(String s) =>
+      s.isEmpty ? s : '${s[0]}${s.substring(1).toLowerCase()}';
+
+  factory QuizModel.fromJson(Map<String, dynamic> json) {
+    final offering = json['offering'] as Map<String, dynamic>;
+    final section = offering['section'] as Map<String, dynamic>;
+    final createdBy = json['createdBy'] as Map<String, dynamic>?;
     return QuizModel(
-      id: id,
-      academyId: map['academy_id'] ?? '',
-      classId: map['class_id'] ?? '',
-      classLabel: map['class_label'] ?? '',
-      title: map['title'] ?? '',
-      subject: map['subject'] ?? '',
-      month: map['month'] ?? '',
-      session: map['session'] ?? '',
-      chapter: map['chapter'] ?? '',
-      difficulty: map['difficulty'] ?? 'Medium',
-      totalMarks: (map['total_marks'] ?? 0).toDouble(),
-      testDate: map['test_date'] is Timestamp
-          ? (map['test_date'] as Timestamp).toDate()
-          : DateTime.now(),
-      instructions: map['instructions'] ?? '',
-      createdByUid: map['created_by_uid'] ?? '',
-      createdByName: map['created_by_name'] ?? '',
-      createdAt: map['created_at'] != null
-          ? (map['created_at'] as Timestamp).toDate()
+      id: json['id'] as String,
+      academyId: json['academyId'] as String,
+      classId: offering['id'] as String,
+      className: section['className'] as String,
+      section: section['sectionLabel'] as String,
+      title: json['title'] as String,
+      subject: json['subject'] as String,
+      session: (json['session'] as String?) ?? '',
+      chapter: (json['chapter'] as String?) ?? '',
+      difficulty: _titleCase(json['difficulty'] as String),
+      totalMarks: (json['totalMarks'] as num).toDouble(),
+      testDate: DateTime.parse(json['testDate'] as String),
+      instructions: (json['instructions'] as String?) ?? '',
+      createdByUid: (createdBy?['id'] as String?) ?? '',
+      createdByName: (createdBy?['fullName'] as String?) ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
           : null,
-      questions: (map['questions'] as List? ?? [])
-          .map((q) => QuizQuestion.fromMap(q as Map<String, dynamic>))
+      questions: (json['questions'] as List<dynamic>)
+          .map((q) => QuizQuestion.fromJson(q as Map<String, dynamic>))
           .toList(),
     );
   }

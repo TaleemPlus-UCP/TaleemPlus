@@ -9,6 +9,7 @@ import '../../logic/parent_provider.dart';
 import '../../logic/session_provider.dart'; // NEW
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
+import '../../data/remote/parent_service.dart';
 import '../../widgets/app_widgets.dart';
 import '../../data/remote/notification_service.dart';
 import '../shared/notifications_screen.dart';
@@ -176,7 +177,9 @@ class ParentDashboard extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => AcademyContactScreen(
-                                academyId: firstChild.academyId ?? '')));
+                                academyName: firstChild.academyName,
+                                academyAddress: firstChild.academyAddress,
+                                academyPhone: firstChild.academyPhone)));
                   },
                 ),
               ],
@@ -267,11 +270,7 @@ class ParentDashboard extends StatelessWidget {
                           await session.authenticateWithBiometrics();
                       if (!context.mounted) return;
                       if (authenticated) {
-                        final pass = await _promptForPassword(context);
-                        if (pass != null) {
-                          await session.setBiometricEnabled(true,
-                              password: pass);
-                        }
+                        await session.setBiometricEnabled(true);
                       }
                     } else {
                       await session.setBiometricEnabled(false);
@@ -333,6 +332,7 @@ class ParentDashboard extends StatelessWidget {
 
   void _showChangePasswordDialog(BuildContext context) {
     final passCtrl = TextEditingController();
+    final currentPassCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
 
     showDialog(
@@ -343,12 +343,17 @@ class ParentDashboard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Enter a new password for your account.",
+            const Text("Enter your current password and a new one.",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 20),
             LabeledField(
+                label: "Current Password",
+                hint: "Required",
+                controller: currentPassCtrl,
+                obscure: true),
+            LabeledField(
                 label: "New Password",
-                hint: "Min 6 chars",
+                hint: "Min 8 chars, incl. upper/lower/digit",
                 controller: passCtrl,
                 obscure: true),
             LabeledField(
@@ -368,19 +373,28 @@ class ParentDashboard extends StatelessWidget {
                     const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
-              if (passCtrl.text.length < 6) {
+              if (passCtrl.text.length < 8) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Minimum 6 characters required!")));
+                    content: Text("Minimum 8 characters required!")));
                 return;
               }
               try {
-                await AuthService().directUpdatePassword(passCtrl.text);
+                await AuthService()
+                    .directUpdatePassword(currentPassCtrl.text, passCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                 }
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Password updated successfully!")));
+                  // Changing the password revokes every session, including
+                  // this one — send the user back to Login to re-authenticate.
+                  await context.read<AuthProvider>().signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                        AppRoutes.login, (route) => false);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content:
+                            Text("Password updated. Please log in again.")));
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -393,70 +407,6 @@ class ParentDashboard extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<String?> _promptForPassword(BuildContext context) async {
-    final ctrl = TextEditingController();
-    String? error;
-    bool verifying = false;
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: context.appColors.surface,
-          title: const Text("Verify Password"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                  "Enter your account password to enable biometric login.",
-                  style:
-                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              const SizedBox(height: 16),
-              LabeledField(
-                  label: "Current Password",
-                  hint: "Required",
-                  controller: ctrl,
-                  obscure: true),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(error!,
-                      style: const TextStyle(
-                          color: AppColors.danger, fontSize: 12)),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("CANCEL")),
-            TextButton(
-              onPressed: verifying
-                  ? null
-                  : () async {
-                      setDialogState(() {
-                        verifying = true;
-                        error = null;
-                      });
-                      final ok = await AuthService().verifyPassword(ctrl.text);
-                      if (!ok) {
-                        setDialogState(() {
-                          verifying = false;
-                          error = "Incorrect password.";
-                        });
-                        return;
-                      }
-                      if (ctx.mounted) Navigator.pop(ctx, ctrl.text);
-                    },
-              child: Text(verifying ? "VERIFYING..." : "VERIFY",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: AppColors.accent)),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -651,7 +601,7 @@ class _LinkChildSheet extends StatefulWidget {
 
 class _LinkChildSheetState extends State<_LinkChildSheet> {
   final _searchCtrl = TextEditingController();
-  final _authService = AuthService();
+  final _parentService = ParentService();
   List<AppUser> _results = [];
   bool _searching = false;
 
@@ -668,13 +618,9 @@ class _LinkChildSheetState extends State<_LinkChildSheet> {
       return;
     }
 
-    final parent = context.read<AuthProvider>().currentUser;
-    if (parent == null || parent.academyId == null) return;
-
     setState(() => _searching = true);
     try {
-      final list =
-          await _authService.searchStudentsByName(queryText, parent.academyId!);
+      final list = await _parentService.searchStudents(queryText);
       if (mounted) {
         setState(() {
           _results = list;

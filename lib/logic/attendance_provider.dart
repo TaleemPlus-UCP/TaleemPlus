@@ -4,8 +4,8 @@ import '../data/models/attendance_record.dart';
 import '../data/models/class_entity.dart';
 import '../data/repositories/attendance_repository.dart';
 
-/// Manages the in-progress attendance sheet for one class + date.
-/// Data source is Firestore, so all devices see the same result.
+/// Manages the in-progress attendance sheet for one class + date, plus
+/// on-demand monthly/yearly history lookups for a single student.
 class AttendanceProvider extends ChangeNotifier {
   final AttendanceRepository _repo;
   AttendanceProvider({AttendanceRepository? repo})
@@ -43,11 +43,13 @@ class AttendanceProvider extends ChangeNotifier {
 
   /// Load existing sheet (if any) so the teacher can edit it.
   /// `allStudentIds` should be the enrolled uids from the class doc.
+  /// `academyId` is no longer needed to scope the request (the backend
+  /// infers it from the JWT) but is kept so the call site is unchanged.
   Future<void> loadForClassDate({
     required String classId,
     required DateTime date,
     required List<String> allStudentIds,
-    required String academyId, // NEW
+    required String academyId,
   }) async {
     _loading = true;
     _lastError = null;
@@ -58,11 +60,11 @@ class AttendanceProvider extends ChangeNotifier {
       _statuses[id] = 'absent'; // default
     }
     try {
-      final existing = await _repo.forClassOnDate(
-          classId: classId, date: date, academyId: academyId);
-      for (final r in existing) {
-        _statuses[r.studentId] = r.status;
-      }
+      final daySheet =
+          await _repo.getDaySheet(offeringId: classId, logDate: date);
+      daySheet.forEach((studentId, status) {
+        if (allStudentIds.contains(studentId)) _statuses[studentId] = status;
+      });
     } catch (_) {
       _lastError = 'Could not load previous attendance.';
     }
@@ -70,6 +72,8 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// `markedByUid` is no longer needed (the backend attributes the sheet to
+  /// the authenticated user) but is kept so the call site is unchanged.
   Future<bool> save({
     required ClassEntity classEntity,
     required DateTime date,
@@ -79,23 +83,8 @@ class AttendanceProvider extends ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      final records = <AttendanceRecord>[];
-      final now = DateTime.now();
-      _statuses.forEach((studentId, status) {
-        records.add(AttendanceRecord(
-          id: AttendanceRecord.buildId(
-              classId: classEntity.id, studentId: studentId, date: date),
-          academyId: classEntity.academyId, // PASS ACADEMY ID
-          classId: classEntity.id,
-          studentId: studentId,
-          studentName: classEntity.studentNames[studentId] ?? 'Student',
-          logDate: date,
-          status: status,
-          markedByUid: markedByUid,
-          recordedAt: now,
-        ));
-      });
-      await _repo.saveAll(records);
+      await _repo.markSheet(
+          offeringId: classEntity.id, logDate: date, statuses: _statuses);
       _saving = false;
       notifyListeners();
       return true;
@@ -115,9 +104,17 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Watch attendance for a specific student (Real-time).
-  Stream<List<AttendanceRecord>> watchStudentAttendance(
-      String studentId, String academyId) {
-    return _repo.watchForStudent(studentId, academyId);
+  /// One student's daily records + summary for a month (current month if
+  /// omitted).
+  Future<AttendanceMonthlyReport> loadStudentMonthly(String studentId,
+      {int? year, int? month}) {
+    return _repo.getStudentMonthly(studentId, year: year, month: month);
+  }
+
+  /// One student's month-by-month summary for a year (current year if
+  /// omitted).
+  Future<AttendanceYearlyReport> loadStudentYearly(String studentId,
+      {int? year}) {
+    return _repo.getStudentYearly(studentId, year: year);
   }
 }

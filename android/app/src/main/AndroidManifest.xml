@@ -2,6 +2,8 @@
 
     <!-- Camera Permission -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Required for the REST API client (Dio) and OCR/PDF network fetches -->
+    <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
         android:label="Taleem Plus"

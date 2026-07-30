@@ -1,128 +1,128 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'api_client.dart';
 import '../models/quiz_model.dart';
 import '../models/test_mark_model.dart';
 
+/// Backed by the Node API's `/quizzes` and `/marks` endpoints instead of
+/// Firestore. Quiz definitions (including the answer key) are staff-only —
+/// students/parents only ever see results through the Marks endpoints.
 class QuizService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final ApiClient _api;
+  QuizService({ApiClient? api}) : _api = api ?? ApiClient.instance;
 
-  CollectionReference get _quizzes => _db.collection('quizzes');
-  CollectionReference get _marks => _db.collection('test_marks');
-
-  /// Create a new test/quiz
-  Future<void> createQuiz(QuizModel quiz) async {
-    await _quizzes.doc(quiz.id).set(quiz.toMap());
-  }
-
-  /// Get tests for a specific class (Safe query)
-  Stream<List<QuizModel>> watchQuizzesByClass(
-      String classId, String academyId) {
-    return _quizzes
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .snapshots()
-        .map((snap) {
-      final list = snap.docs
-          .map((doc) =>
-              QuizModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .toList();
-      list.sort((a, b) {
-        final dateA = a.createdAt ?? DateTime(2000);
-        final dateB = b.createdAt ?? DateTime(2000);
-        return dateB.compareTo(dateA);
-      });
-      return list;
+  Future<QuizModel> createQuiz({
+    required String offeringId,
+    required String title,
+    required String subject,
+    String? session,
+    String? chapter,
+    required String difficulty,
+    required double totalMarks,
+    required DateTime testDate,
+    String? instructions,
+    required List<QuizQuestion> questions,
+  }) async {
+    final response = await _api.post('/quizzes', data: {
+      'offeringId': offeringId,
+      'title': title,
+      'subject': subject,
+      if (session != null && session.isNotEmpty) 'session': session,
+      if (chapter != null && chapter.isNotEmpty) 'chapter': chapter,
+      'difficulty': difficulty.toUpperCase(),
+      'totalMarks': totalMarks,
+      'testDate': _dateOnly(testDate),
+      if (instructions != null && instructions.isNotEmpty)
+        'instructions': instructions,
+      'questions': questions.map((q) => q.toJson()).toList(),
     });
+    return QuizModel.fromJson(response.data['data'] as Map<String, dynamic>);
   }
 
-  /// Delete a test and all its marks atomically (a single batch per chunk,
-  /// so a mid-delete failure can't leave the quiz gone with orphaned marks
-  /// still referencing it, or vice versa).
   Future<void> deleteQuiz(String quizId, String academyId) async {
-    final marks = await _marks
-        .where('academy_id', isEqualTo: academyId)
-        .where('quiz_id', isEqualTo: quizId)
-        .get();
-
-    // Firestore batches cap at 500 ops; chunk conservatively and always
-    // include the quiz-doc delete in the first chunk.
-    const chunkSize = 450;
-    var batch = _db.batch();
-    batch.delete(_quizzes.doc(quizId));
-    var opsInBatch = 1;
-
-    for (final doc in marks.docs) {
-      if (opsInBatch >= chunkSize) {
-        await batch.commit();
-        batch = _db.batch();
-        opsInBatch = 0;
-      }
-      batch.delete(doc.reference);
-      opsInBatch++;
-    }
-    await batch.commit();
+    await _api.delete('/quizzes/$quizId');
   }
 
-  /// Bulk upload marks for a class
-  Future<void> uploadBulkMarks(List<TestMarkModel> marksList) async {
-    final batch = _db.batch();
-    for (var mark in marksList) {
-      final docRef = _marks.doc("${mark.quizId}_${mark.studentId}");
-      batch.set(docRef, mark.toMap());
-    }
-    await batch.commit();
-  }
-
-  /// Watch marks for a specific quiz (Safe query)
-  Stream<List<TestMarkModel>> watchMarksByQuiz(
-      String quizId, String academyId) {
-    return _marks
-        .where('academy_id', isEqualTo: academyId)
-        .where('quiz_id', isEqualTo: quizId)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => TestMarkModel.fromMap(
-                doc.id, doc.data() as Map<String, dynamic>))
-            .toList());
-  }
-
-  /// Watch marks for a specific student (Safe query)
-  Stream<List<TestMarkModel>> watchStudentMarks(
-      String studentUid, String academyId) {
-    return _marks
-        .where('academy_id', isEqualTo: academyId)
-        .where('student_id', isEqualTo: studentUid)
-        .snapshots()
-        .map((snap) {
-      final list = snap.docs
-          .map((doc) =>
-              TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .toList();
-      list.sort((a, b) {
-        return b.updatedAt.compareTo(a.updatedAt);
-      });
-      return list;
-    });
-  }
-
-  /// Get all marks for a class (Safe query)
-  Stream<List<TestMarkModel>> watchClassMarks(
-      String classId, String academyId) {
-    return _marks
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => TestMarkModel.fromMap(
-                doc.id, doc.data() as Map<String, dynamic>))
-            .toList());
-  }
-
-  /// NEW: Fetch ALL marks across the academy (for AI Predictions)
-  Future<List<TestMarkModel>> getAllAcademyMarks(String academyId) async {
-    final snap = await _marks.where('academy_id', isEqualTo: academyId).get();
-    return snap.docs
-        .map((doc) =>
-            TestMarkModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+  /// Quizzes for one class offering — admin sees any; teacher only sees
+  /// their own (enforced server-side either way).
+  Future<List<QuizModel>> fetchQuizzesForOffering(String offeringId) async {
+    final response = await _api.get('/quizzes',
+        queryParameters: {'offeringId': offeringId, 'limit': 100});
+    final items = response.data['data'] as List<dynamic>;
+    final list = items
+        .map((q) => QuizModel.fromJson(q as Map<String, dynamic>))
         .toList();
+    list.sort((a, b) => (b.createdAt ?? DateTime(2000))
+        .compareTo(a.createdAt ?? DateTime(2000)));
+    return list;
+  }
+
+  Future<List<TestMarkModel>> fetchMarksForQuiz(String quizId) async {
+    final response = await _api.get('/quizzes/$quizId/marks');
+    final items = response.data['data'] as List<dynamic>;
+    return items
+        .map((m) => TestMarkModel.fromJson(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<TestMarkModel>> fetchStudentResults(String studentId) async {
+    final response = await _api
+        .get('/marks/students/$studentId', queryParameters: {'limit': 100});
+    final items = response.data['data'] as List<dynamic>;
+    final list = items
+        .map((m) => TestMarkModel.fromJson(m as Map<String, dynamic>))
+        .toList();
+    list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return list;
+  }
+
+  Future<List<TestMarkModel>> upsertMarks(
+      String quizId, List<MarkRecordInput> records) async {
+    final response = await _api.put('/quizzes/$quizId/marks', data: {
+      'records': records.map((r) => r.toJson()).toList(),
+    });
+    final items = response.data['data'] as List<dynamic>;
+    return items
+        .map((m) => TestMarkModel.fromJson(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// AI Smart Grader: scores one Short/Long answer against the question's
+  /// grading keywords, given already-OCR'd text (OCR itself stays an
+  /// on-device ML Kit concern).
+  Future<GradeSuggestion> gradeSuggestion(
+      String quizId, String questionId, String ocrText) async {
+    final response = await _api
+        .post('/quizzes/$quizId/questions/$questionId/grade-suggestion', data: {
+      'ocrText': ocrText,
+    });
+    return GradeSuggestion.fromJson(
+        response.data['data'] as Map<String, dynamic>);
+  }
+
+  static String _dateOnly(DateTime d) =>
+      DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
+}
+
+class GradeSuggestion {
+  final int matches;
+  final int keywordCount;
+  final List<String> matchedKeywords;
+  final double suggestedMarks;
+
+  const GradeSuggestion({
+    required this.matches,
+    required this.keywordCount,
+    required this.matchedKeywords,
+    required this.suggestedMarks,
+  });
+
+  factory GradeSuggestion.fromJson(Map<String, dynamic> json) {
+    return GradeSuggestion(
+      matches: json['matches'] as int,
+      keywordCount: json['keywordCount'] as int,
+      matchedKeywords: (json['matchedKeywords'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      suggestedMarks: (json['suggestedMarks'] as num).toDouble(),
+    );
   }
 }

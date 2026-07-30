@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../data/models/app_user.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/timetable_slot.dart';
+import '../../../data/remote/api_exception.dart';
 import '../../../data/remote/auth_service.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/class_provider.dart';
@@ -456,27 +456,11 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
       final provider = context.read<TimetableProvider>();
       final cls = _isBreak ? null : _selectedClass;
 
-      final conflict = await provider.findConflict(
-        academyId: widget.academyId,
-        dayOfWeek: _dayOfWeek,
-        startMinutes: startMinutes,
-        endMinutes: endMinutes,
-        teacherId: cls?.primaryTeacherId ?? '',
-        room: _roomCtrl.text,
-        className: cls?.className ?? '',
-        section: cls?.section ?? '',
-        effectiveFrom: _effectiveFrom,
-        effectiveTo: _effectiveTo,
-        excludeSlotId: widget.existing?.id,
-      );
-      if (conflict != null) {
-        _showError(conflict);
-        setState(() => _saving = false);
-        return;
-      }
-
+      // Server-side create/update enforces teacher/room/section double-
+      // booking rules and responds 409 with a human-readable message on
+      // conflict — caught below instead of pre-checking here.
       final slot = TimetableSlot(
-        id: widget.existing?.id ?? const Uuid().v4(),
+        id: widget.existing?.id ?? '',
         academyId: widget.academyId,
         isBreak: _isBreak,
         classId: cls?.id ?? '',
@@ -506,6 +490,11 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
             content:
                 Text(widget.existing != null ? 'Slot updated!' : 'Slot added!'),
             backgroundColor: AppColors.success));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        _showError(e.message);
       }
     } catch (e) {
       if (mounted) {

@@ -1,0 +1,565 @@
+// TaleemPlus backend — Prisma schema
+// Module 1 (Auth): Academy, User, and everything the auth/RBAC flow needs.
+// Domain modules (classes, attendance, quizzes, fees, ...) are added in later
+// migrations as each module is implemented, per the module-by-module workflow.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum NotificationType {
+  APPROVAL
+  FEE
+  ATTENDANCE
+  RESULT
+  ANNOUNCEMENT
+}
+
+enum FeeChallanStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum QuestionType {
+  MCQ
+  SHORT
+  LONG
+}
+
+enum QuizDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+/// A tenant. One Academy is created automatically when an ADMIN registers;
+/// every other role joins an existing Academy via its human-friendly `code`.
+model Academy {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  phone     String?
+  logoUrl   String?
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users             User[]
+  classSections     ClassSection[]
+  classOfferings    ClassOffering[]
+  attendanceRecords AttendanceRecord[]
+  timetableSlots    TimetableSlot[]
+  announcements     Announcement[]
+  notifications     Notification[]
+  feeChallans       FeeChallan[]
+  quizzes           Quiz[]
+  testMarks         TestMark[]
+  learningResources LearningResource[]
+  studentQueries    StudentQuery[]
+
+  @@map("academies")
+}
+
+/// Canonical account for every role. Mirrors the Firestore `users/{uid}`
+/// document from the legacy app, normalized: academy branding fields move
+/// to `Academy` instead of being duplicated onto every user row.
+model User {
+  id               String        @id @default(uuid())
+  fullName         String        @map("full_name")
+  email            String        @unique
+  passwordHash     String        @map("password_hash")
+  phoneNumber      String?       @map("phone_number")
+  role             UserRole
+  accountStatus    AccountStatus @default(PENDING) @map("account_status")
+  academyId        String?       @map("academy_id")
+  academy          Academy?      @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  joiningDate      DateTime?     @map("joining_date")
+  extraInfo        String?       @map("extra_info")
+  assignedSections String[]      @default([]) @map("assigned_sections")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  deletedAt        DateTime?     @map("deleted_at")
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  securityQuestion    SecurityQuestion?
+  auditLogs           AuditLog[]
+
+  parentLinks ParentChildLink[] @relation("ParentLinks")
+  childLinks  ParentChildLink[] @relation("ChildLinks")
+
+  sectionEnrollments SectionEnrollment[]
+  teachingOfferings  ClassOffering[]     @relation("TeacherOfferings")
+
+  attendanceAsStudent AttendanceRecord[] @relation("StudentAttendance")
+  attendanceMarked    AttendanceRecord[] @relation("AttendanceMarkedBy")
+
+  announcementsCreated Announcement[]
+  notifications        Notification[]
+  feeChallans          FeeChallan[]
+  quizzesCreated       Quiz[]
+  testMarksAsStudent   TestMark[]
+  ocrDocuments         OcrDocument[]
+
+  learningResourcesPosted LearningResource[]
+  queriesAsked            StudentQuery[]     @relation("QueryAskedBy")
+  queriesToAnswer         StudentQuery[]     @relation("QueryTeacher")
+
+  @@index([academyId])
+  @@index([role])
+  @@index([accountStatus])
+  @@map("users")
+}
+
+/// Parent -> Student linkage (replaces the `linked_children` array field on
+/// the legacy Firestore user doc with a proper join table).
+model ParentChildLink {
+  id        String   @id @default(uuid())
+  parentId  String   @map("parent_id")
+  parent    User     @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  childId   String   @map("child_id")
+  child     User     @relation("ChildLinks", fields: [childId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([parentId, childId])
+  @@index([childId])
+  @@map("parent_child_links")
+}
+
+/// Hashed, rotatable refresh tokens. The raw token is only ever sent to the
+/// client once; only its SHA-256 hash is persisted, so a DB leak alone can't
+/// be replayed. Rotation-on-use plus `revokedAt` lets us detect/kill reuse.
+model RefreshToken {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash           String    @unique @map("token_hash")
+  expiresAt           DateTime  @map("expires_at")
+  revokedAt           DateTime? @map("revoked_at")
+  replacedByTokenHash String?   @map("replaced_by_token_hash")
+  userAgent           String?   @map("user_agent")
+  ipAddress           String?   @map("ip_address")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+/// Single-use, short-lived, hashed tokens for the "forgot password" email flow.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Security-question self-service recovery, ported from the legacy
+/// `password_recovery` Firestore collection but now scoped server-side
+/// instead of being a publicly-readable-by-email collection.
+model SecurityQuestion {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   String
+  answerHash String   @map("answer_hash")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("security_questions")
+}
+
+/// Append-only audit trail for authentication and security-relevant events.
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  metadata  Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// The canonical class+section enrollment unit (e.g. "10th - A"). Replaces
+/// the legacy Firestore `class_sections` collection, which stored the
+/// roster as `student_ids`/`student_names` arrays directly on the document.
+/// Here the roster is a real join table (SectionEnrollment) — every subject
+/// offering under this section reads the same roster via that join, so
+/// there is nothing to keep in sync (the legacy app had to fan out every
+/// enrollment edit to every offering's copy, and cascade three collections
+/// by hand on delete; both are now a single FK cascade).
+model ClassSection {
+  id           String   @id @default(uuid())
+  academyId    String   @map("academy_id")
+  academy      Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  className    String   @map("class_name")
+  sectionLabel String   @map("section_label")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  enrollments SectionEnrollment[]
+  offerings   ClassOffering[]
+
+  @@unique([academyId, className, sectionLabel])
+  @@index([academyId])
+  @@map("class_sections")
+}
+
+/// One row per student enrolled in a section. Deleting the section or the
+/// student cascades here automatically.
+model SectionEnrollment {
+  id         String       @id @default(uuid())
+  sectionId  String       @map("section_id")
+  section    ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  studentId  String       @map("student_id")
+  student    User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime     @default(now()) @map("enrolled_at")
+
+  @@unique([sectionId, studentId])
+  @@index([studentId])
+  @@map("section_enrollments")
+}
+
+/// A single subject taught to a section by one primary teacher — the
+/// legacy Firestore `classes` collection. `academyId` is denormalized here
+/// (in addition to being reachable via `section.academyId`) purely so
+/// tenant-scoped queries don't need an extra join; it's still enforced to
+/// match the section's academy at the service layer.
+model ClassOffering {
+  id        String       @id @default(uuid())
+  academyId String       @map("academy_id")
+  academy   Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  sectionId String       @map("section_id")
+  section   ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subject   String       @default("")
+  teacherId String?      @map("teacher_id")
+  teacher   User?        @relation("TeacherOfferings", fields: [teacherId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  attendanceRecords AttendanceRecord[]
+  timetableSlots    TimetableSlot[]
+  quizzes           Quiz[]
+  learningResources LearningResource[]
+  studentQueries    StudentQuery[]
+
+  @@unique([sectionId, subject])
+  @@index([academyId])
+  @@index([teacherId])
+  @@map("class_offerings")
+}
+
+/// A recurring weekly period. Non-break slots reference a `ClassOffering`,
+/// which is what actually carries the class/section/subject/teacher — the
+/// legacy Firestore doc denormalized all of those directly onto the slot;
+/// here they're derived via the join instead. Overlap/double-booking
+/// conflicts (teacher, room, or section) are checked server-side at
+/// create/update time in the service layer, rather than only client-side
+/// before save as in the legacy app.
+model TimetableSlot {
+  id            String         @id @default(uuid())
+  academyId     String         @map("academy_id")
+  academy       Academy        @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  isBreak       Boolean        @default(false) @map("is_break")
+  offeringId    String?        @map("offering_id")
+  offering      ClassOffering? @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  dayOfWeek     Int            @map("day_of_week")
+  startMinutes  Int            @map("start_minutes")
+  endMinutes    Int            @map("end_minutes")
+  room          String?
+  semester      String?
+  effectiveFrom DateTime       @map("effective_from") @db.Date
+  effectiveTo   DateTime?      @map("effective_to") @db.Date
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([academyId])
+  @@index([offeringId])
+  @@index([academyId, dayOfWeek])
+  @@map("timetable_slots")
+}
+
+/// One student's attendance for one class offering on one day. The unique
+/// constraint mirrors the legacy Firestore deterministic doc id
+/// (`{classId}_{studentId}_{yyyy-MM-dd}`), giving the same "re-saving a
+/// day upserts instead of duplicating" behavior as a real constraint
+/// instead of an app-level convention.
+model AttendanceRecord {
+  id         String           @id @default(uuid())
+  academyId  String           @map("academy_id")
+  academy    Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  offeringId String           @map("offering_id")
+  offering   ClassOffering    @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  studentId  String           @map("student_id")
+  student    User             @relation("StudentAttendance", fields: [studentId], references: [id], onDelete: Cascade)
+  logDate    DateTime         @map("log_date") @db.Date
+  status     AttendanceStatus
+  markedById String?          @map("marked_by_id")
+  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
+  recordedAt DateTime         @default(now()) @map("recorded_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  @@unique([offeringId, studentId, logDate])
+  @@index([academyId])
+  @@index([studentId, logDate])
+  @@index([offeringId, logDate])
+  @@map("attendance_records")
+}
+
+/// A broadcast message from staff (admin/teacher) to one or more roles.
+/// `isForAll` plus `targetRoles: UserRole[]` replaces the legacy app's
+/// convention of stuffing a magic `"all"` string into the roles array.
+model Announcement {
+  id          String     @id @default(uuid())
+  academyId   String     @map("academy_id")
+  academy     Academy    @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  isForAll    Boolean    @default(false) @map("is_for_all")
+  targetRoles UserRole[] @map("target_roles")
+  createdById String?    @map("created_by_id")
+  createdBy   User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@index([academyId])
+  @@map("announcements")
+}
+
+/// A per-user, in-app notification. Recipient-private — only its own
+/// recipient (or staff via other endpoints) can ever see or mutate it.
+model Notification {
+  id          String           @id @default(uuid())
+  academyId   String           @map("academy_id")
+  academy     Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  recipientId String           @map("recipient_id")
+  recipient   User             @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@index([recipientId, createdAt])
+  @@index([academyId])
+  @@map("notifications")
+}
+
+/// A monthly fee invoice for one student. Replaces the legacy app's
+/// `challan_number`-prefix trick for detecting "already billed this month"
+/// (`"CH-JUL-..."`, with no year, which double-bills across a year
+/// boundary) with a real `(studentId, billingYear, billingMonth)` unique
+/// constraint. Money fields are `Decimal`, never `Float` — currency must
+/// never be represented with binary floating point. `classLabelSnapshot`
+/// is deliberately denormalized (unlike section rosters elsewhere in this
+/// schema): a challan is a historical financial document and should keep
+/// showing the class the student was billed in even if they change
+/// sections later.
+model FeeChallan {
+  id                 String           @id @default(uuid())
+  academyId          String           @map("academy_id")
+  academy            Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  challanNumber      String           @unique @map("challan_number")
+  studentId          String           @map("student_id")
+  student            User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classLabelSnapshot String           @map("class_label_snapshot")
+  billingYear        Int              @map("billing_year")
+  billingMonth       Int              @map("billing_month")
+  issueDate          DateTime         @map("issue_date") @db.Date
+  dueDate            DateTime         @map("due_date") @db.Date
+  monthlyFee         Decimal          @map("monthly_fee") @db.Decimal(10, 2)
+  admissionFee       Decimal          @default(0) @map("admission_fee") @db.Decimal(10, 2)
+  examFee            Decimal          @default(0) @map("exam_fee") @db.Decimal(10, 2)
+  transportFee       Decimal          @default(0) @map("transport_fee") @db.Decimal(10, 2)
+  fine               Decimal          @default(0) @db.Decimal(10, 2)
+  status             FeeChallanStatus @default(PENDING)
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  @@unique([studentId, billingYear, billingMonth])
+  @@index([academyId])
+  @@index([studentId])
+  @@map("fee_challans")
+}
+
+/// A test/quiz for one class offering. `subject`/`session`/`chapter` are
+/// genuinely independent, teacher-entered fields (not derived from the
+/// offering) — the legacy create-quiz screen has its own free-text inputs
+/// for them, distinct from the offering's own `subject`. `totalMarks` is
+/// likewise teacher-entered rather than computed from the sum of question
+/// marks, matching the legacy form.
+model Quiz {
+  id           String         @id @default(uuid())
+  academyId    String         @map("academy_id")
+  academy      Academy        @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  offeringId   String         @map("offering_id")
+  offering     ClassOffering  @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  title        String
+  subject      String
+  session      String?
+  chapter      String?
+  difficulty   QuizDifficulty @default(MEDIUM)
+  totalMarks   Decimal        @map("total_marks") @db.Decimal(6, 2)
+  testDate     DateTime       @map("test_date") @db.Date
+  instructions String?
+  createdById  String?        @map("created_by_id")
+  createdBy    User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  questions QuizQuestion[]
+  marks     TestMark[]
+
+  @@index([academyId])
+  @@index([offeringId])
+  @@map("quizzes")
+}
+
+/// A single question on a quiz. Real rows instead of the legacy app's
+/// embedded JSON array, so a question can be validated, indexed, and
+/// referenced (e.g. by the AI Smart Grader endpoint) directly by id.
+/// `order` preserves the teacher-authored question sequence.
+model QuizQuestion {
+  id              String       @id @default(uuid())
+  quizId          String       @map("quiz_id")
+  quiz            Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order           Int          @default(0)
+  text            String
+  type            QuestionType
+  options         String[]     @default([])
+  correctIndex    Int?         @map("correct_index")
+  marks           Decimal      @db.Decimal(6, 2)
+  gradingKeywords String[]     @default([]) @map("grading_keywords")
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+/// The canonical gradebook row — one per (quiz, student), enforced by a
+/// real unique constraint instead of the legacy app's deterministic
+/// `{quizId}_{studentUid}` document-id convention. `totalMarks` is
+/// snapshotted at grading time (the quiz's total could change later);
+/// `percentage`/`gradeLetter` are computed server-side, never trusted from
+/// the client. The legacy model also denormalized `subject`/`month`
+/// directly onto this row "for AI" — dropped here since both are one join
+/// away via `quiz`.
+model TestMark {
+  id              String   @id @default(uuid())
+  academyId       String   @map("academy_id")
+  academy         Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  quizId          String   @map("quiz_id")
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId       String   @map("student_id")
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  marksObtained   Decimal  @map("marks_obtained") @db.Decimal(6, 2)
+  totalMarks      Decimal  @map("total_marks") @db.Decimal(6, 2)
+  percentage      Decimal  @db.Decimal(5, 2)
+  gradeLetter     String   @map("grade_letter")
+  teacherFeedback String?  @map("teacher_feedback")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([quizId, studentId])
+  @@index([academyId])
+  @@index([studentId])
+  @@map("test_marks")
+}
+
+/// A scanned/OCR'd document. Deliberately **not** academy-scoped — the
+/// legacy Firestore `ocr_documents` collection was owner-private rather
+/// than tenant-scoped (see database.md/security.md), and that boundary is
+/// preserved here: only the creator can ever read, update, or delete their
+/// own scans.
+model OcrDocument {
+  id            String   @id @default(uuid())
+  title         String
+  extractedText String   @map("extracted_text")
+  createdById   String   @map("created_by_id")
+  createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@map("ocr_documents")
+}
+
+/// A note/link a teacher shares with one class offering (the legacy app's
+/// "Classroom Hub" resources). `linkUrl` not `fileUrl` — the UI only ever
+/// collected a pasted URL (e.g. a Drive link), never a real file upload, so
+/// there's no attachment-storage concern here.
+model LearningResource {
+  id          String        @id @default(uuid())
+  academyId   String        @map("academy_id")
+  academy     Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  offeringId  String        @map("offering_id")
+  offering    ClassOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  teacherId   String        @map("teacher_id")
+  teacher     User          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  linkUrl     String?       @map("link_url")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  @@index([academyId])
+  @@index([offeringId])
+  @@map("learning_resources")
+}
+
+/// A student's question posted to their class offering's shared discussion
+/// wall — visible to every student in the class, not just the asker
+/// (matches the legacy app's Firestore-backed "class discussion" screen).
+model StudentQuery {
+  id         String        @id @default(uuid())
+  academyId  String        @map("academy_id")
+  academy    Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  offeringId String        @map("offering_id")
+  offering   ClassOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  studentId  String        @map("student_id")
+  student    User          @relation("QueryAskedBy", fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId  String        @map("teacher_id")
+  teacher    User          @relation("QueryTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String?
+  isResolved Boolean       @default(false) @map("is_resolved")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  answeredAt DateTime?     @map("answered_at")
+
+  @@index([academyId])
+  @@index([offeringId])
+  @@map("student_queries")
+}
