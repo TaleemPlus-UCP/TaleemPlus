@@ -303,7 +303,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
           fatherName: student.academyName ??
               "N/A", // We reuse academyName for student bio sometimes
           classLabel: cls.displayLabel,
-          rollNumber: cls.id.substring(0, 4), // Fallback or extra data
+          rollNumber: student.rollNumber,
           issueDate: DateTime.now(),
           dueDate: _dueDateForMonth(_selectedMonth),
           monthlyFee: double.tryParse(_monthlyFeeCtrl.text) ?? 0,

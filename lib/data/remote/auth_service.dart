@@ -253,6 +253,19 @@ class AuthService {
     }
   }
 
+  /// True if [rollNumber] is already used by another student among
+  /// [studentUids] (the target class+section's roster) — enforces "roll
+  /// number unique within its class" without a dedicated Firestore index,
+  /// by reusing the same batched profile fetch already used for a
+  /// parent's linked children.
+  Future<bool> isRollNumberTaken(
+      List<String> studentUids, String rollNumber) async {
+    final clean = rollNumber.trim().toLowerCase();
+    if (studentUids.isEmpty || clean.isEmpty) return false;
+    final profiles = await getProfilesByIds(studentUids);
+    return profiles.any((p) => p.rollNumber.trim().toLowerCase() == clean);
+  }
+
   /// Atomically link a child to a parent. Uses `arrayUnion` instead of
   /// reading the current list and writing the whole array back, so two
   /// devices linking different children for the same parent at the same
@@ -382,6 +395,7 @@ class AuthService {
     String? extraInfo,
     DateTime? joiningDate,
     List<String>? sections,
+    String? rollNumber,
   }) async {
     await _users.doc(uid).update({
       'full_name': fullName.trim(),
@@ -389,6 +403,7 @@ class AuthService {
       'extra_info': extraInfo,
       if (joiningDate != null) 'joining_date': Timestamp.fromDate(joiningDate),
       if (sections != null) 'sections': sections,
+      if (rollNumber != null) 'roll_number': rollNumber.trim(),
       'updated_at': FieldValue.serverTimestamp(),
     });
   }
@@ -406,6 +421,7 @@ class AuthService {
     String? extraInfo,
     DateTime? joiningDate,
     List<String>? sections,
+    String? rollNumber,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     try {
@@ -428,6 +444,7 @@ class AuthService {
         createdAt: DateTime.now(),
         joiningDate: joiningDate ?? DateTime.now(),
         assignedSections: sections ?? [],
+        rollNumber: rollNumber?.trim() ?? '',
       );
 
       await _users.doc(uid).set(user.toMap());

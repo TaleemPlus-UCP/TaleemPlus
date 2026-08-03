@@ -5,14 +5,55 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/academy_member.dart';
+import '../../data/models/class_section.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
+import '../../logic/class_section_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../data/models/app_user.dart';
 import '../../logic/class_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 import '../../core/theme/theme_extensions.dart';
+
+/// "className|program|section" key format used to store a teacher's real
+/// class+section assignments in AppUser.assignedSections (previously
+/// hardcoded, disconnected ['A','B','C','D'] letter chips).
+Widget _teacherSectionPicker(
+  BuildContext context,
+  Set<String> selectedKeys,
+  void Function(String key, bool selected) onToggle,
+) {
+  return Consumer<ClassSectionProvider>(
+    builder: (context, sp, _) {
+      if (sp.sections.isEmpty) {
+        return const Text('No class sections created yet.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12));
+      }
+      return Container(
+        constraints: const BoxConstraints(maxHeight: 220),
+        decoration: BoxDecoration(
+          color: AppColors.inputFill,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          children: sp.sections.map((s) {
+            final key = '${s.className}|${s.program}|${s.section}';
+            final selected = selectedKeys.contains(key);
+            return CheckboxListTile(
+              dense: true,
+              value: selected,
+              title: Text(s.displayLabel, style: const TextStyle(fontSize: 13)),
+              onChanged: (v) => onToggle(key, v ?? false),
+            );
+          }).toList(),
+        ),
+      );
+    },
+  );
+}
 
 class UserManagementScreen extends StatefulWidget {
   final int initialIndex;
@@ -511,7 +552,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _extraCtrl;
   DateTime? _joiningDate;
-  final List<String> _selectedSections = [];
+  final Set<String> _selectedSectionKeys = {};
   bool _saving = false;
 
   @override
@@ -521,6 +562,13 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
     _phoneCtrl = TextEditingController(text: widget.member.phone);
     _extraCtrl = TextEditingController(text: widget.member.extra);
     _joiningDate = widget.member.createdAt;
+    if (widget.member.role == 'teacher') {
+      final admin =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (admin != null) {
+        context.read<ClassSectionProvider>().listenAll(admin.uid);
+      }
+    }
   }
 
   @override
@@ -544,7 +592,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
         phoneNumber: _phoneCtrl.text,
         extraInfo: _extraCtrl.text,
         joiningDate: _joiningDate,
-        sections: widget.member.role == 'teacher' ? _selectedSections : null,
+        sections: widget.member.role == 'teacher'
+            ? _selectedSectionKeys.toList()
+            : null,
       );
 
       if (mounted) {
@@ -639,31 +689,21 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Assigned Sections',
+              const Text('Assigned Classes & Sections',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                       color: AppColors.textSecondary)),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: ['A', 'B', 'C', 'D'].map((s) {
-                  final isSel = _selectedSections.contains(s);
-                  return ChoiceChip(
-                    label: Text(s),
-                    selected: isSel,
-                    onSelected: (v) {
-                      setState(() {
-                        if (v) {
-                          _selectedSections.add(s);
-                        } else {
-                          _selectedSections.remove(s);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
+              _teacherSectionPicker(context, _selectedSectionKeys, (key, sel) {
+                setState(() {
+                  if (sel) {
+                    _selectedSectionKeys.add(key);
+                  } else {
+                    _selectedSectionKeys.remove(key);
+                  }
+                });
+              }),
             ],
             const SizedBox(height: 16),
             PrimaryButton(
@@ -692,11 +732,59 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
+  final _rollNumberCtrl = TextEditingController();
   final _passwordCtrl =
       TextEditingController(text: "123456"); // Default password
   DateTime? _joiningDate = DateTime.now();
-  final List<String> _selectedSections = [];
+
+  // Teacher: real class+section assignment.
+  final Set<String> _selectedSectionKeys = {};
+
+  // Student: class-wise enrollment target.
+  String? _selectedClassName;
+  String? _selectedProgram;
+  ClassSectionEntity? _selectedSection;
+
+  // Parent: link to existing student account(s).
+  List<AppUser> _availableStudents = [];
+  final Set<String> _selectedChildUids = {};
+  bool _loadingStudents = false;
+
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (admin != null &&
+        (widget.role == 'student' || widget.role == 'teacher')) {
+      context.read<ClassSectionProvider>().listenAll(admin.uid);
+    }
+    if (widget.role == 'parent') {
+      _loadStudents();
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _loadingStudents = true);
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (admin == null) {
+      setState(() => _loadingStudents = false);
+      return;
+    }
+    try {
+      final students =
+          await AuthService().getApprovedByRole(UserRole.student, admin.uid);
+      if (mounted) {
+        setState(() {
+          _availableStudents = students;
+          _loadingStudents = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingStudents = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -704,6 +792,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _extraCtrl.dispose();
+    _rollNumberCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -735,13 +824,32 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       return;
     }
 
+    final auth = AuthService();
+
+    // Roll number must be unique within the chosen section before we
+    // create the account (avoids an orphaned auth user on collision).
+    if (widget.role == 'student' &&
+        _selectedSection != null &&
+        _rollNumberCtrl.text.trim().isNotEmpty) {
+      final taken = await auth.isRollNumberTaken(
+          _selectedSection!.studentIds, _rollNumberCtrl.text);
+      if (taken) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Roll number "${_rollNumberCtrl.text.trim()}" is already used in ${_selectedSection!.displayLabel}.'),
+              backgroundColor: AppColors.danger),
+        );
+        return;
+      }
+    }
+
     setState(() => _saving = true);
 
     try {
-      final auth = AuthService();
-
       // 1. Create account in Firebase directly as 'active' and tie to current admin academy
-      await auth.adminCreateUser(
+      final newUser = await auth.adminCreateUser(
         fullName: _nameCtrl.text,
         email: _emailCtrl.text,
         phoneNumber: _phoneCtrl.text,
@@ -750,10 +858,31 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         academyId: admin.uid, // PASS ACADEMY ID
         extraInfo: _extraCtrl.text,
         joiningDate: _joiningDate,
-        sections: widget.role == 'teacher' ? _selectedSections : null,
+        sections:
+            widget.role == 'teacher' ? _selectedSectionKeys.toList() : null,
+        rollNumber: widget.role == 'student' ? _rollNumberCtrl.text : null,
       );
 
-      // 2. Refresh counts in Provider
+      // 2. Student: enroll into the chosen class+section roster.
+      if (widget.role == 'student' && _selectedSection != null) {
+        final section = _selectedSection!;
+        final currentStudents = await auth.getProfilesByIds(section.studentIds);
+        if (mounted) {
+          await context.read<ClassSectionProvider>().updateEnrollment(
+            section: section,
+            students: [...currentStudents, newUser],
+          );
+        }
+      }
+
+      // 3. Parent: link selected existing student account(s).
+      if (widget.role == 'parent' && _selectedChildUids.isNotEmpty) {
+        for (final childUid in _selectedChildUids) {
+          await auth.addLinkedChild(newUser.uid, childUid);
+        }
+      }
+
+      // 4. Refresh counts in Provider
       if (mounted) {
         await context.read<MemberProvider>().load(admin.uid);
         if (!mounted) return;
@@ -848,6 +977,132 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 textInputAction: TextInputAction.done,
                 validator: Validators.phone,
               ),
+              if (widget.role == 'student') ...[
+                const SizedBox(height: 16),
+                const Text('Enroll In Class (optional)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedClassName,
+                    isExpanded: true,
+                    hint: const Text('Select class'),
+                    items: AppClasses.all
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      _selectedClassName = v;
+                      _selectedProgram = null;
+                      _selectedSection = null;
+                    }),
+                  ),
+                ),
+                if (_selectedClassName != null &&
+                    AppPrograms.appliesTo(_selectedClassName!)) ...[
+                  const SizedBox(height: 8),
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedProgram,
+                      isExpanded: true,
+                      hint: const Text('Select program'),
+                      items: AppPrograms.all
+                          .map(
+                              (p) => DropdownMenuItem(value: p, child: Text(p)))
+                          .toList(),
+                      onChanged: (v) => setState(() {
+                        _selectedProgram = v;
+                        _selectedSection = null;
+                      }),
+                    ),
+                  ),
+                ],
+                if (_selectedClassName != null &&
+                    (!AppPrograms.appliesTo(_selectedClassName!) ||
+                        _selectedProgram != null)) ...[
+                  const SizedBox(height: 8),
+                  Consumer<ClassSectionProvider>(
+                    builder: (context, sp, _) {
+                      final sections = sp.sections
+                          .where((s) =>
+                              s.className == _selectedClassName &&
+                              s.program == (_selectedProgram ?? ''))
+                          .toList();
+                      return DropdownButtonHideUnderline(
+                        child: DropdownButton<ClassSectionEntity>(
+                          value: _selectedSection,
+                          isExpanded: true,
+                          hint: const Text('Select section'),
+                          items: sections
+                              .map((s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text('Section ${s.section}')))
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedSection = v),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                const SizedBox(height: 12),
+                LabeledField(
+                  label: 'Roll Number',
+                  hint: 'e.g. 24',
+                  controller: _rollNumberCtrl,
+                ),
+              ],
+              if (widget.role == 'parent') ...[
+                const SizedBox(height: 16),
+                const Text('Link Existing Child(ren)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                if (_loadingStudents)
+                  const Center(
+                      child: CircularProgressIndicator(color: AppColors.accent))
+                else if (_availableStudents.isEmpty)
+                  const Text('No approved students yet.',
+                      style:
+                          TextStyle(color: AppColors.textMuted, fontSize: 12))
+                else
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    decoration: BoxDecoration(
+                      color: AppColors.inputFill,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _availableStudents.length,
+                      itemBuilder: (_, i) {
+                        final s = _availableStudents[i];
+                        final selected = _selectedChildUids.contains(s.uid);
+                        return CheckboxListTile(
+                          dense: true,
+                          value: selected,
+                          title: Text(s.fullName,
+                              style: const TextStyle(fontSize: 13)),
+                          subtitle: Text(s.email,
+                              style: const TextStyle(
+                                  color: AppColors.textMuted, fontSize: 11)),
+                          onChanged: (v) => setState(() {
+                            if (v == true) {
+                              _selectedChildUids.add(s.uid);
+                            } else {
+                              _selectedChildUids.remove(s.uid);
+                            }
+                          }),
+                        );
+                      },
+                    ),
+                  ),
+              ],
               if (widget.role == 'teacher') ...[
                 const SizedBox(height: 16),
                 const Text('Joining Date',
@@ -886,31 +1141,22 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Assigned Sections',
+                const Text('Assigned Classes & Sections',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: ['A', 'B', 'C', 'D'].map((s) {
-                    final isSel = _selectedSections.contains(s);
-                    return ChoiceChip(
-                      label: Text(s),
-                      selected: isSel,
-                      onSelected: (v) {
-                        setState(() {
-                          if (v) {
-                            _selectedSections.add(s);
-                          } else {
-                            _selectedSections.remove(s);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
+                _teacherSectionPicker(context, _selectedSectionKeys,
+                    (key, sel) {
+                  setState(() {
+                    if (sel) {
+                      _selectedSectionKeys.add(key);
+                    } else {
+                      _selectedSectionKeys.remove(key);
+                    }
+                  });
+                }),
               ],
               const SizedBox(height: 8),
               PrimaryButton(
