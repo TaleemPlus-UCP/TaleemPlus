@@ -14,6 +14,7 @@ import 'class_sections_screen.dart';
 import 'screens/class_fee_status_screen.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/student_roster_dialog.dart';
 
 class ClassManagementScreen extends StatefulWidget {
   const ClassManagementScreen({super.key});
@@ -143,6 +144,15 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                     style:
                         const TextStyle(color: AppColors.accent, fontSize: 12)),
               ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.visibility_rounded, color: AppColors.accent),
+            tooltip: 'View Students',
+            onPressed: () => showStudentRosterDialog(
+              context,
+              title: c.displayLabel,
+              studentNames: c.studentNames,
             ),
           ),
           IconButton(

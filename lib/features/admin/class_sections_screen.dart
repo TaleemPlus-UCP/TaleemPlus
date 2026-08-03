@@ -10,6 +10,7 @@ import '../../logic/auth_provider.dart';
 import '../../logic/class_section_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/student_roster_dialog.dart';
 
 /// Where enrollment actually lives: one roster per class+section.
 /// Subject offerings in Class Management just point at a section here
@@ -101,7 +102,25 @@ class _ClassSectionsScreenState extends State<ClassSectionsScreen> {
                 child: Text('No sections yet. Tap + to add one.',
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
               ),
-            for (final s in sections) _sectionTile(s),
+            if (AppPrograms.appliesTo(className))
+              ...AppPrograms.all.expand((program) {
+                final progSections =
+                    sections.where((s) => s.program == program).toList();
+                if (progSections.isEmpty) return const <Widget>[];
+                return [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: Text(program,
+                        style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  for (final s in progSections) _sectionTile(s),
+                ];
+              })
+            else
+              for (final s in sections) _sectionTile(s),
           ],
         ),
       ),
@@ -121,6 +140,15 @@ class _ClassSectionsScreenState extends State<ClassSectionsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
+            icon: const Icon(Icons.visibility_rounded, color: AppColors.accent),
+            tooltip: 'View Students',
+            onPressed: () => showStudentRosterDialog(
+              context,
+              title: s.displayLabel,
+              studentNames: s.studentNames,
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.group_add_rounded, color: AppColors.accent),
             tooltip: 'Manage Enrollment',
             onPressed: () => _openEnrollmentSheet(s),
@@ -137,37 +165,84 @@ class _ClassSectionsScreenState extends State<ClassSectionsScreen> {
 
   Future<void> _openAddSectionDialog(String className) async {
     final ctrl = TextEditingController();
+    final needsProgram = AppPrograms.appliesTo(className);
+    String? program = needsProgram ? AppPrograms.all.first : null;
+
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceAlt,
-        title: Text('New section in $className',
-            style: const TextStyle(color: AppColors.textPrimary)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(hintText: 'e.g. A, B, Morning'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceAlt,
+          title: Text('New section in $className',
+              style: const TextStyle(color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (needsProgram) ...[
+                const Text('Program',
+                    style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: program,
+                    isExpanded: true,
+                    dropdownColor: AppColors.surfaceAlt,
+                    items: AppPrograms.all
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => program = v),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: ctrl,
+                autofocus: !needsProgram,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration:
+                    const InputDecoration(hintText: 'e.g. A, B, Morning'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Create',
+                  style: TextStyle(color: AppColors.accent)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child:
-                const Text('Create', style: TextStyle(color: AppColors.accent)),
-          ),
-        ],
       ),
     );
     if (result == null || result.isEmpty || !mounted) return;
+
+    final effectiveProgram = program ?? '';
+    if (context.read<ClassSectionProvider>().sectionExists(
+          className: className,
+          program: effectiveProgram,
+          section: result,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Section "$result" already exists${needsProgram ? ' for $effectiveProgram' : ''} in $className.'),
+          backgroundColor: AppColors.danger));
+      return;
+    }
+
     try {
       await context.read<ClassSectionProvider>().createSection(
             academyId: _academyId,
             className: className,
+            program: effectiveProgram,
             section: result,
           );
     } catch (e) {
