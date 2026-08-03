@@ -83,146 +83,127 @@ class TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 4),
               Text('Your classroom overview',
                   style: TextStyle(color: context.appColors.textSecondary)),
-              const SizedBox(height: 24),
-              Text('MODULES',
-                  style: TextStyle(
-                      color: context.appColors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1)),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Attendance',
-                'Mark daily attendance for your classes',
-                Icons.fact_check_rounded,
-                () => Navigator.push(
+              const SizedBox(height: 16),
+              _gridSection(context, 'CLASSROOM', [
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const TeacherClassesScreen()),
+                  'Attendance',
+                  'Mark daily attendance',
+                  Icons.fact_check_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TeacherClassesScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'My Timetable',
-                'View your weekly class schedule',
-                Icons.schedule_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(builder: (_) => const MyTimetableScreen()),
+                  'My Timetable',
+                  'Weekly class schedule',
+                  Icons.schedule_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MyTimetableScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'View Announcements',
-                'View broadcasts from your academy',
-                Icons.campaign_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const ViewAnnouncementsScreen()),
+                  'Resources',
+                  'Share notes & materials',
+                  Icons.folder_shared_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TeacherClassesScreen(
+                              jumpTo: ClassJumpTarget.resources))),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Manage My Announcements',
-                'Reach out to parents & students',
-                Icons.add_comment_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const TeacherAnnouncementsScreen()),
+                  'Queries',
+                  'Answer student questions',
+                  Icons.forum_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TeacherClassesScreen(
+                              jumpTo: ClassJumpTarget.queries))),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'OCR Document Scanner',
-                'Scan and manage digitized notes',
-                Icons.document_scanner_rounded,
-                () => Navigator.push(
+              ]),
+              _gridSection(context, 'GRADING & TESTS', [
+                _gridTile(
                   context,
-                  MaterialPageRoute(builder: (_) => const OcrScannerScreen()),
+                  'Grading & AI Grader',
+                  'Enter or AI-grade marks',
+                  Icons.add_chart_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const TeacherQuizListScreen(isAiGen: false))),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'OCR History',
-                'View and edit previously scanned documents',
-                Icons.history_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(builder: (_) => const OcrHistoryScreen()),
+                  'AI Test Generator',
+                  'Generate & print tests',
+                  Icons.auto_awesome_motion_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const TeacherQuizListScreen(isAiGen: true))),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Grading & AI Paper Grader',
-                'Enter marks or use AI to grade papers',
-                Icons.add_chart_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          const TeacherQuizListScreen(isAiGen: false)),
+                  'Monthly Performance',
+                  'Compiled student results',
+                  Icons.insights_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MonthlyReportScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'AI Test Paper Generator',
-                'Generate and print monthly tests',
-                Icons.auto_awesome_motion_rounded,
-                () => Navigator.push(
+              ]),
+              _gridSection(context, 'ANNOUNCEMENTS & TOOLS', [
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          const TeacherQuizListScreen(isAiGen: true)),
+                  'View Announcements',
+                  'Broadcasts from your academy',
+                  Icons.campaign_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ViewAnnouncementsScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Resources',
-                'Share notes & materials with a class',
-                Icons.folder_shared_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const TeacherClassesScreen(
-                          jumpTo: ClassJumpTarget.resources)),
+                  'Manage Announcements',
+                  'Reach parents & students',
+                  Icons.add_comment_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TeacherAnnouncementsScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Queries',
-                'Answer student questions for a class',
-                Icons.forum_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const TeacherClassesScreen(
-                          jumpTo: ClassJumpTarget.queries)),
+                  'OCR Scanner',
+                  'Scan digitized notes',
+                  Icons.document_scanner_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const OcrScannerScreen())),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Monthly Performance',
-                'View compiled student results',
-                Icons.insights_rounded,
-                () => Navigator.push(
+                _gridTile(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const MonthlyReportScreen()),
+                  'OCR History',
+                  'View scanned documents',
+                  Icons.history_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const OcrHistoryScreen())),
                 ),
-              ),
+              ]),
             ],
           ),
         ),
@@ -504,53 +485,70 @@ class TeacherDashboard extends StatelessWidget {
     );
   }
 
-  Widget _actionTile(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    VoidCallback? onTap,
-  ) {
-    final enabled = onTap != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.55,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: context.appColors.surface.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: context.appColors.border.withValues(alpha: 0.5)),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: AppColors.accent, size: 22),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: TextStyle(
-                              color: context.appColors.textPrimary,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text(subtitle,
-                          style: TextStyle(
-                              color: context.appColors.textMuted,
-                              fontSize: 12)),
-                    ],
-                  ),
-                ),
-                if (enabled)
-                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              ],
-            ),
+  /// A labeled section of a compact 2-column tile grid — groups related
+  /// dashboard actions so the whole "MODULES" area no longer scrolls as one
+  /// long single-column list of 11 full-width rows.
+  Widget _gridSection(BuildContext context, String title, List<Widget> tiles) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: TextStyle(
+                  color: context.appColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+            children: tiles,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gridTile(BuildContext context, String title, String subtitle,
+      IconData icon, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.appColors.surface.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: context.appColors.border.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: AppColors.accent, size: 22),
+              const Spacer(),
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: context.appColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: context.appColors.textMuted, fontSize: 10.5)),
+            ],
           ),
         ),
       ),

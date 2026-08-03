@@ -20,8 +20,9 @@ class AppUser {
       assignedSections; // NEW: Sections assigned (e.g. ['A', 'B'])
   final List<String> linkedChildren; // NEW: Child UIDs (for Parents)
   final String rollNumber; // NEW: unique within a student's class section
+  final String subject; // NEW: teacher's subject (separate from qualification)
   final String?
-      extraInfo; // Role-specific note (qualification/roll no./relation)
+      extraInfo; // Role-specific note (qualification for teachers/relation for parents)
 
   const AppUser({
     required this.uid,
@@ -41,6 +42,7 @@ class AppUser {
     this.assignedSections = const [],
     this.linkedChildren = const [],
     this.rollNumber = '',
+    this.subject = '',
     this.extraInfo,
   });
 
@@ -65,6 +67,7 @@ class AppUser {
       'sections': assignedSections,
       'linked_children': linkedChildren,
       'roll_number': rollNumber,
+      'subject': subject,
       'extra_info': extraInfo,
       'created_at': createdAt != null
           ? Timestamp.fromDate(createdAt!)
@@ -104,6 +107,7 @@ class AppUser {
               .toList() ??
           [],
       rollNumber: (map['roll_number'] ?? '') as String,
+      subject: (map['subject'] ?? '') as String,
       extraInfo: map['extra_info'] as String?,
     );
   }

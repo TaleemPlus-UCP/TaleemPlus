@@ -6,7 +6,9 @@ class AcademyMember {
   final String email;
   final String phone;
   final String role; // 'teacher' | 'student' | 'parent'
-  final String extra; // roll number / qualification / relation
+  final String extra; // qualification (teacher) / relation (parent)
+  final String subject; // teacher's subject (separate from qualification)
+  final String rollNumber; // student's unique roll number
   final String status;
   final DateTime createdAt;
 
@@ -18,6 +20,8 @@ class AcademyMember {
     required this.phone,
     required this.role,
     this.extra = '',
+    this.subject = '',
+    this.rollNumber = '',
     this.status = 'active',
     required this.createdAt,
   });
@@ -25,7 +29,7 @@ class AcademyMember {
   static String extraLabelFor(String role) {
     switch (role) {
       case 'teacher':
-        return 'Qualification / Subject';
+        return 'Qualification';
       case 'student':
         return 'Roll Number';
       case 'parent':
@@ -44,6 +48,8 @@ class AcademyMember {
       'phone': phone,
       'role': role,
       'extra': extra,
+      'subject': subject,
+      'roll_number': rollNumber,
       'status': status,
       'created_at': createdAt.toIso8601String(),
     };
@@ -58,6 +64,8 @@ class AcademyMember {
       phone: (map['phone'] ?? '') as String,
       role: (map['role'] ?? 'student') as String,
       extra: (map['extra'] ?? '') as String,
+      subject: (map['subject'] ?? '') as String,
+      rollNumber: (map['roll_number'] ?? '') as String,
       status: (map['status'] ?? 'active') as String,
       createdAt: DateTime.tryParse((map['created_at'] ?? '') as String) ??
           DateTime.now(),

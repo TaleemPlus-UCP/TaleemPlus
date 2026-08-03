@@ -201,6 +201,8 @@ class _RoleListTabState extends State<_RoleListTab>
               .where((m) =>
                   m.fullName.toLowerCase().contains(_query.toLowerCase()) ||
                   m.extra.toLowerCase().contains(_query.toLowerCase()) ||
+                  m.subject.toLowerCase().contains(_query.toLowerCase()) ||
+                  m.rollNumber.toLowerCase().contains(_query.toLowerCase()) ||
                   m.phone.contains(_query))
               .toList();
         }
@@ -311,7 +313,24 @@ class _RoleListTabState extends State<_RoleListTab>
                         fontWeight: FontWeight.w600,
                         fontSize: 15)),
                 const SizedBox(height: 2),
-                if (m.extra.isNotEmpty)
+                if (m.role == 'teacher' &&
+                    (m.extra.isNotEmpty || m.subject.isNotEmpty))
+                  Text(
+                      [
+                        if (m.extra.isNotEmpty) m.extra,
+                        if (m.subject.isNotEmpty) m.subject,
+                      ].join(' • '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppColors.accent, fontSize: 12))
+                else if (m.role == 'student' && m.rollNumber.isNotEmpty)
+                  Text('Roll: ${m.rollNumber}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppColors.accent, fontSize: 12))
+                else if (m.extra.isNotEmpty)
                   Text(m.extra,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -551,6 +570,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _extraCtrl;
+  late final TextEditingController _qualificationCtrl;
+  late final TextEditingController _subjectCtrl;
+  late final TextEditingController _rollNumberCtrl;
   DateTime? _joiningDate;
   final Set<String> _selectedSectionKeys = {};
   bool _saving = false;
@@ -561,6 +583,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
     _nameCtrl = TextEditingController(text: widget.member.fullName);
     _phoneCtrl = TextEditingController(text: widget.member.phone);
     _extraCtrl = TextEditingController(text: widget.member.extra);
+    _qualificationCtrl = TextEditingController(text: widget.member.extra);
+    _subjectCtrl = TextEditingController(text: widget.member.subject);
+    _rollNumberCtrl = TextEditingController(text: widget.member.rollNumber);
     _joiningDate = widget.member.createdAt;
     if (widget.member.role == 'teacher') {
       final admin =
@@ -576,11 +601,34 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _extraCtrl.dispose();
+    _qualificationCtrl.dispose();
+    _subjectCtrl.dispose();
+    _rollNumberCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+
+    if (widget.member.role == 'student' && admin != null) {
+      final taken = await AuthService().isRollNumberTaken(
+        admin.uid,
+        _rollNumberCtrl.text,
+        excludeUid: widget.member.id,
+      );
+      if (taken) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Roll number "${_rollNumberCtrl.text.trim()}" is already in use.'),
+              backgroundColor: AppColors.danger),
+        );
+        return;
+      }
+    }
 
     setState(() => _saving = true);
 
@@ -590,7 +638,12 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
         uid: widget.member.id,
         fullName: _nameCtrl.text,
         phoneNumber: _phoneCtrl.text,
-        extraInfo: _extraCtrl.text,
+        extraInfo: widget.member.role == 'teacher'
+            ? _qualificationCtrl.text
+            : _extraCtrl.text,
+        subject: widget.member.role == 'teacher' ? _subjectCtrl.text : null,
+        rollNumber:
+            widget.member.role == 'student' ? _rollNumberCtrl.text : null,
         joiningDate: _joiningDate,
         sections: widget.member.role == 'teacher'
             ? _selectedSectionKeys.toList()
@@ -643,14 +696,39 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 hint: 'Enter name',
                 controller: _nameCtrl,
                 validator: Validators.fullName),
-            LabeledField(
-                label: label, hint: 'Enter $label', controller: _extraCtrl),
+            if (widget.member.role == 'parent')
+              LabeledField(
+                  label: label, hint: 'Enter $label', controller: _extraCtrl),
             LabeledField(
                 label: 'Phone',
                 hint: '+92...',
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
                 validator: Validators.phone),
+            if (widget.member.role == 'teacher') ...[
+              LabeledField(
+                  label: 'Qualification',
+                  hint: 'e.g. M.Sc Physics',
+                  controller: _qualificationCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Qualification is required'
+                      : null),
+              LabeledField(
+                  label: 'Subject',
+                  hint: 'e.g. Physics',
+                  controller: _subjectCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Subject is required'
+                      : null),
+            ],
+            if (widget.member.role == 'student')
+              LabeledField(
+                  label: 'Roll Number',
+                  hint: 'e.g. 24',
+                  controller: _rollNumberCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Roll Number is required'
+                      : null),
             const SizedBox(height: 12),
             if (widget.member.role == 'teacher') ...[
               const Text('Joining Date',
@@ -733,6 +811,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _phoneCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
   final _rollNumberCtrl = TextEditingController();
+  final _qualificationCtrl = TextEditingController();
+  final _subjectCtrl = TextEditingController();
+  final _parentSearchCtrl = TextEditingController();
   final _passwordCtrl =
       TextEditingController(text: "123456"); // Default password
   DateTime? _joiningDate = DateTime.now();
@@ -744,6 +825,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   String? _selectedClassName;
   String? _selectedProgram;
   ClassSectionEntity? _selectedSection;
+
+  // Student: assign directly to an existing parent (search by name).
+  List<AppUser> _availableParents = [];
+  String? _selectedParentUid;
+  String? _selectedParentName;
 
   // Parent: link to existing student account(s).
   List<AppUser> _availableStudents = [];
@@ -762,6 +848,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     }
     if (widget.role == 'parent') {
       _loadStudents();
+    }
+    if (widget.role == 'student') {
+      _loadParents();
     }
   }
 
@@ -786,6 +875,113 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     }
   }
 
+  Widget _parentSearchField() {
+    final query = _parentSearchCtrl.text.trim().toLowerCase();
+    final matches = query.isEmpty
+        ? const <AppUser>[]
+        : _availableParents
+            .where((p) => p.fullName.toLowerCase().contains(query))
+            .take(5)
+            .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_selectedParentName != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border:
+                  Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.accent, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Will link to: $_selectedParentName',
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      size: 16, color: AppColors.textMuted),
+                  onPressed: () => setState(() {
+                    _selectedParentUid = null;
+                    _selectedParentName = null;
+                  }),
+                ),
+              ],
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: _parentSearchCtrl,
+            decoration: const InputDecoration(
+              hintText: 'Search parent by name...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 12),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        if (matches.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            constraints: const BoxConstraints(maxHeight: 160),
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: matches.length,
+              itemBuilder: (_, i) {
+                final p = matches[i];
+                return ListTile(
+                  dense: true,
+                  title: Text(p.fullName, style: const TextStyle(fontSize: 13)),
+                  subtitle: Text(p.email,
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 11)),
+                  onTap: () => setState(() {
+                    _selectedParentUid = p.uid;
+                    _selectedParentName = p.fullName;
+                    _parentSearchCtrl.clear();
+                  }),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _loadParents() async {
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (admin == null) return;
+    try {
+      final parents =
+          await AuthService().getApprovedByRole(UserRole.parent, admin.uid);
+      if (mounted) setState(() => _availableParents = parents);
+    } catch (_) {
+      // Assign-to-parent search just stays empty; not a blocking failure.
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -793,6 +989,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     _phoneCtrl.dispose();
     _extraCtrl.dispose();
     _rollNumberCtrl.dispose();
+    _qualificationCtrl.dispose();
+    _subjectCtrl.dispose();
+    _parentSearchCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -826,19 +1025,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
     final auth = AuthService();
 
-    // Roll number must be unique within the chosen section before we
-    // create the account (avoids an orphaned auth user on collision).
-    if (widget.role == 'student' &&
-        _selectedSection != null &&
-        _rollNumberCtrl.text.trim().isNotEmpty) {
-      final taken = await auth.isRollNumberTaken(
-          _selectedSection!.studentIds, _rollNumberCtrl.text);
+    // Roll number must be unique academy-wide before we create the account
+    // (avoids an orphaned auth user on collision).
+    if (widget.role == 'student') {
+      final taken =
+          await auth.isRollNumberTaken(admin.uid, _rollNumberCtrl.text);
       if (taken) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Roll number "${_rollNumberCtrl.text.trim()}" is already used in ${_selectedSection!.displayLabel}.'),
+                  'Roll number "${_rollNumberCtrl.text.trim()}" is already in use.'),
               backgroundColor: AppColors.danger),
         );
         return;
@@ -856,7 +1053,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         password: _passwordCtrl.text,
         role: UserRole.values.firstWhere((r) => r.name == widget.role),
         academyId: admin.uid, // PASS ACADEMY ID
-        extraInfo: _extraCtrl.text,
+        extraInfo: widget.role == 'teacher'
+            ? _qualificationCtrl.text
+            : widget.role == 'parent'
+                ? _extraCtrl.text
+                : null,
+        subject: widget.role == 'teacher' ? _subjectCtrl.text : null,
         joiningDate: _joiningDate,
         sections:
             widget.role == 'teacher' ? _selectedSectionKeys.toList() : null,
@@ -875,14 +1077,19 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         }
       }
 
-      // 3. Parent: link selected existing student account(s).
+      // 3. Student: assign directly to a searched-and-picked parent.
+      if (widget.role == 'student' && _selectedParentUid != null) {
+        await auth.addLinkedChild(_selectedParentUid!, newUser.uid);
+      }
+
+      // 4. Parent: link selected existing student account(s).
       if (widget.role == 'parent' && _selectedChildUids.isNotEmpty) {
         for (final childUid in _selectedChildUids) {
           await auth.addLinkedChild(newUser.uid, childUid);
         }
       }
 
-      // 4. Refresh counts in Provider
+      // 5. Refresh counts in Provider
       if (mounted) {
         await context.read<MemberProvider>().load(admin.uid);
         if (!mounted) return;
@@ -961,14 +1168,15 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 controller: _passwordCtrl,
                 validator: Validators.password,
               ),
-              LabeledField(
-                label: label,
-                hint: 'Enter $label',
-                controller: _extraCtrl,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? '$label is required'
-                    : null,
-              ),
+              if (widget.role == 'parent')
+                LabeledField(
+                  label: label,
+                  hint: 'Enter $label',
+                  controller: _extraCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? '$label is required'
+                      : null,
+                ),
               LabeledField(
                 label: 'Phone',
                 hint: '+92 300 1234567',
@@ -977,7 +1185,41 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 textInputAction: TextInputAction.done,
                 validator: Validators.phone,
               ),
+              if (widget.role == 'teacher') ...[
+                LabeledField(
+                  label: 'Qualification',
+                  hint: 'e.g. M.Sc Physics',
+                  controller: _qualificationCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Qualification is required'
+                      : null,
+                ),
+                LabeledField(
+                  label: 'Subject',
+                  hint: 'e.g. Physics',
+                  controller: _subjectCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Subject is required'
+                      : null,
+                ),
+              ],
               if (widget.role == 'student') ...[
+                LabeledField(
+                  label: 'Roll Number',
+                  hint: 'e.g. 24',
+                  controller: _rollNumberCtrl,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Roll Number is required'
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                const Text('Assign to Parent (optional)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                _parentSearchField(),
                 const SizedBox(height: 16),
                 const Text('Enroll In Class (optional)',
                     style: TextStyle(
@@ -1047,12 +1289,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     },
                   ),
                 ],
-                const SizedBox(height: 12),
-                LabeledField(
-                  label: 'Roll Number',
-                  hint: 'e.g. 24',
-                  controller: _rollNumberCtrl,
-                ),
               ],
               if (widget.role == 'parent') ...[
                 const SizedBox(height: 16),

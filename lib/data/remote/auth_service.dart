@@ -253,17 +253,19 @@ class AuthService {
     }
   }
 
-  /// True if [rollNumber] is already used by another student among
-  /// [studentUids] (the target class+section's roster) — enforces "roll
-  /// number unique within its class" without a dedicated Firestore index,
-  /// by reusing the same batched profile fetch already used for a
-  /// parent's linked children.
+  /// True if [rollNumber] is already used by another student in
+  /// [academyId] — enforced on both create and update. `excludeUid` lets an
+  /// edit compare against everyone except the student's own existing record.
   Future<bool> isRollNumberTaken(
-      List<String> studentUids, String rollNumber) async {
+    String academyId,
+    String rollNumber, {
+    String? excludeUid,
+  }) async {
     final clean = rollNumber.trim().toLowerCase();
-    if (studentUids.isEmpty || clean.isEmpty) return false;
-    final profiles = await getProfilesByIds(studentUids);
-    return profiles.any((p) => p.rollNumber.trim().toLowerCase() == clean);
+    if (clean.isEmpty) return false;
+    final students = await getApprovedByRole(UserRole.student, academyId);
+    return students.any((s) =>
+        s.uid != excludeUid && s.rollNumber.trim().toLowerCase() == clean);
   }
 
   /// Atomically link a child to a parent. Uses `arrayUnion` instead of
@@ -396,6 +398,7 @@ class AuthService {
     DateTime? joiningDate,
     List<String>? sections,
     String? rollNumber,
+    String? subject,
   }) async {
     await _users.doc(uid).update({
       'full_name': fullName.trim(),
@@ -404,6 +407,7 @@ class AuthService {
       if (joiningDate != null) 'joining_date': Timestamp.fromDate(joiningDate),
       if (sections != null) 'sections': sections,
       if (rollNumber != null) 'roll_number': rollNumber.trim(),
+      if (subject != null) 'subject': subject.trim(),
       'updated_at': FieldValue.serverTimestamp(),
     });
   }
@@ -422,6 +426,7 @@ class AuthService {
     DateTime? joiningDate,
     List<String>? sections,
     String? rollNumber,
+    String? subject,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     try {
@@ -445,6 +450,7 @@ class AuthService {
         joiningDate: joiningDate ?? DateTime.now(),
         assignedSections: sections ?? [],
         rollNumber: rollNumber?.trim() ?? '',
+        subject: subject?.trim() ?? '',
       );
 
       await _users.doc(uid).set(user.toMap());

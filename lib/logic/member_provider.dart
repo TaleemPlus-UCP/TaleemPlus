@@ -91,6 +91,8 @@ class MemberProvider extends ChangeNotifier {
       phone: u.phoneNumber,
       role: u.role.value,
       extra: u.extraInfo ?? '',
+      subject: u.subject,
+      rollNumber: u.rollNumber,
       status: u.accountStatus,
       createdAt: u.createdAt ?? DateTime.now(),
     );

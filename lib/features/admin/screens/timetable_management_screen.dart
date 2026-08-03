@@ -361,7 +361,9 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
 
   bool _isBreak = false;
   ClassEntity? _selectedClass;
-  int _dayOfWeek = DateTime.monday;
+  // Multiple days on create (one slot gets written per day); a single day
+  // when editing an existing slot, since that edits one specific entry.
+  Set<int> _selectedDays = {DateTime.monday};
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
   DateTime _effectiveFrom = DateTime.now();
@@ -378,7 +380,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
       final classMatches =
           widget.classes.where((c) => c.id == existing.classId).toList();
       _selectedClass = classMatches.isEmpty ? null : classMatches.first;
-      _dayOfWeek = existing.dayOfWeek;
+      _selectedDays = {existing.dayOfWeek};
       _startTime = TimeOfDay(
           hour: existing.startMinutes ~/ 60,
           minute: existing.startMinutes % 60);
@@ -393,32 +395,51 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
   }
 
   /// Recomputes which teachers are already booked for the currently chosen
-  /// day/time/date-range, so the CLASS dropdown can hide classes taught by
-  /// an unavailable teacher instead of only rejecting the pick on save.
+  /// day(s)/time/date-range (union across every selected day), so the CLASS
+  /// dropdown can hide classes taught by an unavailable teacher instead of
+  /// only rejecting the pick on save.
   Future<void> _refreshBusyTeachers() async {
     final startMinutes = _timeToMinutes(_startTime);
     final endMinutes = _timeToMinutes(_endTime);
     if (startMinutes == null ||
         endMinutes == null ||
-        endMinutes <= startMinutes) {
+        endMinutes <= startMinutes ||
+        _selectedDays.isEmpty) {
       if (mounted) setState(() => _busyTeacherIds = {});
       return;
     }
     try {
-      final busy = await context.read<TimetableProvider>().busyTeacherIds(
-            academyId: widget.academyId,
-            dayOfWeek: _dayOfWeek,
-            startMinutes: startMinutes,
-            endMinutes: endMinutes,
-            effectiveFrom: _effectiveFrom,
-            effectiveTo: _effectiveTo,
-            excludeSlotId: widget.existing?.id,
-          );
+      final provider = context.read<TimetableProvider>();
+      final results =
+          await Future.wait(_selectedDays.map((day) => provider.busyTeacherIds(
+                academyId: widget.academyId,
+                dayOfWeek: day,
+                startMinutes: startMinutes,
+                endMinutes: endMinutes,
+                effectiveFrom: _effectiveFrom,
+                effectiveTo: _effectiveTo,
+                excludeSlotId: widget.existing?.id,
+              )));
+      final busy = results.expand((s) => s).toSet();
       if (mounted) setState(() => _busyTeacherIds = busy);
     } catch (_) {
       // Non-fatal: dropdown just stays unfiltered, findConflict() on save
       // still catches any real double-booking.
     }
+  }
+
+  void _toggleDay(int day) {
+    setState(() {
+      if (widget.existing != null) {
+        // Editing one specific slot: picking a day always replaces it.
+        _selectedDays = {day};
+      } else if (_selectedDays.contains(day)) {
+        if (_selectedDays.length > 1) _selectedDays.remove(day);
+      } else {
+        _selectedDays.add(day);
+      }
+    });
+    _refreshBusyTeachers();
   }
 
   @override
@@ -469,6 +490,10 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
       _showError('Please select a class, or mark this slot as a break.');
       return;
     }
+    if (_selectedDays.isEmpty) {
+      _showError('Please select at least one day.');
+      return;
+    }
     final startMinutes = _timeToMinutes(_startTime);
     final endMinutes = _timeToMinutes(_endTime);
     if (startMinutes == null || endMinutes == null) {
@@ -488,56 +513,80 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
     try {
       final provider = context.read<TimetableProvider>();
       final cls = _isBreak ? null : _selectedClass;
+      final days = _selectedDays.toList()..sort();
 
-      final conflict = await provider.findConflict(
-        academyId: widget.academyId,
-        dayOfWeek: _dayOfWeek,
-        startMinutes: startMinutes,
-        endMinutes: endMinutes,
-        teacherId: cls?.primaryTeacherId ?? '',
-        room: _roomCtrl.text,
-        className: cls?.className ?? '',
-        section: cls?.section ?? '',
-        effectiveFrom: _effectiveFrom,
-        effectiveTo: _effectiveTo,
-        excludeSlotId: widget.existing?.id,
-      );
-      if (conflict != null) {
-        _showError(conflict);
-        setState(() => _saving = false);
-        return;
+      // Check every selected day for conflicts before writing anything, so
+      // a multi-day save either fully succeeds or fully fails.
+      for (final day in days) {
+        final conflict = await provider.findConflict(
+          academyId: widget.academyId,
+          dayOfWeek: day,
+          startMinutes: startMinutes,
+          endMinutes: endMinutes,
+          teacherId: cls?.primaryTeacherId ?? '',
+          room: _roomCtrl.text,
+          className: cls?.className ?? '',
+          section: cls?.section ?? '',
+          effectiveFrom: _effectiveFrom,
+          effectiveTo: _effectiveTo,
+          excludeSlotId: widget.existing?.id,
+        );
+        if (conflict != null) {
+          _showError('${TimetableSlot.weekdayNames[day - 1]}: $conflict');
+          setState(() => _saving = false);
+          return;
+        }
       }
 
-      final slot = TimetableSlot(
-        id: widget.existing?.id ?? const Uuid().v4(),
-        academyId: widget.academyId,
-        isBreak: _isBreak,
-        classId: cls?.id ?? '',
-        className: cls?.className ?? '',
-        section: cls?.section ?? '',
-        subject: cls?.subject ?? '',
-        teacherId: cls?.primaryTeacherId ?? '',
-        teacherName: cls?.primaryTeacherName ?? '',
-        dayOfWeek: _dayOfWeek,
-        startMinutes: startMinutes,
-        endMinutes: endMinutes,
-        room: _roomCtrl.text.trim(),
-        semester: _semesterCtrl.text.trim(),
-        effectiveFrom: _effectiveFrom,
-        effectiveTo: _effectiveTo,
-      );
-
       if (widget.existing != null) {
+        final slot = TimetableSlot(
+          id: widget.existing!.id,
+          academyId: widget.academyId,
+          isBreak: _isBreak,
+          classId: cls?.id ?? '',
+          className: cls?.className ?? '',
+          section: cls?.section ?? '',
+          subject: cls?.subject ?? '',
+          teacherId: cls?.primaryTeacherId ?? '',
+          teacherName: cls?.primaryTeacherName ?? '',
+          dayOfWeek: days.first,
+          startMinutes: startMinutes,
+          endMinutes: endMinutes,
+          room: _roomCtrl.text.trim(),
+          semester: _semesterCtrl.text.trim(),
+          effectiveFrom: _effectiveFrom,
+          effectiveTo: _effectiveTo,
+        );
         await provider.updateSlot(slot);
       } else {
-        await provider.createSlot(slot);
+        for (final day in days) {
+          await provider.createSlot(TimetableSlot(
+            id: const Uuid().v4(),
+            academyId: widget.academyId,
+            isBreak: _isBreak,
+            classId: cls?.id ?? '',
+            className: cls?.className ?? '',
+            section: cls?.section ?? '',
+            subject: cls?.subject ?? '',
+            teacherId: cls?.primaryTeacherId ?? '',
+            teacherName: cls?.primaryTeacherName ?? '',
+            dayOfWeek: day,
+            startMinutes: startMinutes,
+            endMinutes: endMinutes,
+            room: _roomCtrl.text.trim(),
+            semester: _semesterCtrl.text.trim(),
+            effectiveFrom: _effectiveFrom,
+            effectiveTo: _effectiveTo,
+          ));
+        }
       }
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(widget.existing != null ? 'Slot updated!' : 'Slot added!'),
+            content: Text(widget.existing != null
+                ? 'Slot updated!'
+                : '${days.length} slot${days.length == 1 ? '' : 's'} added!'),
             backgroundColor: AppColors.success));
       }
     } catch (e) {
@@ -674,35 +723,36 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               }),
               const SizedBox(height: 16),
             ],
-            const Text('DAY OF WEEK',
-                style: TextStyle(
+            Text(
+                widget.existing != null
+                    ? 'DAY OF WEEK'
+                    : 'DAY(S) OF WEEK — select one or more',
+                style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 11,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                  color: AppColors.inputFill,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border)),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: _dayOfWeek,
-                  isExpanded: true,
-                  dropdownColor: AppColors.surfaceAlt,
-                  items: [
-                    for (var d = 1; d <= 7; d++)
-                      DropdownMenuItem(
-                          value: d,
-                          child: Text(TimetableSlot.weekdayNames[d - 1]))
-                  ],
-                  onChanged: (d) {
-                    setState(() => _dayOfWeek = d!);
-                    _refreshBusyTeachers();
-                  },
-                ),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var d = 1; d <= 7; d++)
+                  FilterChip(
+                    label:
+                        Text(TimetableSlot.weekdayNames[d - 1].substring(0, 3)),
+                    selected: _selectedDays.contains(d),
+                    onSelected: (_) => _toggleDay(d),
+                    selectedColor: AppColors.accent.withValues(alpha: 0.2),
+                    checkmarkColor: AppColors.accent,
+                    labelStyle: TextStyle(
+                        color: _selectedDays.contains(d)
+                            ? AppColors.accent
+                            : AppColors.textSecondary,
+                        fontWeight: _selectedDays.contains(d)
+                            ? FontWeight.bold
+                            : FontWeight.normal),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             Row(

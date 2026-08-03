@@ -522,133 +522,114 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                const Text('MANAGE',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1)),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'User Management',
-                  'Add or remove teachers, students, parents',
-                  Icons.group_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const UserManagementScreen()),
+                const SizedBox(height: 8),
+                _gridSection('PEOPLE', [
+                  _gridTile(
+                    'User Management',
+                    'Teachers, students, parents',
+                    Icons.group_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const UserManagementScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Classes & Sections',
-                  'Manage 9th/10th/1st/2nd Year sections and enroll students',
-                  Icons.groups_2_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ClassSectionsScreen()),
+                  _gridTile(
+                    'Approval Requests',
+                    'Approve or reject signups',
+                    Icons.how_to_reg_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ApprovalRequestsScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Class Management',
-                  'Assign subjects and teachers to a class section',
-                  Icons.class_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ClassManagementScreen()),
+                ]),
+                _gridSection('ACADEMICS', [
+                  _gridTile(
+                    'Classes & Sections',
+                    'Manage sections, enroll students',
+                    Icons.groups_2_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ClassSectionsScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Timetable Management',
-                  'Build weekly class schedules with conflict checks',
-                  Icons.schedule_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const TimetableManagementScreen()),
+                  _gridTile(
+                    'Class Management',
+                    'Assign subjects & teachers',
+                    Icons.class_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ClassManagementScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Approval Requests',
-                  'Approve or reject new signups',
-                  Icons.how_to_reg_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ApprovalRequestsScreen()),
+                  _gridTile(
+                    'Timetable',
+                    'Weekly schedules, conflict checks',
+                    Icons.schedule_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const TimetableManagementScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Fee Ledger',
-                  'Track fees and defaulters',
-                  Icons.receipt_long_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FeeLedgerScreen()),
+                  _gridTile(
+                    'Test Reports & Grading',
+                    'Student performance & results',
+                    Icons.analytics_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AdminQuizListScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Bulk Fee Challans',
-                  'Generate monthly invoices for classes',
-                  Icons.request_quote_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ChallanGenerationScreen()),
+                ]),
+                _gridSection('FEES', [
+                  _gridTile(
+                    'Fee Ledger',
+                    'Track fees and defaulters',
+                    Icons.receipt_long_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const FeeLedgerScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Unpaid Students',
-                  'Academy-wide list of pending/overdue challans',
-                  Icons.money_off_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const UnpaidStudentsScreen()),
+                  _gridTile(
+                    'Bulk Fee Challans',
+                    'Generate monthly invoices',
+                    Icons.request_quote_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ChallanGenerationScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Announcements',
-                  'Broadcast to teachers, students, parents',
-                  Icons.campaign_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AnnouncementsScreen()),
+                  _gridTile(
+                    'Unpaid Students',
+                    'Pending/overdue challans',
+                    Icons.money_off_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const UnpaidStudentsScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'Test Reports & Grading',
-                  'Monitor student performance and results',
-                  Icons.analytics_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AdminQuizListScreen()),
+                ]),
+                _gridSection('INSIGHTS & COMMUNICATION', [
+                  _gridTile(
+                    'AI Prediction & Insights',
+                    'Risk & revenue trends',
+                    Icons.auto_awesome_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AdminAiPredictionScreen())),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  'AI Prediction & Insights',
-                  'Predict student risk and revenue trends',
-                  Icons.auto_awesome_rounded,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AdminAiPredictionScreen()),
+                  _gridTile(
+                    'Announcements',
+                    'Broadcast to the academy',
+                    Icons.campaign_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AnnouncementsScreen())),
                   ),
-                ),
+                ]),
               ],
             ),
           ),
@@ -789,48 +770,70 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _actionTile(
-      String title, String subtitle, IconData icon, VoidCallback? onTap) {
-    final enabled = onTap != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.55,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: context.appColors.surface.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: context.appColors.border.withValues(alpha: 0.5)),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: AppColors.accent, size: 22),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: TextStyle(
-                              color: context.appColors.textPrimary,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text(subtitle,
-                          style: TextStyle(
-                              color: context.appColors.textMuted,
-                              fontSize: 12)),
-                    ],
-                  ),
-                ),
-                if (enabled)
-                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              ],
-            ),
+  /// A labeled section of a compact 2-column tile grid — groups related
+  /// dashboard actions so the whole "MANAGE" area no longer scrolls as one
+  /// long single-column list of 11 full-width rows.
+  Widget _gridSection(String title, List<Widget> tiles) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+            children: tiles,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gridTile(
+      String title, String subtitle, IconData icon, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.appColors.surface.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: context.appColors.border.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: AppColors.accent, size: 22),
+              const Spacer(),
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: context.appColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: context.appColors.textMuted, fontSize: 10.5)),
+            ],
           ),
         ),
       ),
