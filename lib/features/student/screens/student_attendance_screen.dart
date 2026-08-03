@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/attendance_provider.dart';
+import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../data/models/attendance_record.dart';
+import '../../../data/models/class_entity.dart';
 
 class StudentAttendanceScreen extends StatelessWidget {
   final String studentUid;
@@ -27,65 +29,71 @@ class StudentAttendanceScreen extends StatelessWidget {
         child: SafeArea(
           child: academyId.isEmpty
               ? const Center(child: Text("Academy session error"))
-              : StreamBuilder<List<AttendanceRecord>>(
+              : StreamBuilder<List<ClassEntity>>(
                   stream: context
-                      .read<AttendanceProvider>()
-                      .watchStudentAttendance(studentUid, academyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
+                      .read<ClassProvider>()
+                      .streamForStudent(studentUid, academyId),
+                  builder: (context, courseSnap) {
+                    final courses = courseSnap.data ?? const [];
+                    return StreamBuilder<List<AttendanceRecord>>(
+                      stream: context
+                          .read<AttendanceProvider>()
+                          .watchStudentAttendance(studentUid, academyId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
+                            courseSnap.connectionState ==
+                                ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: AppColors.accent));
+                        }
 
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline_rounded,
-                                  color: AppColors.danger, size: 48),
-                              const SizedBox(height: 16),
-                              Text(
-                                "Error loading records: ${snapshot.error}",
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppColors.danger),
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.error_outline_rounded,
+                                      color: AppColors.danger, size: 48),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "Error loading records: ${snapshot.error}",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        color: AppColors.danger),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 12),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: AppColors.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
+                            ),
+                          );
+                        }
 
-                    final records = snapshot.data ?? [];
+                        final records = snapshot.data ?? [];
 
-                    if (records.isEmpty) {
-                      return _buildEmptyState();
-                    }
+                        if (records.isEmpty && courses.isEmpty) {
+                          return _buildEmptyState();
+                        }
 
-                    return Column(
-                      children: [
-                        _buildStatsHeader(records),
-                        Expanded(
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(20),
-                            itemCount: records.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) =>
-                                _attendanceTile(records[index]),
-                          ),
-                        ),
-                      ],
+                        return Column(
+                          children: [
+                            _buildStatsHeader(records),
+                            Expanded(
+                              child: _buildCourseGroupedView(courses, records),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -133,6 +141,130 @@ class StudentAttendanceScreen extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700)),
       ],
+    );
+  }
+
+  /// Groups attendance records by enrolled course (subject offering), then
+  /// by month within each course — a flat chronological list previously
+  /// gave no way to see "how am I doing in Physics this month" at a glance.
+  Widget _buildCourseGroupedView(
+      List<ClassEntity> courses, List<AttendanceRecord> records) {
+    final courseById = {for (final c in courses) c.id: c};
+    final Map<String, List<AttendanceRecord>> byCourse = {};
+    for (final r in records) {
+      byCourse.putIfAbsent(r.classId, () => []).add(r);
+    }
+    // Show every currently-enrolled course even before it has any records.
+    for (final c in courses) {
+      byCourse.putIfAbsent(c.id, () => []);
+    }
+
+    if (byCourse.isEmpty) return _buildEmptyState();
+
+    final courseIds = byCourse.keys.toList()
+      ..sort((a, b) {
+        final aLabel = courseById[a]?.displayLabel ?? a;
+        final bLabel = courseById[b]?.displayLabel ?? b;
+        return aLabel.compareTo(bLabel);
+      });
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      children: courseIds
+          .map((id) => _courseSection(courseById[id], id, byCourse[id]!))
+          .toList(),
+    );
+  }
+
+  Widget _courseSection(
+      ClassEntity? course, String classId, List<AttendanceRecord> records) {
+    final label = course?.displayLabel ?? 'Unknown Course';
+    final total = records.length;
+    final present = records.where((r) => r.isPresent).length;
+    final late = records.where((r) => r.isLate).length;
+    final pct = total == 0 ? 0.0 : ((present + late) / total) * 100;
+
+    final Map<String, List<AttendanceRecord>> byMonth = {};
+    for (final r in records) {
+      byMonth
+          .putIfAbsent(DateFormat('yyyy-MM').format(r.logDate), () => [])
+          .add(r);
+    }
+    final months = byMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: months.isNotEmpty,
+        title: Text(label,
+            style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 15)),
+        subtitle: Text(
+          total == 0
+              ? 'No records yet'
+              : '${pct.toStringAsFixed(1)}% overall · $total marked',
+          style: const TextStyle(color: AppColors.accent, fontSize: 12),
+        ),
+        children: months.isEmpty
+            ? [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Text('No attendance recorded for this course yet.',
+                      style:
+                          TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                ),
+              ]
+            : months.map((m) => _monthSection(m, byMonth[m]!)).toList(),
+      ),
+    );
+  }
+
+  Widget _monthSection(String monthKey, List<AttendanceRecord> records) {
+    final monthLabel =
+        DateFormat('MMMM yyyy').format(DateFormat('yyyy-MM').parse(monthKey));
+    final total = records.length;
+    final present = records.where((r) => r.isPresent).length;
+    final late = records.where((r) => r.isLate).length;
+    final absent = total - present - late;
+    final pct = total == 0 ? 0.0 : ((present + late) / total) * 100;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(monthLabel,
+                  style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
+              Text('${pct.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                      color: pct >= 75 ? AppColors.success : AppColors.warning,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Present $present · Late $late · Absent $absent',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          const SizedBox(height: 8),
+          ...records.map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _attendanceTile(r),
+              )),
+        ],
+      ),
     );
   }
 

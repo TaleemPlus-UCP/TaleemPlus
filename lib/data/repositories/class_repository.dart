@@ -41,6 +41,22 @@ class ClassRepository {
         );
   }
 
+  /// Every subject offering (course) a student is enrolled in — used to
+  /// group the student's attendance records by course on their portal,
+  /// since AttendanceRecord.classId already points at one of these.
+  Stream<List<ClassEntity>> watchForStudent(
+      String studentUid, String academyId) {
+    return _col
+        .where('academy_id', isEqualTo: academyId)
+        .where('student_ids', arrayContains: studentUid)
+        .snapshots()
+        .map(
+          (snap) => snap.docs
+              .map((d) => ClassEntity.fromMap(d.id, d.data()))
+              .toList(),
+        );
+  }
+
   Future<ClassEntity?> getById(String id) async {
     final doc = await _col.doc(id).get();
     if (!doc.exists || doc.data() == null) return null;

@@ -54,6 +54,10 @@ class ClassProvider extends ChangeNotifier {
           String teacherUid, String academyId) =>
       _repo.watchForTeacher(teacherUid, academyId);
 
+  Stream<List<ClassEntity>> streamForStudent(
+          String studentUid, String academyId) =>
+      _repo.watchForStudent(studentUid, academyId);
+
   Future<void> createClassWithStudents({
     required String className,
     required String section,
