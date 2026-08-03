@@ -5,9 +5,10 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/app_user.dart';
+import '../../../data/models/class_section.dart';
 import '../../../data/remote/auth_service.dart';
 import '../../../logic/auth_provider.dart';
-import '../../../logic/class_provider.dart';
+import '../../../logic/class_section_provider.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../widgets/gradient_background.dart';
@@ -23,7 +24,7 @@ class ChallanGenerationScreen extends StatefulWidget {
 
 class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
   final _repo = FeeChallanRepository();
-  String? _selectedClassId;
+  ClassSectionEntity? _selectedSection;
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
   final _monthlyFeeCtrl = TextEditingController(text: "3000");
   final _admissionFeeCtrl = TextEditingController(text: "0");
@@ -31,6 +32,18 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
   final _fineCtrl = TextEditingController(text: "0");
 
   bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user =
+          Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        context.read<ClassSectionProvider>().listenAll(user.uid);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -72,7 +85,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final classes = context.watch<ClassProvider>().classes;
+    final sections = context.watch<ClassSectionProvider>().sections;
 
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +98,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              _buildClassSelector(classes),
+              _buildClassSelector(sections),
               const SizedBox(height: 16),
               _buildMonthSelector(),
               const SizedBox(height: 24),
@@ -118,16 +131,16 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
                   keyboardType: TextInputType.number),
               const SizedBox(height: 24),
               PrimaryButton(
-                label: "GENERATE FOR ENTIRE CLASS",
+                label: "GENERATE FOR SECTION",
                 icon: Icons.auto_awesome_motion_rounded,
                 loading: _isGenerating,
-                onPressed: (_selectedClassId == null || _isGenerating)
+                onPressed: (_selectedSection == null || _isGenerating)
                     ? null
                     : _confirmAndGenerate,
               ),
               const SizedBox(height: 12),
               const Text(
-                  "Note: This will create pending challans for all students enrolled in the selected class.",
+                  "Note: This will create pending challans for all students enrolled in the selected class+section.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
             ],
@@ -137,11 +150,11 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
     );
   }
 
-  Widget _buildClassSelector(List<dynamic> classes) {
+  Widget _buildClassSelector(List<ClassSectionEntity> sections) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("SELECT CLASS",
+        const Text("SELECT CLASS & SECTION",
             style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
@@ -154,19 +167,19 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border)),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedClassId,
+            child: DropdownButton<ClassSectionEntity>(
+              value: _selectedSection,
               isExpanded: true,
               dropdownColor: AppColors.surface,
-              hint: const Text("Pick a class"),
-              items: classes
-                  .map((c) => DropdownMenuItem(
-                      value: c.id as String,
-                      child: Text(c.displayLabel as String,
+              hint: const Text("Pick a class & section"),
+              items: sections
+                  .map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.displayLabel,
                           style:
                               const TextStyle(color: AppColors.textPrimary))))
                   .toList(),
-              onChanged: (v) => setState(() => _selectedClassId = v),
+              onChanged: (v) => setState(() => _selectedSection = v),
             ),
           ),
         ),
@@ -211,16 +224,8 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
   }
 
   Future<void> _confirmAndGenerate() async {
-    final cp = context.read<ClassProvider>();
-    final clsMatches =
-        cp.classes.where((c) => c.id == _selectedClassId).toList();
-    if (clsMatches.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Selected class no longer exists.'),
-          backgroundColor: AppColors.danger));
-      return;
-    }
-    final cls = clsMatches.first;
+    final section = _selectedSection;
+    if (section == null) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -228,7 +233,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
         title: const Text('Generate challans?'),
         content: Text(
             'This will create pending challans for every student enrolled in '
-            '${cls.displayLabel} for $_selectedMonth. Students who already '
+            '${section.displayLabel} for $_selectedMonth. Students who already '
             'have a challan for this month will be skipped. This cannot be '
             'undone automatically.'),
         actions: [
@@ -247,17 +252,18 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
   }
 
   Future<void> _generateChallans() async {
+    final section = _selectedSection;
+    if (section == null) return;
+
     setState(() => _isGenerating = true);
 
     try {
-      final cp = context.read<ClassProvider>();
-      final cls = cp.classes.firstWhere((c) => c.id == _selectedClassId);
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final admin = auth.currentUser;
       if (admin == null) return;
 
-      if (cls.studentIds.isEmpty) {
-        throw Exception("No students are enrolled in this class.");
+      if (section.studentIds.isEmpty) {
+        throw Exception("No students are enrolled in this section.");
       }
 
       // Fetching all approved students from Firebase to ensure we have father names/extra data
@@ -276,16 +282,16 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
       int count = 0;
       int skipped = 0;
-      for (var studentId in cls.studentIds) {
+      for (var studentId in section.studentIds) {
         if (studentsAlreadyBilled.contains(studentId)) {
           skipped++;
           continue;
         }
-        // Find student in our fresh list, or fallback to class records
+        // Find student in our fresh list, or fallback to section records
         final student = allStudents.firstWhere((s) => s.uid == studentId,
             orElse: () => AppUser(
                   uid: studentId,
-                  fullName: cls.studentNames[studentId] ?? "Student",
+                  fullName: section.studentNames[studentId] ?? "Student",
                   email: "",
                   phoneNumber: "",
                   role: UserRole.student,
@@ -302,7 +308,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
           studentName: student.fullName,
           fatherName: student.academyName ??
               "N/A", // We reuse academyName for student bio sometimes
-          classLabel: cls.displayLabel,
+          classLabel: section.displayLabel,
           rollNumber: student.rollNumber,
           issueDate: DateTime.now(),
           dueDate: _dueDateForMonth(_selectedMonth),

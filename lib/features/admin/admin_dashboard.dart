@@ -26,6 +26,7 @@ import 'class_sections_screen.dart';
 import 'admin_quiz_list_screen.dart';
 import 'admin_ai_prediction_screen.dart';
 import 'screens/challan_generation_screen.dart';
+import 'screens/unpaid_students_screen.dart';
 import 'screens/timetable_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -602,6 +603,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ChallanGenerationScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _actionTile(
+                  'Unpaid Students',
+                  'Academy-wide list of pending/overdue challans',
+                  Icons.money_off_rounded,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const UnpaidStudentsScreen()),
                   ),
                 ),
                 const SizedBox(height: 12),
