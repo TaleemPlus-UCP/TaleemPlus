@@ -11,6 +11,7 @@ import '../../../data/models/class_entity.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../logic/session_provider.dart';
+import '../../../logic/tfidf_grader.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
 
@@ -417,18 +418,20 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
 
       if (rawText.trim().isEmpty) throw Exception("No text detected!");
 
-      // 2. Local AI Logic (Keyword Matching)
-      int matches = 0;
-      for (var kw in q.gradingKeywords) {
-        if (rawText.contains(kw.toLowerCase())) matches++;
-      }
-
-      // 3. Heuristic Scoring
-      double suggested = 0;
-      if (q.gradingKeywords.isNotEmpty) {
-        double matchRatio = matches / q.gradingKeywords.length;
-        suggested = q.marks * matchRatio;
-      }
+      // 2-3. TF-IDF weighted cosine-similarity scoring against the
+      // question's grading keywords, using this quiz's own gradable
+      // questions as the corpus for IDF weighting (100% offline, no
+      // training data — see TfIdfGrader).
+      final corpus = widget.quiz.questions
+          .where((question) => question.gradingKeywords.isNotEmpty)
+          .map((question) => question.gradingKeywords)
+          .toList();
+      final similarity = TfIdfGrader.score(
+        keywords: q.gradingKeywords,
+        answerText: rawText,
+        corpusKeywordSets: corpus,
+      );
+      final suggested = q.marks * similarity;
 
       if (!mounted) return;
       setState(() {

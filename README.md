@@ -20,7 +20,7 @@ TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designe
 
 ### 👨‍🏫 Teacher Portal (Digital Classroom)
 *   **My Classes, Resources, and Queries:** Dedicated dashboard entries for attendance, shared classroom resources, and student queries.
-*   **AI Smart Grader:** Grade handwritten answer sheets offline via OCR and keyword matching, with manual mark entry as a fallback and editable grading keywords.
+*   **AI Smart Grader:** Grade handwritten answer sheets offline via OCR and TF-IDF cosine-similarity scoring against teacher-defined keywords, with manual mark entry as a fallback and editable grading keywords.
 *   **AI Test Generator:** Scan textbook pages to auto-generate MCQ/Short/Long questions, grouped into sections with an auto-computed Total Marks and a matching sectioned PDF export.
 *   **Attendance Marking:** Digital presence tracking for all assigned classes.
 *   **Performance Tracking:** Enter, edit, and delete individual student test scores.
@@ -28,7 +28,7 @@ TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designe
 ### 🎓 Student Portal (Learning Console)
 *   **My Classroom Hub:** View subject-wise resources, and discuss topics with teachers.
 *   **Monthly Attendance:** Attendance broken down by enrolled course and month.
-*   **AI Summarizer:** Generate concise summaries from large study notes 100% offline.
+*   **AI Summarizer:** TextRank-based extractive summaries from large study notes, 100% offline.
 *   **Performance Analytics:** Visual progress charts and detailed test reports.
 *   **Fee Status:** Real-time tracking of paid and pending challans.
 
@@ -43,8 +43,9 @@ TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designe
 
 *   **Google ML Kit (Deep Learning):** High-precision OCR used for digitizing physical notes and answer sheets.
 *   **Trained On-Device ML Models:** A logistic-regression fee-delay-risk model and a linear-regression performance-forecast model, trained in Python (`ml_training/`) and ported to plain Dart — no TensorFlow Lite runtime dependency.
-*   **Heuristic NLP Algorithms:** Rule-based logic for automated test paper generation and extractive text summarization.
-*   **Keyword Matcher:** Intelligent scoring system for grading short answers based on teacher-defined rubrics.
+*   **TextRank Summarization:** Unsupervised graph-based sentence ranking (Mihalcea & Tarau, 2004) for extractive note summarization — no training data required.
+*   **TF-IDF Cosine-Similarity Grading:** Grades short/long answers by vector-space similarity to teacher-defined keywords, weighted by how distinctive each keyword is across the quiz's own questions.
+*   **Heuristic NLP Algorithms:** Rule-based logic for automated test paper generation (question extraction from scanned notes).
 
 ---
 
@@ -53,7 +54,7 @@ TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designe
 *   **Frontend:** Flutter (Dart) - Responsive UI for Mobile & Web.
 *   **State Management:** Provider.
 *   **Backend:** Firebase (Authentication, Firestore, Hosting).
-*   **AI/ML:** Google ML Kit, scikit-learn-trained models ported to Dart, Heuristic Logic.
+*   **AI/ML:** Google ML Kit, scikit-learn-trained models ported to Dart, TextRank, TF-IDF cosine similarity, Heuristic Logic.
 *   **Utilities:** Local Auth (Biometrics), PDF Printing/Sharing, fl_chart.
 
 ---

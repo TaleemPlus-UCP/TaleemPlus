@@ -37,8 +37,7 @@ void main() {
       );
     });
 
-    test('risk probability increases as attendance drops, all else equal',
-        () {
+    test('risk probability increases as attendance drops, all else equal', () {
       final higherAttendance = FeeRiskModel.predictRiskProbability(
         attendanceRate: 0.9,
         daysLateAvg: 5,

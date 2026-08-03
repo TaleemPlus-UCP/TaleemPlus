@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../logic/session_provider.dart';
+import '../../../logic/text_rank_summarizer.dart';
 import '../../../widgets/gradient_background.dart';
 
 class AiSummarizerScreen extends StatefulWidget {
@@ -69,51 +70,23 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
     }
   }
 
-  /// 100% Offline Rule-based "AI" Summarizer
-  /// Extracts key points, definitions, and headers locally.
+  /// 100% offline extractive summarization via TextRank — an unsupervised,
+  /// graph-based ranking algorithm (no training data needed), rather than
+  /// the previous plain formatting heuristic (short/ALL-CAPS lines) that
+  /// also operated on raw OCR '\n' breaks instead of real sentences.
   String _generateLocalSummary(String text) {
     if (text.isEmpty) return "No text detected to summarize.";
 
-    final lines = text
-        .split('\n')
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty)
-        .toList();
-    final List<String> keyPoints = [];
-    final List<String> definitions = [];
-
-    for (var line in lines) {
-      // Logic for definitions (e.g., "Word is...")
-      if (line.contains(' is ') || line.contains(':')) {
-        definitions.add(line);
-      }
-      // Logic for key headers or short impactful lines
-      else if (line.length < 50 &&
-          (line.toUpperCase() == line || line.endsWith('.'))) {
-        keyPoints.add(line);
-      }
-    }
-
-    final StringBuffer sb = StringBuffer();
-    sb.writeln("📌 QUICK SUMMARY (OFFLINE AI)\n");
-
-    if (definitions.isNotEmpty) {
-      sb.writeln("📖 KEY DEFINITIONS:");
-      for (var d in definitions.take(5)) {
-        sb.writeln("• $d");
-      }
-      sb.writeln("");
-    }
-
-    if (keyPoints.isNotEmpty) {
-      sb.writeln("💡 IMPORTANT POINTS:");
-      for (var k in keyPoints.take(8)) {
-        sb.writeln("• $k");
-      }
-    }
-
-    if (sb.length < 50) {
+    final topSentences = TextRankSummarizer.summarize(text, maxSentences: 6);
+    if (topSentences.isEmpty) {
       return "Detected text is too short for a structured summary:\n\n$text";
+    }
+
+    final sb = StringBuffer();
+    sb.writeln("📌 QUICK SUMMARY (OFFLINE AI — TextRank)\n");
+    sb.writeln("💡 KEY POINTS:");
+    for (final s in topSentences) {
+      sb.writeln("• $s.");
     }
 
     return sb.toString();
