@@ -681,30 +681,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _statCard(String label, int value, IconData icon, VoidCallback onTap) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-            decoration: BoxDecoration(
-              color: context.appColors.surface.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: context.appColors.border.withValues(alpha: 0.5)),
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: AppColors.accent, size: 24),
-                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: AppColors.accentDark, size: 20),
+                ),
+                const SizedBox(height: 10),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text('$value',
                       style: TextStyle(
                           color: context.appColors.textPrimary,
-                          fontSize: 22,
+                          fontSize: 24,
                           fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(height: 2),
@@ -713,7 +714,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Text(label,
                       style: TextStyle(
                           color: context.appColors.textSecondary,
-                          fontSize: 11)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -724,48 +726,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildAcademyCodeCard(String code) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.1),
+    return Card(
+      color: AppColors.accent.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+        side: BorderSide(color: AppColors.accent.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.vpn_key_rounded, color: AppColors.accent, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("ACADEMY JOINING CODE",
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1)),
-                Text(code,
-                    style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2)),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy_all_rounded,
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.vpn_key_rounded,
                 color: AppColors.accent, size: 20),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: code));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Academy Code copied to clipboard!")));
-              }
-            },
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("ACADEMY JOINING CODE",
+                      style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1)),
+                  Text(code,
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2)),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.copy_all_rounded,
+                  color: AppColors.accent, size: 20),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: code));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Academy Code copied to clipboard!")));
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -802,30 +808,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _gridTile(
       String title, String subtitle, IconData icon, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
+    return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.appColors.surface.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: context.appColors.border.withValues(alpha: 0.5)),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: AppColors.accent, size: 22),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: AppColors.accentDark, size: 18),
+              ),
               const Spacer(),
               Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                       color: context.appColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13)),
               const SizedBox(height: 2),
               Text(subtitle,

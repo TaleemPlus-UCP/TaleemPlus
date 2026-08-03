@@ -462,14 +462,8 @@ class ParentDashboard extends StatelessWidget {
   }
 
   Widget _childCard(BuildContext context, AppUser child) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: context.appColors.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
-      ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
@@ -602,22 +596,23 @@ class ParentDashboard extends StatelessWidget {
 
   Widget _actionTile(BuildContext context, String title, String subtitle,
       IconData icon, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
+    return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: context.appColors.surface.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: context.appColors.border.withValues(alpha: 0.5)),
-          ),
           child: Row(
             children: [
-              Icon(icon, color: AppColors.accent, size: 22),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.accentDark, size: 20),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -626,7 +621,7 @@ class ParentDashboard extends StatelessWidget {
                     Text(title,
                         style: TextStyle(
                             color: context.appColors.textPrimary,
-                            fontWeight: FontWeight.w600)),
+                            fontWeight: FontWeight.w700)),
                     Text(subtitle,
                         style: TextStyle(
                             color: context.appColors.textMuted, fontSize: 12)),
