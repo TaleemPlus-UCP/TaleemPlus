@@ -18,6 +18,12 @@ class GradientBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDarkMode;
 
+    // Light mode renders flat (no gradient "fog") per the redesigned light
+    // theme — the teal glow gradient is a dark-mode-only design element.
+    if (!isDark && !useSplashGlow) {
+      return ColoredBox(color: AppColors.bgBottomLight, child: child);
+    }
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
