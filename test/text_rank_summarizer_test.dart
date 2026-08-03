@@ -36,5 +36,31 @@ void main() {
     test('empty text yields no sentences', () {
       expect(TextRankSummarizer.summarize('', maxSentences: 5), isEmpty);
     });
+
+    test('rankSentences returns every sentence exactly once, none dropped', () {
+      const text =
+          'Force and motion are central to this entire mechanics chapter. '
+          'A short unrelated note about cooking recipes appears here today. '
+          'This mechanics chapter often returns to force and motion again.';
+      final ranked = TextRankSummarizer.rankSentences(text);
+      expect(ranked.length, 3);
+      expect(ranked.toSet(), {
+        'Force and motion are central to this entire mechanics chapter.',
+        'A short unrelated note about cooking recipes appears here today.',
+        'This mechanics chapter often returns to force and motion again.',
+      });
+    });
+
+    test('rankSentences does not simply favor the longest sentence', () {
+      const text =
+          'Energy is central and energy recurs across this entire passage. '
+          'Energy transformations are discussed again in relation to energy. '
+          'This unrelated sentence about a totally different topic happens to run on for quite a long stretch of unrelated words just to be long.';
+      final ranked = TextRankSummarizer.rankSentences(text);
+      // The longest sentence (the unrelated one) should not be ranked first
+      // purely for its length — the two sentences sharing "energy" should
+      // dominate the ranking.
+      expect(ranked.first, isNot(contains('unrelated sentence')));
+    });
   });
 }

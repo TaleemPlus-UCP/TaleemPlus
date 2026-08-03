@@ -21,18 +21,41 @@ class TextRankSummarizer {
     'when', 'while', 'has', 'have', 'had', 'will', 'we', 'you', 'your', //
   };
 
-  /// Returns the top [maxSentences] sentences from [text], in their
-  /// original order (so the summary still reads coherently).
-  static List<String> summarize(String text, {int maxSentences = 5}) {
+  static List<String> _splitSentences(String text) {
     final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    final sentences = normalized
+    return normalized
         .split(RegExp(r'(?<=[.?!])\s+'))
         .map((s) => s.trim())
         .where((s) => s.length > 15)
         .toList();
+  }
 
+  /// Returns the top [maxSentences] sentences from [text], in their
+  /// original order (so the summary still reads coherently).
+  static List<String> summarize(String text, {int maxSentences = 5}) {
+    final sentences = _splitSentences(text);
     if (sentences.length <= maxSentences) return sentences;
 
+    final order = _rankByImportance(sentences);
+    final topIndices = order.take(maxSentences).toList()..sort();
+    return topIndices.map((i) => sentences[i]).toList();
+  }
+
+  /// Every sentence in [text], sorted by TextRank importance (most central
+  /// to the document first) — exposed directly so callers that need a full
+  /// importance ordering (e.g. the AI Paper Generator deciding which
+  /// sentences become questions) can reuse the same graph-based ranking
+  /// instead of picking by arbitrary length or position.
+  static List<String> rankSentences(String text) {
+    final sentences = _splitSentences(text);
+    if (sentences.length <= 1) return sentences;
+    return _rankByImportance(sentences).map((i) => sentences[i]).toList();
+  }
+
+  /// Sentence indices into [sentences], sorted by TextRank importance
+  /// (descending). Index-based so duplicate-content sentences don't
+  /// collide the way a string-`Set` match would.
+  static List<int> _rankByImportance(List<String> sentences) {
     final wordSets = sentences.map(_wordSet).toList();
     final n = sentences.length;
 
@@ -69,10 +92,8 @@ class TextRankSummarizer {
       scores = next;
     }
 
-    final ranked = List<int>.generate(n, (i) => i)
+    return List<int>.generate(n, (i) => i)
       ..sort((a, b) => scores[b].compareTo(scores[a]));
-    final topIndices = ranked.take(maxSentences).toList()..sort();
-    return topIndices.map((i) => sentences[i]).toList();
   }
 
   static Set<String> _wordSet(String sentence) => sentence

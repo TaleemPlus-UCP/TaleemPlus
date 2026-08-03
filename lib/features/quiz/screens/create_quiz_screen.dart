@@ -10,6 +10,7 @@ import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../logic/session_provider.dart';
+import '../../../logic/text_rank_summarizer.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../data/models/quiz_model.dart';
@@ -357,26 +358,23 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   ({int mcq, int sq, int lq}) _generateQuestionsLocally(
       String extractedText, String diff, int mcqs, int sqs, int lqs) {
-    // 100% Offline Heuristic Question Generation.
-    // ML Kit OCR breaks text on visual line boundaries, not sentence
-    // boundaries, so a raw '\n' split rarely produces a long enough line to
-    // trigger the "long question" heuristic and often chops "X is Y"
-    // definitions mid-sentence, starving the MCQ heuristic too. Rejoining
-    // into one blob and re-splitting on sentence terminators gives each
-    // heuristic real sentence-level text to work with.
-    final normalized = extractedText.replaceAll(RegExp(r'\s+'), ' ').trim();
-    final sentences = normalized
-        .split(RegExp(r'[.?!]+'))
-        .map((s) => s.trim())
+    // 100% Offline Question Generation, sentence selection driven by
+    // TextRank (the same unsupervised graph-ranking algorithm the AI
+    // Summarizer uses) instead of arbitrary sentence length/position — the
+    // most central ideas in the notes get first claim on each question
+    // type, rather than whichever sentence happened to be longest.
+    final rankedSentences = TextRankSummarizer.rankSentences(extractedText)
+        .map((s) => s.replaceAll(RegExp(r'[.?!]+$'), '').trim())
         .where((s) => s.length > 15)
         .toList();
 
     final List<QuizQuestion> generated = [];
     final usedSentences = <String>{};
 
-    // Heuristic 1: MCQs from "X is/refers to Y" definitions.
+    // Heuristic 1: MCQs from "X is/refers to Y" definitions, highest
+    // TextRank importance first.
     int mGenerated = 0;
-    for (var sentence in sentences) {
+    for (var sentence in rankedSentences) {
       if (mGenerated >= mcqs) break;
       if (usedSentences.contains(sentence)) continue;
       if (sentence.contains(' is ') || sentence.contains(' refers to ')) {
@@ -404,14 +402,12 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       }
     }
 
-    // Remaining sentences, longest first, so the longest ones become Long
-    // Questions and the rest are available for Short Questions.
-    final remaining = sentences
-        .where((s) => !usedSentences.contains(s))
-        .toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
+    // Remaining sentences, still in TextRank importance order.
+    final remaining =
+        rankedSentences.where((s) => !usedSentences.contains(s)).toList();
 
-    // Heuristic 2: Long Questions from the longest remaining sentences.
+    // Heuristic 2: Long Questions from the most important remaining
+    // sentences substantial enough to "discuss in detail".
     int lGenerated = 0;
     for (var sentence in remaining) {
       if (lGenerated >= lqs) break;
@@ -430,7 +426,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       lGenerated++;
     }
 
-    // Heuristic 3: Short Questions from whatever's left.
+    // Heuristic 3: Short Questions from the next-most-important remaining
+    // sentences.
     int sGenerated = 0;
     for (var sentence in remaining) {
       if (sGenerated >= sqs) break;
@@ -681,7 +678,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-              "Take a photo of the textbook topic to get suggested question counts and difficulty.",
+              "Take a photo of the textbook topic — TextRank ranks the most important sentences to build your questions from, offline.",
               style: TextStyle(
                   color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
           const SizedBox(height: 16),
