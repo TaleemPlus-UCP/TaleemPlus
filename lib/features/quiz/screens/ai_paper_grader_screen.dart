@@ -202,11 +202,32 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
             _resultPreview(q),
             const SizedBox(height: 16),
           ],
-          PrimaryButton(
-            label: hasResult ? "RE-SCAN PAPER" : "SCAN ANSWER SHEET",
-            icon: Icons.camera_alt_rounded,
-            loading: _isProcessing,
-            onPressed: () => _pickAndGrade(q),
+          Row(
+            children: [
+              Expanded(
+                child: PrimaryButton(
+                  label: hasResult ? "RE-SCAN PAPER" : "SCAN ANSWER SHEET",
+                  icon: Icons.camera_alt_rounded,
+                  loading: _isProcessing,
+                  onPressed: () => _pickAndGrade(q),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: _isProcessing ? null : () => _enterMarksManually(q),
+                icon: const Icon(Icons.edit_note_rounded,
+                    size: 18, color: AppColors.accent),
+                label: const Text('Manual',
+                    style: TextStyle(color: AppColors.accent)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.accent),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -323,6 +344,52 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
             SnackBar(content: Text("Could not save keywords: $e")));
       }
     }
+  }
+
+  /// Fallback to OCR when the answer sheet can't be scanned (bad lighting,
+  /// handwriting the AI can't parse, no camera access) — lets the teacher
+  /// directly type the score, still saved through the same secured
+  /// uploadBulkMarks path as an OCR-derived one.
+  Future<void> _enterMarksManually(QuizQuestion q) async {
+    final ctrl = TextEditingController(
+        text: _suggestedMarks[q.id]?.toStringAsFixed(1) ?? '');
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text('Enter Marks Manually'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(hintText: 'Out of ${q.marks}'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(ctrl.text.trim());
+              if (val == null || val < 0 || val > q.marks) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content: Text('Enter a value between 0 and ${q.marks}'),
+                    backgroundColor: AppColors.danger));
+                return;
+              }
+              Navigator.pop(ctx, val);
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _suggestedMarks[q.id] = result;
+      _extractedText[q.id] = 'Entered manually by teacher.';
+    });
   }
 
   Future<void> _pickAndGrade(QuizQuestion q) async {
