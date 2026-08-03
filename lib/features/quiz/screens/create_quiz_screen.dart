@@ -28,7 +28,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
-  final _totalMarksCtrl = TextEditingController();
   final _instructionsCtrl = TextEditingController();
   final _chapterCtrl = TextEditingController();
   final _sessionCtrl = TextEditingController(text: 'Monthly Test');
@@ -38,6 +37,19 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final DateTime _testDate = DateTime.now();
 
   final List<QuizQuestion> _questions = [];
+
+  /// MCQ -> Short -> Long, preserving relative order within each type —
+  /// makes "Q1 is always MCQ" a structural guarantee (whenever at least one
+  /// MCQ exists) instead of incidental insertion order, and fixes manually
+  /// added questions previously always appending to the end regardless of
+  /// type. Used for both the on-screen list and what actually gets saved.
+  List<QuizQuestion> get _sortedQuestions => [
+        ..._questions.where((q) => q.type == QuestionType.mcq),
+        ..._questions.where((q) => q.type == QuestionType.short),
+        ..._questions.where((q) => q.type == QuestionType.long),
+      ];
+
+  double get _totalMarks => _questions.fold(0.0, (sum, q) => sum + q.marks);
 
   final List<String> _months = [
     'January',
@@ -64,7 +76,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _subjectCtrl.dispose();
-    _totalMarksCtrl.dispose();
     _instructionsCtrl.dispose();
     _chapterCtrl.dispose();
     _sessionCtrl.dispose();
@@ -519,13 +530,13 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       session: _sessionCtrl.text.trim(),
       chapter: _chapterCtrl.text.trim(),
       difficulty: _difficulty,
-      totalMarks: double.tryParse(_totalMarksCtrl.text) ?? 0,
+      totalMarks: _totalMarks,
       testDate: _testDate,
       instructions: _instructionsCtrl.text.trim(),
       createdByUid: user.uid,
       createdByName: user.fullName,
       createdAt: DateTime.now(),
-      questions: _questions,
+      questions: _sortedQuestions,
     );
 
     try {
@@ -600,18 +611,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       ['Easy', 'Medium', 'Hard'],
                       (v) => setState(() => _difficulty = v!)),
                   const SizedBox(height: 16),
-                  LabeledField(
-                      label: 'Total Marks',
-                      hint: 'e.g. 20',
-                      controller: _totalMarksCtrl,
-                      keyboardType: TextInputType.number,
-                      validator: (v) {
-                        final marks = double.tryParse(v?.trim() ?? '');
-                        if (marks == null || marks <= 0) {
-                          return 'Enter total marks greater than 0';
-                        }
-                        return null;
-                      }),
+                  _totalMarksDisplay(),
                   LabeledField(
                       label: 'Instructions',
                       hint: 'e.g. No calculators',
@@ -625,11 +625,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1)),
                 const SizedBox(height: 12),
-                ..._questions.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final q = entry.value;
-                  return _questionCard(i + 1, q);
-                }),
+                ..._buildQuestionSections(),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _addQuestion,
@@ -717,6 +713,41 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
+  /// Read-only — recomputed live from `_questions` on every add/delete/
+  /// generate instead of a manually-typed field that could drift out of
+  /// sync with the actual question marks.
+  Widget _totalMarksDisplay() {
+    final formatted = _totalMarks == _totalMarks.roundToDouble()
+        ? _totalMarks.toInt().toString()
+        : _totalMarks.toString();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Total Marks',
+            style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.inputFill,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+              _questions.isEmpty
+                  ? '$formatted (add questions below)'
+                  : formatted,
+              style: const TextStyle(
+                  color: AppColors.accent, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDropdownField(String label, String value, List<String> items,
       ValueChanged<String?> onChanged) {
     return Column(
@@ -757,6 +788,38 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     );
   }
 
+  /// MCQ / Short / Long, each under its own header, numbered continuously
+  /// across sections — mirrors the PDF's section grouping so what the
+  /// teacher previews here matches what gets printed.
+  List<Widget> _buildQuestionSections() {
+    final sorted = _sortedQuestions;
+    final widgets = <Widget>[];
+    String? lastHeader;
+    for (var i = 0; i < sorted.length; i++) {
+      final q = sorted[i];
+      final header = switch (q.type) {
+        QuestionType.mcq => 'Multiple Choice Questions',
+        QuestionType.short => 'Short Questions',
+        QuestionType.long => 'Long Questions',
+      };
+      if (header != lastHeader) {
+        if (lastHeader != null) widgets.add(const SizedBox(height: 4));
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8, top: 4),
+          child: Text(header,
+              style: const TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5)),
+        ));
+        lastHeader = header;
+      }
+      widgets.add(_questionCard(i + 1, q));
+    }
+    return widgets;
+  }
+
   Widget _questionCard(int index, QuizQuestion q) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -792,9 +855,6 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w700)),
               const Spacer(),
-              Text('${q.marks} Marks',
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 12)),
               IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppColors.danger, size: 18),

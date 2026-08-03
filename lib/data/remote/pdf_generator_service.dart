@@ -149,54 +149,11 @@ class PdfGeneratorService {
               pw.SizedBox(height: 20),
             ],
 
-            // Questions Section
-            ...quiz.questions.asMap().entries.map((entry) {
-              final i = entry.key;
-              final q = entry.value;
-              return pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 16),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Row(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text("Q${i + 1}. ",
-                            style: const pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold)),
-                        pw.Expanded(
-                          child: pw.Text(q.text,
-                              style: const pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold)),
-                        ),
-                        pw.Text("(${q.marks} Marks)",
-                            style: const pw.TextStyle(
-                                fontStyle: pw.FontStyle.italic, fontSize: 10)),
-                      ],
-                    ),
-                    pw.SizedBox(height: 8),
-                    if (q.type == QuestionType.mcq && q.options != null)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(left: 20),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: q.options!.asMap().entries.map((optEntry) {
-                            final optLetter =
-                                String.fromCharCode(65 + optEntry.key);
-                            return pw.Padding(
-                              padding: const pw.EdgeInsets.only(bottom: 4),
-                              child: pw.Text("$optLetter) ${optEntry.value}"),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    // Short/long questions print with no answer-writing
-                    // space: answer sheets are provided separately, so a
-                    // blank box here would just waste page space.
-                  ],
-                ),
-              );
-            }),
+            // Questions Section — grouped into MCQ/Short/Long blocks, each
+            // with its own "Section X (N Marks)" heading showing
+            // count x per-question-mark, instead of one continuous list
+            // with marks printed beside every individual question.
+            ..._buildQuestionSections(quiz.questions),
 
             pw.Footer(
               margin: const pw.EdgeInsets.only(top: 20),
@@ -210,5 +167,123 @@ class PdfGeneratorService {
     );
 
     return pdf;
+  }
+
+  /// Groups questions into MCQ -> Short -> Long blocks (skipping empty
+  /// groups) and assigns section letters dynamically to whichever groups
+  /// are actually present. Question numbering continues across sections
+  /// (Q1..Qn MCQs, then Qn+1.. Short, etc.) rather than restarting per
+  /// section.
+  static List<pw.Widget> _buildQuestionSections(List<QuizQuestion> all) {
+    final groups = [
+      ('MCQs', all.where((q) => q.type == QuestionType.mcq).toList()),
+      (
+        'Short Questions',
+        all.where((q) => q.type == QuestionType.short).toList()
+      ),
+      (
+        'Long Questions',
+        all.where((q) => q.type == QuestionType.long).toList()
+      ),
+    ];
+
+    const letters = ['A', 'B', 'C'];
+    final widgets = <pw.Widget>[];
+    var questionNumber = 1;
+    var letterIndex = 0;
+
+    for (final (typeName, questions) in groups) {
+      if (questions.isEmpty) continue;
+      widgets.addAll(_buildSection(
+        sectionLabel: 'Section ${letters[letterIndex]}',
+        typeName: typeName,
+        questions: questions,
+        startNumber: questionNumber,
+      ));
+      questionNumber += questions.length;
+      letterIndex++;
+    }
+    return widgets;
+  }
+
+  static List<pw.Widget> _buildSection({
+    required String sectionLabel,
+    required String typeName,
+    required List<QuizQuestion> questions,
+    required int startNumber,
+  }) {
+    final perQuestionMarks = questions.first.marks;
+    final sectionTotal =
+        questions.fold<double>(0, (total, q) => total + q.marks);
+
+    String fmt(double v) =>
+        v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+    return [
+      pw.Container(
+        padding: const pw.EdgeInsets.only(bottom: 6),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('$sectionLabel (${fmt(sectionTotal)} Marks)',
+                style: const pw.TextStyle(
+                    fontSize: 13, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+                '${questions.length} $typeName × ${fmt(perQuestionMarks)} '
+                'Mark${perQuestionMarks == 1 ? '' : 's'}',
+                style: const pw.TextStyle(
+                    fontSize: 10, fontStyle: pw.FontStyle.italic)),
+            pw.SizedBox(height: 4),
+            pw.Text('Attempt all questions in this section.',
+                style: const pw.TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+      pw.SizedBox(height: 8),
+      ...questions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final q = entry.value;
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 16),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("Q${startNumber + i}. ",
+                      style:
+                          const pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Expanded(
+                    child: pw.Text(q.text,
+                        style:
+                            const pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              if (q.type == QuestionType.mcq && q.options != null)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(left: 20),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: q.options!.asMap().entries.map((optEntry) {
+                      final optLetter = String.fromCharCode(65 + optEntry.key);
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text("$optLetter) ${optEntry.value}"),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              // Short/long questions print with no answer-writing space:
+              // answer sheets are provided separately, so a blank box here
+              // would just waste page space.
+            ],
+          ),
+        );
+      }),
+      pw.SizedBox(height: 12),
+    ];
   }
 }
