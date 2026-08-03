@@ -43,6 +43,22 @@ class QuizService {
     });
   }
 
+  /// Watch tests across several classes in one query (e.g. every subject a
+  /// student is enrolled in) — used to surface "upcoming tests" without a
+  /// per-class subscription. Firestore's `whereIn` caps at 30 values.
+  Stream<List<QuizModel>> watchQuizzesForClasses(
+      List<String> classIds, String academyId) {
+    if (classIds.isEmpty) return Stream.value(const []);
+    return _quizzes
+        .where('academy_id', isEqualTo: academyId)
+        .where('class_id', whereIn: classIds.take(30).toList())
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) =>
+                QuizModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+            .toList());
+  }
+
   /// Delete a test and all its marks atomically (a single batch per chunk,
   /// so a mid-delete failure can't leave the quiz gone with orphaned marks
   /// still referencing it, or vice versa).

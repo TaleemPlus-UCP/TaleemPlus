@@ -60,6 +60,13 @@ class QuizProvider extends ChangeNotifier {
     return _service.watchQuizzesByClass(classId, academyId);
   }
 
+  /// Watch tests across several classes at once (e.g. a student's full
+  /// subject list) — used to surface upcoming tests on the dashboard.
+  Stream<List<QuizModel>> watchQuizzesForClasses(
+      List<String> classIds, String academyId) {
+    return _service.watchQuizzesForClasses(classIds, academyId);
+  }
+
   /// Watch marks for a specific test (for Teacher/Admin review)
   Stream<List<TestMarkModel>> watchQuizResults(
       String quizId, String academyId) {
