@@ -188,6 +188,32 @@ class TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 12),
               _actionTile(
                 context,
+                'Resources',
+                'Share notes & materials with a class',
+                Icons.folder_shared_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherClassesScreen(
+                          jumpTo: ClassJumpTarget.resources)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
+                'Queries',
+                'Answer student questions for a class',
+                Icons.forum_rounded,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherClassesScreen(
+                          jumpTo: ClassJumpTarget.queries)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _actionTile(
+                context,
                 'Monthly Performance',
                 'View compiled student results',
                 Icons.insights_rounded,

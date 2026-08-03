@@ -12,7 +12,16 @@ import '../../../widgets/app_widgets.dart';
 
 class ClassroomManagementScreen extends StatefulWidget {
   final ClassEntity classEntity;
-  const ClassroomManagementScreen({super.key, required this.classEntity});
+
+  /// 0 = Student Queries, 1 = Share Content (Resources). Lets dashboard
+  /// shortcuts (see teacher_dashboard.dart's "Resources"/"Queries" tiles)
+  /// land directly on the right tab instead of always opening on Queries.
+  final int initialTabIndex;
+  const ClassroomManagementScreen({
+    super.key,
+    required this.classEntity,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<ClassroomManagementScreen> createState() =>
@@ -27,7 +36,11 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
   }
 
   @override

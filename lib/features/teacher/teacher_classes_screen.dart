@@ -10,10 +10,27 @@ import '../quiz/screens/teacher_quiz_list_screen.dart';
 import 'screens/classroom_management_screen.dart';
 import 'attendance_marking_screen.dart';
 
+/// Where tapping a class in [TeacherClassesScreen] should jump straight to,
+/// skipping the full options bottom sheet. `null` (the default "My Classes"
+/// entry point) keeps today's behavior of showing all options.
+enum ClassJumpTarget { resources, queries }
+
 /// Streams the classes assigned to the logged-in teacher (matched by email
 /// against `primary_teacher_email` on the class doc in Firestore).
 class TeacherClassesScreen extends StatelessWidget {
-  const TeacherClassesScreen({super.key});
+  final ClassJumpTarget? jumpTo;
+  const TeacherClassesScreen({super.key, this.jumpTo});
+
+  String get _title {
+    switch (jumpTo) {
+      case ClassJumpTarget.resources:
+        return 'Resources';
+      case ClassJumpTarget.queries:
+        return 'Queries';
+      case null:
+        return 'My Classes';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +40,8 @@ class TeacherClassesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('My Classes',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title:
+            Text(_title, style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: GradientBackground(
         child: SafeArea(
@@ -86,7 +103,7 @@ class TeacherClassesScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _showOptions(context, c),
+        onTap: () => _onTapClass(context, c),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -117,7 +134,8 @@ class TeacherClassesScreen extends StatelessWidget {
                             fontSize: 15)),
                     const SizedBox(height: 2),
                     Text(
-                        '${c.enrollmentCount} students · Tap to mark attendance',
+                        '${c.enrollmentCount} students'
+                        '${jumpTo == null ? ' · Tap for options' : ''}',
                         style: const TextStyle(
                             color: AppColors.textSecondary, fontSize: 12)),
                   ],
@@ -126,6 +144,22 @@ class TeacherClassesScreen extends StatelessWidget {
               const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _onTapClass(BuildContext context, ClassEntity c) {
+    if (jumpTo == null) {
+      _showOptions(context, c);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ClassroomManagementScreen(
+          classEntity: c,
+          initialTabIndex: jumpTo == ClassJumpTarget.resources ? 1 : 0,
         ),
       ),
     );
