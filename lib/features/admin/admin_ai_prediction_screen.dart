@@ -63,6 +63,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
                   const SizedBox(height: 20),
                   _buildRevenueForecast(ai),
                   const SizedBox(height: 20),
+                  _buildPerformanceForecast(ai),
+                  const SizedBox(height: 20),
                   _buildAcademicInsights(ai),
                   const SizedBox(height: 40),
                 ],
@@ -238,6 +240,53 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
       actionLabel: "LEDGER",
       onAction: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+    );
+  }
+
+  Widget _buildPerformanceForecast(AdminAiProvider ai) {
+    final bool hasUnderperformers = ai.underperformingStudentNames.isNotEmpty;
+    return _predictionCard(
+      title: "Performance Forecast (ML Model)",
+      prediction:
+          "Predicted Index: ${ai.predictedAvgPerformanceIndex.toStringAsFixed(1)}",
+      insight: hasUnderperformers
+          ? "Trained on quiz scores, attendance and payment history — likely to underperform: ${ai.underperformingStudentNames.join(', ')}."
+          : "Trained on quiz scores, attendance and payment history. No students are forecast to fall below the performance threshold.",
+      icon: Icons.trending_up_rounded,
+      color: hasUnderperformers ? AppColors.warning : AppColors.success,
+      actionLabel: "VIEW DETAILS",
+      onAction: () => _showPerformanceForecastDialog(context, ai),
+    );
+  }
+
+  void _showPerformanceForecastDialog(BuildContext context, AdminAiProvider ai) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text("Forecast Underperformers",
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: ai.underperformingStudentNames.isNotEmpty
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ai.underperformingStudentNames
+                    .map((name) => ListTile(
+                          leading: const Icon(Icons.person,
+                              color: AppColors.warning),
+                          title: Text(name,
+                              style: const TextStyle(
+                                  color: AppColors.textPrimary)),
+                        ))
+                    .toList(),
+              )
+            : const Text(
+                "No students are forecast to fall below the performance threshold.",
+                style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
+        ],
+      ),
     );
   }
 

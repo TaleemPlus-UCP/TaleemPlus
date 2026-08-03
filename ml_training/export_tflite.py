@@ -1,12 +1,14 @@
 # Week 6, Day 38
+# Superseded: both models now ship as plain Dart ports of the trained
+# scikit-learn coefficients (lib/logic/fee_risk_model.dart,
+# lib/logic/performance_index_model.dart) instead of a TFLite runtime —
+# see train_risk_model.py's print_dart_coefficients(). Left here as a record
+# of the original plan.
+#
 # Converts the trained scikit-learn model to TensorFlow Lite for on-device
 # inference via tflite_flutter. sklearn models don't convert directly, so
 # the usual path is: re-implement the trained model's logic (weights) as a
 # tiny tf.keras model, or train an equivalent model directly in tf.keras.
-#
-# If this step stalls, fall back to the documented heuristic formula instead
-# (see TaleemPlus_60Day_Plan.md, Week 6 fallback note) rather than losing
-# days here — it's a legitimate, documentable design decision.
 
 import tensorflow as tf
 
