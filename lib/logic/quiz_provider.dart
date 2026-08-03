@@ -34,6 +34,11 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateQuestions(
+      String quizId, List<QuizQuestion> questions) async {
+    await _service.updateQuestions(quizId, questions);
+  }
+
   Future<void> uploadBulkMarks(List<TestMarkModel> marksList) async {
     _setLoading(true);
     try {

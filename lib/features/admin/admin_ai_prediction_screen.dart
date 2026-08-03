@@ -259,7 +259,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     );
   }
 
-  void _showPerformanceForecastDialog(BuildContext context, AdminAiProvider ai) {
+  void _showPerformanceForecastDialog(
+      BuildContext context, AdminAiProvider ai) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

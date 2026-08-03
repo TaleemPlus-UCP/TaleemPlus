@@ -219,13 +219,13 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
               final sCount = int.tryParse(sqCountCtrl.text) ?? sqs;
               final lCount = int.tryParse(lqCountCtrl.text) ?? lqs;
 
-              _generateQuestionsLocally(
+              final actual = _generateQuestionsLocally(
                   _scannedText, diff, mCount, sCount, lCount);
 
               setState(() {
                 _difficulty = diff;
                 _instructionsCtrl.text =
-                    "Attempt all $mCount MCQs, $sCount Short Questions and $lCount Long Questions.";
+                    "Attempt all ${actual.mcq} MCQs, ${actual.sq} Short Questions and ${actual.lq} Long Questions.";
               });
               Navigator.pop(ctx);
             },
@@ -344,7 +344,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     return words.take(max).toList();
   }
 
-  void _generateQuestionsLocally(
+  ({int mcq, int sq, int lq}) _generateQuestionsLocally(
       String extractedText, String diff, int mcqs, int sqs, int lqs) {
     // 100% Offline Heuristic Question Generation.
     // ML Kit OCR breaks text on visual line boundaries, not sentence
@@ -412,7 +412,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         id: const Uuid().v4(),
         text: "Discuss in detail the following concept: $preview",
         type: QuestionType.long,
-        marks: 5.0,
+        marks: 8.0,
         gradingKeywords: _extractKeywords(sentence),
       ));
       usedSentences.add(sentence);
@@ -445,6 +445,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           content: Text("Generated ${generated.length} questions from notes!"),
           backgroundColor: AppColors.success),
     );
+
+    return (mcq: mGenerated, sq: sGenerated, lq: lGenerated);
   }
 
   Widget _aiStatRow(String label, String value, Color valColor) {

@@ -13,6 +13,15 @@ class QuizService {
     await _quizzes.doc(quiz.id).set(quiz.toMap());
   }
 
+  /// Persist an updated question list for an existing quiz — e.g. the AI
+  /// Grader adding grading keywords to a question that has none.
+  Future<void> updateQuestions(
+      String quizId, List<QuizQuestion> questions) async {
+    await _quizzes.doc(quizId).update({
+      'questions': questions.map((q) => q.toMap()).toList(),
+    });
+  }
+
   /// Get tests for a specific class (Safe query)
   Stream<List<QuizModel>> watchQuizzesByClass(
       String classId, String academyId) {

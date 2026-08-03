@@ -30,6 +30,13 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   // Grading state
   final Map<String, double> _suggestedMarks = {}; // questionId: suggestedScore
   final Map<String, String> _extractedText = {}; // questionId: text
+  late List<QuizQuestion> _questions;
+
+  @override
+  void initState() {
+    super.initState();
+    _questions = List.of(widget.quiz.questions);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +123,7 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
   }
 
   Widget _buildQuestionList() {
-    final gradableQuestions = widget.quiz.questions
+    final gradableQuestions = _questions
         .where(
             (q) => q.type == QuestionType.short || q.type == QuestionType.long)
         .toList();
@@ -165,11 +172,31 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text("Keywords: ${q.gradingKeywords.join(', ')}",
-              style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic)),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                    q.gradingKeywords.isEmpty
+                        ? "No grading keywords set — will always score 0."
+                        : "Keywords: ${q.gradingKeywords.join(', ')}",
+                    style: TextStyle(
+                        color: q.gradingKeywords.isEmpty
+                            ? AppColors.danger
+                            : AppColors.textMuted,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic)),
+              ),
+              InkWell(
+                onTap: () => _editKeywords(q),
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.edit_rounded,
+                      size: 16, color: AppColors.accent),
+                ),
+              ),
+            ],
+          ),
           const Divider(height: 32),
           if (hasResult) ...[
             _resultPreview(q),
@@ -228,6 +255,74 @@ class _AiPaperGraderScreenState extends State<AiPaperGraderScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _editKeywords(QuizQuestion q) async {
+    final ctrl = TextEditingController(text: q.gradingKeywords.join(', '));
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appColors.surface,
+        title: const Text("Edit Grading Keywords"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(q.text,
+                style:
+                    const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: "comma, separated, keywords",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text("SAVE"),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final keywords = result
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final index = _questions.indexWhere((item) => item.id == q.id);
+    if (index == -1) return;
+
+    final updatedQuestions = List.of(_questions);
+    updatedQuestions[index] = q.copyWith(gradingKeywords: keywords);
+
+    setState(() => _questions = updatedQuestions);
+
+    try {
+      await context
+          .read<QuizProvider>()
+          .updateQuestions(widget.quiz.id, _questions);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Could not save keywords: $e")));
+      }
+    }
   }
 
   Future<void> _pickAndGrade(QuizQuestion q) async {

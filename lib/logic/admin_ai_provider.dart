@@ -199,9 +199,10 @@ class AdminAiProvider extends ChangeNotifier {
           : attendance.reduce((a, b) => a + b) / attendance.length;
 
       final studentChallans = challansByStudent[studentId];
-      final latePaymentCount = (studentChallans == null || studentChallans.isEmpty)
-          ? 0
-          : studentChallans.map(_daysLate).where((d) => d > 0).length;
+      final latePaymentCount =
+          (studentChallans == null || studentChallans.isEmpty)
+              ? 0
+              : studentChallans.map(_daysLate).where((d) => d > 0).length;
 
       final predicted = PerformanceIndexModel.predict(
         quizAvg: quizAvg,

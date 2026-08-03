@@ -33,6 +33,25 @@ class QuizQuestion {
     };
   }
 
+  QuizQuestion copyWith({
+    String? text,
+    QuestionType? type,
+    List<String>? options,
+    int? correctIndex,
+    double? marks,
+    List<String>? gradingKeywords,
+  }) {
+    return QuizQuestion(
+      id: id,
+      text: text ?? this.text,
+      type: type ?? this.type,
+      options: options ?? this.options,
+      correctIndex: correctIndex ?? this.correctIndex,
+      marks: marks ?? this.marks,
+      gradingKeywords: gradingKeywords ?? this.gradingKeywords,
+    );
+  }
+
   factory QuizQuestion.fromMap(Map<String, dynamic> map) {
     return QuizQuestion(
       id: map['id'] ?? '',
