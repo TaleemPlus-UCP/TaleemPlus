@@ -47,6 +47,16 @@ class AttendanceRepository {
     return iso.substring(0, 10);
   }
 
+  /// Fetch all attendance records for an academy (one-time), used for
+  /// academy-wide analytics like the fee-delay risk model.
+  Future<List<AttendanceRecord>> getAllForAcademy(String academyId) async {
+    final snap =
+        await _col.where('academy_id', isEqualTo: academyId).get();
+    return snap.docs
+        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
+        .toList();
+  }
+
   /// Watch all attendance records for a specific student in an academy.
   Stream<List<AttendanceRecord>> watchForStudent(
       String studentId, String academyId) {

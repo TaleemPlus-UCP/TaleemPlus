@@ -29,8 +29,9 @@ dependencies:
   google_mlkit_text_recognition: ^0.13.0
   image_picker: ^1.1.2
 
-  # On-device ML inference for the risk predictor (Week 6)
-  # tflite_flutter: ^0.11.0
+  # On-device ML inference for the fee-delay risk predictor (Week 6):
+  # a scikit-learn LogisticRegression trained in ml_training/, ported to
+  # plain Dart in lib/logic/fee_risk_model.dart — no tflite_flutter needed.
 
   # Charts for Admin/Parent dashboards
   fl_chart: ^0.68.0

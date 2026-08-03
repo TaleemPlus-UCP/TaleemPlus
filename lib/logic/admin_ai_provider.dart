@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import '../data/models/fee_challan_model.dart';
 import '../data/models/test_mark_model.dart';
+import '../data/repositories/attendance_repository.dart';
 import '../data/repositories/fee_challan_repository.dart';
 import '../data/remote/quiz_service.dart';
+import 'fee_risk_model.dart';
 
 class AdminAiProvider extends ChangeNotifier {
   final QuizService _quizService = QuizService();
   final FeeChallanRepository _feeRepo = FeeChallanRepository();
+  final AttendanceRepository _attendanceRepo = AttendanceRepository();
 
   bool _loading = false;
   String? _error;
@@ -34,6 +38,13 @@ class AdminAiProvider extends ChangeNotifier {
   int get pendingPaymentsCount => _pendingPaymentsCount;
   double get pendingAmount => _pendingAmount;
 
+  // Fee-Delay Risk (trained logistic-regression model)
+  int _feeRiskCount = 0;
+  List<String> _feeRiskStudentNames = [];
+
+  int get feeRiskCount => _feeRiskCount;
+  List<String> get feeRiskStudentNames => _feeRiskStudentNames;
+
   Future<void> runAcademyAnalysis(String academyId) async {
     _loading = true;
     _error = null;
@@ -44,6 +55,7 @@ class AdminAiProvider extends ChangeNotifier {
       await Future.wait([
         _analyzePerformance(academyId),
         _analyzeRevenue(academyId),
+        _analyzeFeeDelayRisk(academyId),
       ]);
     } catch (e) {
       debugPrint("AI Analysis Error: $e");
@@ -87,6 +99,60 @@ class AdminAiProvider extends ChangeNotifier {
       _projectedRevenue =
           totalPayable; // Simple forecast: next month expected similar to current setup
     }
+  }
+
+  Future<void> _analyzeFeeDelayRisk(String academyId) async {
+    final challans = await _feeRepo.getAll(academyId);
+    if (challans.isEmpty) {
+      _feeRiskCount = 0;
+      _feeRiskStudentNames = [];
+      return;
+    }
+
+    final attendanceRecords = await _attendanceRepo.getAllForAcademy(academyId);
+    final Map<String, List<double>> attendedByStudent = {};
+    for (final r in attendanceRecords) {
+      final attended = (r.isPresent || r.isLate) ? 1.0 : 0.0;
+      attendedByStudent.putIfAbsent(r.studentId, () => []).add(attended);
+    }
+
+    final Map<String, List<FeeChallanModel>> challansByStudent = {};
+    for (final c in challans) {
+      challansByStudent.putIfAbsent(c.studentId, () => []).add(c);
+    }
+
+    final atRisk = <String>[];
+    challansByStudent.forEach((studentId, studentChallans) {
+      final lateDays = studentChallans.map(_daysLate).toList();
+      final daysLateAvg = lateDays.reduce((a, b) => a + b) / lateDays.length;
+      final latePaymentCount = lateDays.where((d) => d > 0).length;
+
+      final attendance = attendedByStudent[studentId];
+      // No attendance history yet: give the benefit of the doubt rather
+      // than flagging on payment history alone.
+      final attendanceRate = (attendance == null || attendance.isEmpty)
+          ? 1.0
+          : attendance.reduce((a, b) => a + b) / attendance.length;
+
+      final isAtRisk = FeeRiskModel.predictAtRisk(
+        attendanceRate: attendanceRate,
+        daysLateAvg: daysLateAvg,
+        latePaymentCount: latePaymentCount,
+      );
+
+      if (isAtRisk) {
+        atRisk.add(studentChallans.first.studentName);
+      }
+    });
+
+    _feeRiskStudentNames = atRisk;
+    _feeRiskCount = atRisk.length;
+  }
+
+  double _daysLate(FeeChallanModel c) {
+    final reference = c.isPaid ? c.updatedAt : DateTime.now();
+    final diff = reference.difference(c.dueDate).inDays;
+    return diff > 0 ? diff.toDouble() : 0.0;
   }
 
   void _calculatePerformanceInsights(List<TestMarkModel> marks) {

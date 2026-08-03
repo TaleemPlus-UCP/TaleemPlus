@@ -12,6 +12,7 @@ pubspec.lock
 lib/firebase_options.dart
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+ml_training/service_account.json
 
 # Release signing secrets — do NOT commit
 android/key.properties

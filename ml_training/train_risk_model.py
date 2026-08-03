@@ -33,9 +33,19 @@ def train_fee_risk_model(df: pd.DataFrame) -> LogisticRegression:
     return model
 
 
+def print_dart_coefficients(model: LogisticRegression, feature_names: list[str]) -> None:
+    print("\n--- Dart port (lib/logic/fee_risk_model.dart) ---")
+    for name, w in zip(feature_names, model.coef_[0]):
+        print(f"  {name}: {w:.6f}")
+    print(f"  intercept: {model.intercept_[0]:.6f}")
+
+
 if __name__ == "__main__":
     dataset = load_data()
     risk_model = train_fee_risk_model(dataset)
+    print_dart_coefficients(
+        risk_model, ["attendance_rate", "days_late_avg", "late_payment_count"]
+    )
 
     # TODO: also train a performance_index regression model the same way.
     # TODO: save both with joblib, then convert to TFLite in export_tflite.py.

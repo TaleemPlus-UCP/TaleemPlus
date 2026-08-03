@@ -59,6 +59,8 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
                   const SizedBox(height: 24),
                   _buildRiskPrediction(ai),
                   const SizedBox(height: 20),
+                  _buildFeeDelayRiskPrediction(ai),
+                  const SizedBox(height: 20),
                   _buildRevenueForecast(ai),
                   const SizedBox(height: 20),
                   _buildAcademicInsights(ai),
@@ -164,6 +166,54 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
                     .toList(),
               )
             : const Text("All students are performing above the 50% threshold.",
+                style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeeDelayRiskPrediction(AdminAiProvider ai) {
+    final bool hasRisk = ai.feeRiskCount > 0;
+    return _predictionCard(
+      title: "Fee Payment Risk (ML Model)",
+      prediction: hasRisk
+          ? "${ai.feeRiskCount} Students Likely to Pay Late"
+          : "No High-Risk Payers Detected",
+      insight: hasRisk
+          ? "Trained on attendance and payment history: ${ai.feeRiskStudentNames.join(', ')}."
+          : "Attendance and past payment history don't indicate any students likely to delay this month.",
+      icon: Icons.warning_amber_rounded,
+      color: hasRisk ? AppColors.danger : AppColors.success,
+      actionLabel: "VIEW DETAILS",
+      onAction: () => _showFeeRiskDialog(context, ai),
+    );
+  }
+
+  void _showFeeRiskDialog(BuildContext context, AdminAiProvider ai) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text("Fee Payment Risk",
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: ai.feeRiskCount > 0
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ai.feeRiskStudentNames
+                    .map((name) => ListTile(
+                          leading:
+                              const Icon(Icons.person, color: AppColors.danger),
+                          title: Text(name,
+                              style: const TextStyle(
+                                  color: AppColors.textPrimary)),
+                        ))
+                    .toList(),
+              )
+            : const Text(
+                "No students are currently flagged as high risk for late fee payment.",
                 style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
