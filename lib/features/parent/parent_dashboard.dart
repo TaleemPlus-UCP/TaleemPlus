@@ -32,17 +32,6 @@ class ParentDashboard extends StatelessWidget {
     }
   }
 
-  void _openLinkChildSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => const _LinkChildSheet(),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
@@ -100,25 +89,12 @@ class ParentDashboard extends StatelessWidget {
                 Text('Monitor your child\'s education journey',
                     style: TextStyle(color: context.appColors.textSecondary)),
                 const SizedBox(height: 28),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('MY CHILDREN',
-                        style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2)),
-                    TextButton.icon(
-                      onPressed: () => _openLinkChildSheet(context),
-                      icon: const Icon(Icons.add_circle_outline_rounded,
-                          size: 16),
-                      label: const Text("ADD CHILD",
-                          style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+                const Text('MY CHILDREN',
+                    style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2)),
                 const SizedBox(height: 8),
                 if (parentProv.loading && parentProv.children.isEmpty)
                   const Center(
@@ -484,9 +460,7 @@ class ParentDashboard extends StatelessWidget {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onSelected: (val) {
-            if (val == 'remove') {
-              _confirmUnlink(context, child);
-            } else if (val == 'view') {
+            if (val == 'view') {
               Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -513,55 +487,12 @@ class ParentDashboard extends StatelessWidget {
                   SizedBox(width: 12),
                   Text("View Timetable")
                 ])),
-            const PopupMenuItem(
-                value: 'remove',
-                child: Row(children: [
-                  Icon(Icons.link_off_rounded,
-                      color: AppColors.danger, size: 18),
-                  SizedBox(width: 12),
-                  Text("Remove Child",
-                      style: TextStyle(color: AppColors.danger))
-                ])),
           ],
         ),
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (_) => ChildOverviewScreen(child: child))),
-      ),
-    );
-  }
-
-  void _confirmUnlink(BuildContext context, AppUser child) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.appColors.surface,
-        title: const Text("Remove Child?"),
-        content: Text(
-            "Are you sure you want to unlink ${child.fullName} from your dashboard?"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
-          TextButton(
-            onPressed: () async {
-              try {
-                await context.read<ParentProvider>().unlinkChild(child.uid);
-                if (ctx.mounted) Navigator.pop(ctx);
-              } catch (e) {
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text("Failed to remove child: $e"),
-                      backgroundColor: AppColors.danger));
-                }
-              }
-            },
-            child: const Text("REMOVE",
-                style: TextStyle(
-                    color: AppColors.danger, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
@@ -586,7 +517,8 @@ class ParentDashboard extends StatelessWidget {
               style: TextStyle(
                   color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          const Text("Link your child's profile to track their performance.",
+          const Text(
+              "Your academy will link your child's profile to your account.",
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
         ],
@@ -632,181 +564,6 @@ class ParentDashboard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LinkChildSheet extends StatefulWidget {
-  const _LinkChildSheet();
-
-  @override
-  State<_LinkChildSheet> createState() => _LinkChildSheetState();
-}
-
-class _LinkChildSheetState extends State<_LinkChildSheet> {
-  final _searchCtrl = TextEditingController();
-  final _authService = AuthService();
-  List<AppUser> _results = [];
-  bool _searching = false;
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _performSearch(String q) async {
-    final queryText = q.trim().toLowerCase();
-    if (queryText.isEmpty) {
-      setState(() => _results = []);
-      return;
-    }
-
-    final parent = context.read<AuthProvider>().currentUser;
-    if (parent == null || parent.academyId == null) return;
-
-    setState(() => _searching = true);
-    try {
-      final list =
-          await _authService.searchStudentsByName(queryText, parent.academyId!);
-      if (mounted) {
-        setState(() {
-          _results = list;
-          _searching = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _searching = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text("Link Your Child",
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          const Text("Search by your child's full name or email address.",
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _searchCtrl,
-            onChanged: _performSearch,
-            style: const TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: "Enter Name or Email...",
-              prefixIcon:
-                  const Icon(Icons.search_rounded, color: AppColors.accent),
-              suffixIcon: _searching
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.accent)))
-                  : IconButton(
-                      icon: const Icon(Icons.clear_rounded,
-                          color: AppColors.textMuted),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _results = []);
-                      },
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_results.isNotEmpty)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 250),
-              decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _results.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, color: AppColors.border),
-                itemBuilder: (ctx, i) {
-                  final s = _results[i];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                      child: Text(
-                          s.fullName.isNotEmpty
-                              ? s.fullName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                              color: AppColors.accent, fontSize: 12)),
-                    ),
-                    title: Text(s.fullName,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                        "${s.email}${s.academyName != null ? ' • ${s.academyName}' : ''}",
-                        style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 11)),
-                    trailing: const Icon(Icons.add_link_rounded,
-                        color: AppColors.accent),
-                    onTap: () async {
-                      try {
-                        await context.read<ParentProvider>().addChild(s);
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("Child linked successfully!"),
-                                backgroundColor: AppColors.success));
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text("Failed to link: $e"),
-                              backgroundColor: AppColors.danger));
-                        }
-                      }
-                    },
-                  );
-                },
-              ),
-            )
-          else if (_searchCtrl.text.isNotEmpty && !_searching)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Column(
-                children: [
-                  Icon(Icons.person_search_rounded,
-                      color: AppColors.textMuted, size: 48),
-                  SizedBox(height: 12),
-                  Text("No students found.",
-                      style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Text("Make sure the name or email is correct.",
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-        ],
       ),
     );
   }

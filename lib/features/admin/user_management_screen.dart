@@ -813,7 +813,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _rollNumberCtrl = TextEditingController();
   final _qualificationCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
-  final _parentSearchCtrl = TextEditingController();
   final _passwordCtrl =
       TextEditingController(text: "123456"); // Default password
   DateTime? _joiningDate = DateTime.now();
@@ -823,18 +822,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   // Student: class-wise enrollment target.
   String? _selectedClassName;
-  String? _selectedProgram;
   ClassSectionEntity? _selectedSection;
-
-  // Student: assign directly to an existing parent (search by name).
-  List<AppUser> _availableParents = [];
-  String? _selectedParentUid;
-  String? _selectedParentName;
-
-  // Parent: link to existing student account(s).
-  List<AppUser> _availableStudents = [];
-  final Set<String> _selectedChildUids = {};
-  bool _loadingStudents = false;
 
   bool _saving = false;
 
@@ -845,140 +833,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     if (admin != null &&
         (widget.role == 'student' || widget.role == 'teacher')) {
       context.read<ClassSectionProvider>().listenAll(admin.uid);
-    }
-    if (widget.role == 'parent') {
-      _loadStudents();
-    }
-    if (widget.role == 'student') {
-      _loadParents();
-    }
-  }
-
-  Future<void> _loadStudents() async {
-    setState(() => _loadingStudents = true);
-    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (admin == null) {
-      setState(() => _loadingStudents = false);
-      return;
-    }
-    try {
-      final students =
-          await AuthService().getApprovedByRole(UserRole.student, admin.uid);
-      if (mounted) {
-        setState(() {
-          _availableStudents = students;
-          _loadingStudents = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingStudents = false);
-    }
-  }
-
-  Widget _parentSearchField() {
-    final query = _parentSearchCtrl.text.trim().toLowerCase();
-    final matches = query.isEmpty
-        ? const <AppUser>[]
-        : _availableParents
-            .where((p) => p.fullName.toLowerCase().contains(query))
-            .take(5)
-            .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_selectedParentName != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: AppColors.accent, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Will link to: $_selectedParentName',
-                      style: const TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded,
-                      size: 16, color: AppColors.textMuted),
-                  onPressed: () => setState(() {
-                    _selectedParentUid = null;
-                    _selectedParentName = null;
-                  }),
-                ),
-              ],
-            ),
-          ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.inputFill,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: TextField(
-            controller: _parentSearchCtrl,
-            decoration: const InputDecoration(
-              hintText: 'Search parent by name...',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 12),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-        if (matches.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            constraints: const BoxConstraints(maxHeight: 160),
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: matches.length,
-              itemBuilder: (_, i) {
-                final p = matches[i];
-                return ListTile(
-                  dense: true,
-                  title: Text(p.fullName, style: const TextStyle(fontSize: 13)),
-                  subtitle: Text(p.email,
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 11)),
-                  onTap: () => setState(() {
-                    _selectedParentUid = p.uid;
-                    _selectedParentName = p.fullName;
-                    _parentSearchCtrl.clear();
-                  }),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _loadParents() async {
-    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (admin == null) return;
-    try {
-      final parents =
-          await AuthService().getApprovedByRole(UserRole.parent, admin.uid);
-      if (mounted) setState(() => _availableParents = parents);
-    } catch (_) {
-      // Assign-to-parent search just stays empty; not a blocking failure.
     }
   }
 
@@ -991,7 +845,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     _rollNumberCtrl.dispose();
     _qualificationCtrl.dispose();
     _subjectCtrl.dispose();
-    _parentSearchCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -1077,19 +930,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         }
       }
 
-      // 3. Student: assign directly to a searched-and-picked parent.
-      if (widget.role == 'student' && _selectedParentUid != null) {
-        await auth.addLinkedChild(_selectedParentUid!, newUser.uid);
-      }
-
-      // 4. Parent: link selected existing student account(s).
-      if (widget.role == 'parent' && _selectedChildUids.isNotEmpty) {
-        for (final childUid in _selectedChildUids) {
-          await auth.addLinkedChild(newUser.uid, childUid);
-        }
-      }
-
-      // 5. Refresh counts in Provider
+      // 3. Refresh counts in Provider
       if (mounted) {
         await context.read<MemberProvider>().load(admin.uid);
         if (!mounted) return;
@@ -1212,14 +1053,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                       ? 'Roll Number is required'
                       : null,
                 ),
-                const SizedBox(height: 8),
-                const Text('Assign to Parent (optional)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                _parentSearchField(),
                 const SizedBox(height: 16),
                 const Text('Enroll In Class (optional)',
                     style: TextStyle(
@@ -1237,41 +1070,16 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                         .toList(),
                     onChanged: (v) => setState(() {
                       _selectedClassName = v;
-                      _selectedProgram = null;
                       _selectedSection = null;
                     }),
                   ),
                 ),
-                if (_selectedClassName != null &&
-                    AppPrograms.appliesTo(_selectedClassName!)) ...[
-                  const SizedBox(height: 8),
-                  DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedProgram,
-                      isExpanded: true,
-                      hint: const Text('Select program'),
-                      items: AppPrograms.all
-                          .map(
-                              (p) => DropdownMenuItem(value: p, child: Text(p)))
-                          .toList(),
-                      onChanged: (v) => setState(() {
-                        _selectedProgram = v;
-                        _selectedSection = null;
-                      }),
-                    ),
-                  ),
-                ],
-                if (_selectedClassName != null &&
-                    (!AppPrograms.appliesTo(_selectedClassName!) ||
-                        _selectedProgram != null)) ...[
+                if (_selectedClassName != null) ...[
                   const SizedBox(height: 8),
                   Consumer<ClassSectionProvider>(
                     builder: (context, sp, _) {
-                      final sections = sp.sections
-                          .where((s) =>
-                              s.className == _selectedClassName &&
-                              s.program == (_selectedProgram ?? ''))
-                          .toList();
+                      final sections =
+                          sp.forClass(_selectedClassName!).toList();
                       return DropdownButtonHideUnderline(
                         child: DropdownButton<ClassSectionEntity>(
                           value: _selectedSection,
@@ -1289,55 +1097,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     },
                   ),
                 ],
-              ],
-              if (widget.role == 'parent') ...[
-                const SizedBox(height: 16),
-                const Text('Link Existing Child(ren)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                if (_loadingStudents)
-                  const Center(
-                      child: CircularProgressIndicator(color: AppColors.accent))
-                else if (_availableStudents.isEmpty)
-                  const Text('No approved students yet.',
-                      style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 12))
-                else
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    decoration: BoxDecoration(
-                      color: AppColors.inputFill,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _availableStudents.length,
-                      itemBuilder: (_, i) {
-                        final s = _availableStudents[i];
-                        final selected = _selectedChildUids.contains(s.uid);
-                        return CheckboxListTile(
-                          dense: true,
-                          value: selected,
-                          title: Text(s.fullName,
-                              style: const TextStyle(fontSize: 13)),
-                          subtitle: Text(s.email,
-                              style: const TextStyle(
-                                  color: AppColors.textMuted, fontSize: 11)),
-                          onChanged: (v) => setState(() {
-                            if (v == true) {
-                              _selectedChildUids.add(s.uid);
-                            } else {
-                              _selectedChildUids.remove(s.uid);
-                            }
-                          }),
-                        );
-                      },
-                    ),
-                  ),
               ],
               if (widget.role == 'teacher') ...[
                 const SizedBox(height: 16),
