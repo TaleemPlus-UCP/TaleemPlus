@@ -30,7 +30,9 @@ class ClassSectionRepository {
             .toList();
         list.sort((a, b) {
           final byClass = a.className.compareTo(b.className);
-          return byClass != 0 ? byClass : a.section.compareTo(b.section);
+          if (byClass != 0) return byClass;
+          final byProgram = a.program.compareTo(b.program);
+          return byProgram != 0 ? byProgram : a.section.compareTo(b.section);
         });
         return list;
       },
@@ -42,6 +44,7 @@ class ClassSectionRepository {
   Future<String> createSection({
     required String academyId,
     required String className,
+    String program = '',
     required String section,
   }) async {
     final docRef = _col.doc();
@@ -49,6 +52,7 @@ class ClassSectionRepository {
       id: docRef.id,
       academyId: academyId,
       className: className.trim(),
+      program: program.trim(),
       section: section.trim(),
       createdAt: DateTime.now(),
     );

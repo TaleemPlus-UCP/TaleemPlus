@@ -11,6 +11,7 @@ class ClassSectionEntity {
   final String id;
   final String academyId;
   final String className;
+  final String program; // e.g. "FSC Pre-Engineering" — empty for 9th/10th
   final String section;
   final List<String> studentIds;
   final Map<String, String> studentNames;
@@ -20,6 +21,7 @@ class ClassSectionEntity {
     required this.id,
     required this.academyId,
     required this.className,
+    this.program = '',
     required this.section,
     this.studentIds = const [],
     this.studentNames = const {},
@@ -28,13 +30,18 @@ class ClassSectionEntity {
 
   int get enrollmentCount => studentIds.length;
 
-  /// Display label like "10th - A".
-  String get displayLabel =>
-      section.isEmpty ? className : '$className - $section';
+  /// Display label like "10th - A" or "1st Year - Pre-Engineering - A".
+  String get displayLabel {
+    final buf = StringBuffer(className);
+    if (program.isNotEmpty) buf.write(' - $program');
+    if (section.isNotEmpty) buf.write(' - $section');
+    return buf.toString();
+  }
 
   Map<String, dynamic> toMap() => {
         'academy_id': academyId,
         'class_name': className,
+        'program': program,
         'section': section,
         'student_ids': studentIds,
         'student_names': studentNames,
@@ -52,6 +59,7 @@ class ClassSectionEntity {
       id: id,
       academyId: (map['academy_id'] ?? '') as String,
       className: (map['class_name'] ?? '') as String,
+      program: (map['program'] ?? '') as String,
       section: (map['section'] ?? '') as String,
       studentIds: (rawIds is List) ? rawIds.cast<String>() : const [],
       studentNames: (rawNames is Map)

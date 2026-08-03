@@ -107,3 +107,23 @@ class AppClasses {
 
   static const List<String> all = ['9th', '10th', '1st Year', '2nd Year'];
 }
+
+/// Intermediate (1st/2nd Year) subject groupings. A section's Program is
+/// part of its identity — "1st Year - Pre-Engineering - A" and
+/// "1st Year - ICS - A" are distinct rosters, not one shared section with
+/// a descriptive tag.
+class AppPrograms {
+  AppPrograms._();
+
+  static const List<String> all = [
+    'FSC Pre-Engineering',
+    'FSC Pre-Medical',
+    'ICS',
+    'ICOM',
+    'Arts',
+    'Science',
+  ];
+
+  static bool appliesTo(String className) =>
+      className == '1st Year' || className == '2nd Year';
+}

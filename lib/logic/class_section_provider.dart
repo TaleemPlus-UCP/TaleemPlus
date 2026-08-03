@@ -21,6 +21,24 @@ class ClassSectionProvider extends ChangeNotifier {
   List<ClassSectionEntity> forClass(String className) =>
       _sections.where((s) => s.className == className).toList();
 
+  List<ClassSectionEntity> forClassAndProgram(
+          String className, String program) =>
+      _sections
+          .where((s) => s.className == className && s.program == program)
+          .toList();
+
+  /// True if a section with this exact (class, program, section) already
+  /// exists — sections aren't validated for duplicates otherwise.
+  bool sectionExists({
+    required String className,
+    required String program,
+    required String section,
+  }) =>
+      _sections.any((s) =>
+          s.className == className &&
+          s.program == program &&
+          s.section.toLowerCase() == section.trim().toLowerCase());
+
   /// Start streaming all class sections for a specific academy.
   void listenAll(String academyId) {
     _sub?.cancel();
@@ -44,11 +62,13 @@ class ClassSectionProvider extends ChangeNotifier {
   Future<void> createSection({
     required String academyId,
     required String className,
+    String program = '',
     required String section,
   }) {
     return _repo.createSection(
       academyId: academyId,
       className: className,
+      program: program,
       section: section,
     );
   }
