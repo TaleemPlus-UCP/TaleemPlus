@@ -65,6 +65,37 @@ class TimetableProvider extends ChangeNotifier {
   /// of students). Returns a human-readable conflict message, or `null` if
   /// the slot is free to save. `excludeSlotId` should be set when editing
   /// an existing slot so it doesn't conflict with itself.
+  /// Teacher ids with any slot overlapping the given day/time/date-range —
+  /// used to proactively filter "who's available" (e.g. hide classes whose
+  /// primary teacher is already busy) instead of only rejecting a conflict
+  /// after the admin has already picked one, via [findConflict].
+  Future<Set<String>> busyTeacherIds({
+    required String academyId,
+    required int dayOfWeek,
+    required int startMinutes,
+    required int endMinutes,
+    required DateTime effectiveFrom,
+    DateTime? effectiveTo,
+    String? excludeSlotId,
+  }) async {
+    final daySlots = await _service.getSlotsForDay(academyId, dayOfWeek);
+    final busy = <String>{};
+    for (final s in daySlots) {
+      if (s.id == excludeSlotId || s.teacherId.isEmpty) continue;
+
+      final timeOverlap =
+          startMinutes < s.endMinutes && endMinutes > s.startMinutes;
+      if (!timeOverlap) continue;
+
+      final dateOverlap = _dateRangesOverlap(
+          effectiveFrom, effectiveTo, s.effectiveFrom, s.effectiveTo);
+      if (!dateOverlap) continue;
+
+      busy.add(s.teacherId);
+    }
+    return busy;
+  }
+
   Future<String?> findConflict({
     required String academyId,
     required int dayOfWeek,

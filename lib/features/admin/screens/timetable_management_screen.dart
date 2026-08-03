@@ -367,6 +367,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
   DateTime _effectiveFrom = DateTime.now();
   DateTime? _effectiveTo;
   bool _saving = false;
+  Set<String> _busyTeacherIds = {};
 
   @override
   void initState() {
@@ -387,6 +388,36 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
       _semesterCtrl.text = existing.semester;
       _effectiveFrom = existing.effectiveFrom;
       _effectiveTo = existing.effectiveTo;
+    }
+    _refreshBusyTeachers();
+  }
+
+  /// Recomputes which teachers are already booked for the currently chosen
+  /// day/time/date-range, so the CLASS dropdown can hide classes taught by
+  /// an unavailable teacher instead of only rejecting the pick on save.
+  Future<void> _refreshBusyTeachers() async {
+    final startMinutes = _timeToMinutes(_startTime);
+    final endMinutes = _timeToMinutes(_endTime);
+    if (startMinutes == null ||
+        endMinutes == null ||
+        endMinutes <= startMinutes) {
+      if (mounted) setState(() => _busyTeacherIds = {});
+      return;
+    }
+    try {
+      final busy = await context.read<TimetableProvider>().busyTeacherIds(
+            academyId: widget.academyId,
+            dayOfWeek: _dayOfWeek,
+            startMinutes: startMinutes,
+            endMinutes: endMinutes,
+            effectiveFrom: _effectiveFrom,
+            effectiveTo: _effectiveTo,
+            excludeSlotId: widget.existing?.id,
+          );
+      if (mounted) setState(() => _busyTeacherIds = busy);
+    } catch (_) {
+      // Non-fatal: dropdown just stays unfiltered, findConflict() on save
+      // still catches any real double-booking.
     }
   }
 
@@ -411,6 +442,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
         _endTime = picked;
       }
     });
+    _refreshBusyTeachers();
   }
 
   Future<void> _pickDate({required bool isFrom}) async {
@@ -429,6 +461,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
         _effectiveTo = picked;
       }
     });
+    _refreshBusyTeachers();
   }
 
   Future<void> _save() async {
@@ -592,26 +625,53 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
                       fontSize: 11,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                    color: AppColors.inputFill,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border)),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<ClassEntity>(
-                    value: _selectedClass,
-                    isExpanded: true,
-                    dropdownColor: AppColors.surfaceAlt,
-                    hint: const Text('Select a class'),
-                    items: widget.classes
-                        .map((c) => DropdownMenuItem(
-                            value: c, child: Text(c.displayLabel)))
-                        .toList(),
-                    onChanged: (c) => setState(() => _selectedClass = c),
-                  ),
-                ),
-              ),
+              Builder(builder: (context) {
+                // Only offer classes whose primary teacher is free at the
+                // chosen day/time — "assign only available teachers" as a
+                // proactive filter instead of a reject-after-pick error.
+                // The currently-selected class always stays visible so
+                // editing an existing (now-conflicting-with-itself) slot
+                // doesn't silently clear the selection.
+                final available = widget.classes
+                    .where((c) =>
+                        c.primaryTeacherId.isEmpty ||
+                        !_busyTeacherIds.contains(c.primaryTeacherId) ||
+                        c.id == _selectedClass?.id)
+                    .toList();
+                final hiddenCount = widget.classes.length - available.length;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                          color: AppColors.inputFill,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<ClassEntity>(
+                          value: _selectedClass,
+                          isExpanded: true,
+                          dropdownColor: AppColors.surfaceAlt,
+                          hint: const Text('Select a class'),
+                          items: available
+                              .map((c) => DropdownMenuItem(
+                                  value: c, child: Text(c.displayLabel)))
+                              .toList(),
+                          onChanged: (c) => setState(() => _selectedClass = c),
+                        ),
+                      ),
+                    ),
+                    if (hiddenCount > 0) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                          '$hiddenCount class${hiddenCount == 1 ? '' : 'es'} hidden — teacher already booked at this time.',
+                          style: const TextStyle(
+                              color: AppColors.warning, fontSize: 11)),
+                    ],
+                  ],
+                );
+              }),
               const SizedBox(height: 16),
             ],
             const Text('DAY OF WEEK',
@@ -637,7 +697,10 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
                           value: d,
                           child: Text(TimetableSlot.weekdayNames[d - 1]))
                   ],
-                  onChanged: (d) => setState(() => _dayOfWeek = d!),
+                  onChanged: (d) {
+                    setState(() => _dayOfWeek = d!);
+                    _refreshBusyTeachers();
+                  },
                 ),
               ),
             ),
