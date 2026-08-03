@@ -118,48 +118,164 @@ class QuizResultsScreen extends StatelessWidget {
   }
 
   Widget _markTile(BuildContext context, TestMarkModel mark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(mark.studentName,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text("Grade: ${mark.gradeLetter}",
-                    style: TextStyle(
-                        color: _getGradeColor(mark.gradeLetter),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ],
-            ),
+        onTap: () => _editMark(context, mark),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Row(
             children: [
-              Text("${mark.marksObtained} / ${mark.totalMarks}",
-                  style: const TextStyle(
-                      color: AppColors.accent,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-              Text("${mark.percentage.toStringAsFixed(1)}%",
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(mark.studentName,
+                        style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text("Grade: ${mark.gradeLetter}",
+                        style: TextStyle(
+                            color: _getGradeColor(mark.gradeLetter),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text("${mark.marksObtained} / ${mark.totalMarks}",
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  Text("${mark.percentage.toStringAsFixed(1)}%",
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 11)),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.danger, size: 20),
+                tooltip: 'Delete mark',
+                onPressed: () => _deleteMark(context, mark),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editMark(BuildContext context, TestMarkModel mark) async {
+    final ctrl =
+        TextEditingController(text: mark.marksObtained.toStringAsFixed(1));
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceAlt,
+        title: Text("Edit ${mark.studentName}'s Marks",
+            style: const TextStyle(color: AppColors.textPrimary)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(hintText: 'Out of ${mark.totalMarks}'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(ctrl.text.trim());
+              if (val == null || val < 0 || val > mark.totalMarks) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content:
+                        Text('Enter a value between 0 and ${mark.totalMarks}'),
+                    backgroundColor: AppColors.danger));
+                return;
+              }
+              Navigator.pop(ctx, val);
+            },
+            child: const Text('SAVE'),
           ),
         ],
       ),
     );
+    if (result == null || !context.mounted) return;
+
+    final percentage =
+        mark.totalMarks == 0 ? 0.0 : (result / mark.totalMarks) * 100;
+    final updated = TestMarkModel(
+      id: mark.id,
+      academyId: mark.academyId,
+      quizId: mark.quizId,
+      studentId: mark.studentId,
+      studentName: mark.studentName,
+      classId: mark.classId,
+      subject: mark.subject,
+      month: mark.month,
+      marksObtained: result,
+      totalMarks: mark.totalMarks,
+      percentage: percentage,
+      gradeLetter: TestMarkModel.calculateGrade(percentage),
+      teacherFeedback: mark.teacherFeedback,
+      updatedAt: DateTime.now(),
+    );
+
+    try {
+      await context.read<QuizProvider>().uploadBulkMarks([updated]);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to update mark: $e'),
+            backgroundColor: AppColors.danger));
+      }
+    }
+  }
+
+  Future<void> _deleteMark(BuildContext context, TestMarkModel mark) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceAlt,
+        title: const Text('Delete this mark?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text("Remove ${mark.studentName}'s mark for this test?",
+            style: const TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('CANCEL')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('DELETE',
+                  style: TextStyle(color: AppColors.danger))),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    try {
+      await context
+          .read<QuizProvider>()
+          .deleteMark(mark.quizId, mark.studentId);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to delete mark: $e'),
+            backgroundColor: AppColors.danger));
+      }
+    }
   }
 
   Color _getGradeColor(String grade) {

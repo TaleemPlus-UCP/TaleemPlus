@@ -71,7 +71,9 @@ class QuizService {
     await batch.commit();
   }
 
-  /// Bulk upload marks for a class
+  /// Bulk upload marks for a class. Upserts by the deterministic
+  /// `{quizId}_{studentId}` id, so re-calling with a corrected mark for the
+  /// same student is also how a single mark gets *edited*.
   Future<void> uploadBulkMarks(List<TestMarkModel> marksList) async {
     final batch = _db.batch();
     for (var mark in marksList) {
@@ -79,6 +81,13 @@ class QuizService {
       batch.set(docRef, mark.toMap());
     }
     await batch.commit();
+  }
+
+  /// Deletes a single student's mark for a quiz (same deterministic id
+  /// convention as [uploadBulkMarks]) — as opposed to [deleteQuiz], which
+  /// removes the whole quiz and every student's marks under it.
+  Future<void> deleteMark(String quizId, String studentId) async {
+    await _marks.doc("${quizId}_$studentId").delete();
   }
 
   /// Watch marks for a specific quiz (Safe query)

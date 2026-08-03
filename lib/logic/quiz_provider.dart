@@ -48,6 +48,10 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteMark(String quizId, String studentId) async {
+    await _service.deleteMark(quizId, studentId);
+  }
+
   // --- Streams (Real-time data) ---
 
   /// Watch all tests created for a specific class in an academy
