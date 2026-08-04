@@ -1,12 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 final _currency =
     NumberFormat.currency(locale: 'en_PK', symbol: 'PKR ', decimalDigits: 0);
@@ -69,11 +73,13 @@ class _UnpaidStudentsScreenState extends State<UnpaidStudentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<FeeChallanModel>> byClass = {};
-    for (final c in _unpaid) {
-      byClass.putIfAbsent(c.classLabel, () => []).add(c);
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
     }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -83,29 +89,50 @@ class _UnpaidStudentsScreenState extends State<UnpaidStudentsScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent))
-              : _error != null
-                  ? Center(
-                      child: Text(_error!,
-                          style: const TextStyle(color: AppColors.danger)))
-                  : RefreshIndicator(
-                      color: AppColors.accent,
-                      onRefresh: _load,
-                      child: _unpaid.isEmpty
-                          ? _emptyState()
-                          : ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                              children: byClass.entries
-                                  .map((e) => _classGroup(e.key, e.value))
-                                  .toList(),
-                            ),
-                    ),
+          child: _body(),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Unpaid Students',
+      titleIcon: Icons.money_off_rounded,
+      navSections: navSections,
+      activeNavId: 'unpaid_students',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    final Map<String, List<FeeChallanModel>> byClass = {};
+    for (final c in _unpaid) {
+      byClass.putIfAbsent(c.classLabel, () => []).add(c);
+    }
+
+    return _loading
+        ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+        : _error != null
+            ? Center(
+                child: Text(_error!,
+                    style: const TextStyle(color: AppColors.danger)))
+            : RefreshIndicator(
+                color: AppColors.accent,
+                onRefresh: _load,
+                child: _unpaid.isEmpty
+                    ? _emptyState()
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                        children: byClass.entries
+                            .map((e) => _classGroup(e.key, e.value))
+                            .toList(),
+                      ),
+              );
   }
 
   Widget _emptyState() {

@@ -1,15 +1,20 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/parent_provider.dart';
 import '../../logic/session_provider.dart'; // NEW
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
 import '../../widgets/app_widgets.dart';
+import '../../widgets/parent_stats_row.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import '../../data/remote/notification_service.dart';
 import '../shared/notifications_screen.dart';
 import '../../widgets/gradient_background.dart';
@@ -37,6 +42,15 @@ class ParentDashboard extends StatelessWidget {
     final user = context.watch<AuthProvider>().currentUser;
     final parentProv = context.watch<ParentProvider>();
 
+    final content = _dashboardContent(context, user, parentProv);
+
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, content);
+    }
+    return _buildMobileLayout(context, user, content);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, AppUser? user, Widget content) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -70,95 +84,115 @@ class ParentDashboard extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: RefreshIndicator(
-            color: AppColors.accent,
-            onRefresh: () => parentProv.syncWithUser(user),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                FittedBox(
-                  alignment: Alignment.centerLeft,
-                  fit: BoxFit.scaleDown,
-                  child: Text('Welcome, ${user?.fullName ?? 'Parent'}',
-                      style: TextStyle(
-                          color: context.appColors.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800)),
-                ),
-                const SizedBox(height: 4),
-                Text('Monitor your child\'s education journey',
-                    style: TextStyle(color: context.appColors.textSecondary)),
-                const SizedBox(height: 28),
-                const Text('MY CHILDREN',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2)),
-                const SizedBox(height: 8),
-                if (parentProv.loading && parentProv.children.isEmpty)
-                  const Center(
-                      child: Padding(
-                          padding: EdgeInsets.all(40),
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent)))
-                else if (parentProv.children.isEmpty)
-                  _noChildrenPlaceholder(context)
-                else
-                  ...parentProv.children.map((c) => _childCard(context, c)),
-                const SizedBox(height: 32),
-                const Text('SERVICES',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2)),
-                const SizedBox(height: 12),
-                _actionTile(
-                  context,
-                  'Fee Challans',
-                  'Download and pay monthly invoices',
-                  Icons.receipt_long_rounded,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AllChallansScreen())),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  context,
-                  'Announcements',
-                  'General broadcasts and notices',
-                  Icons.campaign_rounded,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ViewAnnouncementsScreen())),
-                ),
-                const SizedBox(height: 12),
-                _actionTile(
-                  context,
-                  'Academy Support',
-                  'Contact management and helpdesk',
-                  Icons.support_agent_rounded,
-                  () {
-                    if (parentProv.children.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text("Please link a child first.")));
-                      return;
-                    }
-                    final firstChild = parentProv.children.first;
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => AcademyContactScreen(
-                                academyId: firstChild.academyId ?? '')));
-                  },
-                ),
-              ],
-            ),
-          ),
+          child: content,
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context, AppUser? user, Widget content) {
+    final navSections = buildParentNavSections(context, onDashboard: () {});
+    return WebAppShell(
+      title: 'Parent Portal',
+      titleIcon: Icons.family_restroom_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: user,
+      onLogout: () => _logout(context),
+      onSecuritySettings: () => _showSecuritySettings(context),
+      contentPadding: EdgeInsets.zero,
+      body: content,
+    );
+  }
+
+  Widget _dashboardContent(
+      BuildContext context, AppUser? user, ParentProvider parentProv) {
+    return RefreshIndicator(
+      color: AppColors.accent,
+      onRefresh: () => parentProv.syncWithUser(user),
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          FittedBox(
+            alignment: Alignment.centerLeft,
+            fit: BoxFit.scaleDown,
+            child: Text('Welcome, ${user?.fullName ?? 'Parent'}',
+                style: TextStyle(
+                    color: context.appColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(height: 4),
+          Text('Monitor your child\'s education journey',
+              style: TextStyle(color: context.appColors.textSecondary)),
+          const SizedBox(height: 20),
+          ParentStatsRow(
+              children: parentProv.children, academyId: user?.academyId ?? ''),
+          const SizedBox(height: 28),
+          const Text('MY CHILDREN',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          if (parentProv.loading && parentProv.children.isEmpty)
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(color: AppColors.accent)))
+          else if (parentProv.children.isEmpty)
+            _noChildrenPlaceholder(context)
+          else
+            ...parentProv.children.map((c) => _childCard(context, c)),
+          const SizedBox(height: 32),
+          const Text('SERVICES',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2)),
+          const SizedBox(height: 12),
+          _actionTile(
+            context,
+            'Fee Challans',
+            'Download and pay monthly invoices',
+            Icons.receipt_long_rounded,
+            () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AllChallansScreen())),
+          ),
+          const SizedBox(height: 12),
+          _actionTile(
+            context,
+            'Announcements',
+            'General broadcasts and notices',
+            Icons.campaign_rounded,
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ViewAnnouncementsScreen())),
+          ),
+          const SizedBox(height: 12),
+          _actionTile(
+            context,
+            'Academy Support',
+            'Contact management and helpdesk',
+            Icons.support_agent_rounded,
+            () {
+              if (parentProv.children.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Please link a child first.")));
+                return;
+              }
+              final firstChild = parentProv.children.first;
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => AcademyContactScreen(
+                          academyId: firstChild.academyId ?? '')));
+            },
+          ),
+        ],
       ),
     );
   }

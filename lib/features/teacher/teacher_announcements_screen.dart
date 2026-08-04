@@ -1,14 +1,18 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/announcement.dart';
 import '../../data/remote/announcement_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 class TeacherAnnouncementsScreen extends StatefulWidget {
   const TeacherAnnouncementsScreen({super.key});
@@ -27,6 +31,13 @@ class _TeacherAnnouncementsScreenState
     final user = context.watch<AuthProvider>().currentUser;
     final academyId = user?.academyId ?? '';
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, academyId);
+    }
+    return _buildMobileLayout(context, user, academyId);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, dynamic user, String academyId) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -45,44 +56,88 @@ class _TeacherAnnouncementsScreenState
             ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
-              ? const Center(child: Text("Invalid session"))
-              : StreamBuilder<List<Announcement>>(
-                  stream: _service.watchAll(academyId),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return Center(
-                        child: Text(
-                            'Error loading announcements: ${snap.error}',
-                            style: const TextStyle(color: AppColors.danger)),
-                      );
-                    }
-
-                    // Teachers only see announcements THEY created here
-                    final list = (snap.data ?? const [])
-                        .where((a) => a.createdByUid == user?.uid)
-                        .toList();
-
-                    if (list.isEmpty) return _emptyState();
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) =>
-                          _announcementTile(list[i], academyId),
-                    );
-                  },
-                ),
+          child: _body(academyId, user),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context, dynamic user, String academyId) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'My Announcements',
+      titleIcon: Icons.add_comment_rounded,
+      navSections: navSections,
+      activeNavId: 'manage_announcements',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('My Announcements',
+                    style:
+                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              if (academyId.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => _openComposeSheet(academyId),
+                  icon: const Icon(Icons.add_comment_rounded, size: 18),
+                  label: const Text('New Announcement'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _body(academyId, user)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(String academyId, dynamic user) {
+    return academyId.isEmpty
+        ? const Center(child: Text("Invalid session"))
+        : StreamBuilder<List<Announcement>>(
+            stream: _service.watchAll(academyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Text('Error loading announcements: ${snap.error}',
+                      style: const TextStyle(color: AppColors.danger)),
+                );
+              }
+
+              // Teachers only see announcements THEY created here
+              final list = (snap.data ?? const [])
+                  .where((a) => a.createdByUid == user?.uid)
+                  .toList();
+
+              if (list.isEmpty) return _emptyState();
+
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _announcementTile(list[i], academyId),
+              );
+            },
+          );
   }
 
   Widget _emptyState() {
@@ -308,9 +363,9 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
                   label: 'Title',
                   hint: 'e.g. Tomorrow\'s Class Timing',
                   controller: _titleCtrl),
-              const Text('Message',
+              Text('Message',
                   style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: context.appColors.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
@@ -318,7 +373,7 @@ class _TeacherComposeSheetState extends State<_TeacherComposeSheet> {
                 controller: _messageCtrl,
                 minLines: 3,
                 maxLines: 5,
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: context.appColors.textPrimary),
                 decoration:
                     const InputDecoration(hintText: 'Enter your message...'),
                 validator: (v) =>

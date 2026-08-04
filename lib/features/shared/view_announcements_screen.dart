@@ -1,13 +1,19 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/announcement.dart';
+import '../../data/models/app_user.dart';
 import '../../data/remote/announcement_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 /// Read-only announcements list for Teacher / Student / Parent portals.
 /// Automatically filters by the logged-in user's role (plus 'all').
@@ -28,6 +34,14 @@ class _ViewAnnouncementsScreenState extends State<ViewAnnouncementsScreen> {
     final roleValue = user?.role.value ?? '';
     final academyId = user?.academyId ?? '';
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, roleValue, academyId);
+    }
+    return _buildMobileLayout(context, roleValue, academyId);
+  }
+
+  Widget _buildMobileLayout(
+      BuildContext context, String roleValue, String academyId) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -37,45 +51,75 @@ class _ViewAnnouncementsScreenState extends State<ViewAnnouncementsScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: roleValue.isEmpty || academyId.isEmpty
-              ? Center(
-                  child: Text('Please log in again.',
-                      style: TextStyle(color: context.appColors.textSecondary)),
-                )
-              : StreamBuilder<List<Announcement>>(
-                  stream: _service.watchForRole(roleValue, academyId),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Error loading announcements: ${snap.error}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.danger),
-                          ),
-                        ),
-                      );
-                    }
-                    final list = snap.data ?? const [];
-                    if (list.isEmpty) return _emptyState();
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) => _announcementTile(list[i]),
-                    );
-                  },
-                ),
+          child: _body(context, roleValue, academyId),
         ),
       ),
     );
+  }
+
+  /// Reached from every role's dashboard, so — like [NotificationsScreen] —
+  /// the sidebar resolves to whichever role is currently logged in.
+  Widget _buildWebLayout(BuildContext context, AppUser? user, String roleValue,
+      String academyId) {
+    void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
+    final navSections = switch (user?.role) {
+      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.teacher =>
+        buildTeacherNavSections(context, onDashboard: onDashboard),
+      UserRole.student =>
+        buildStudentNavSections(context, onDashboard: onDashboard),
+      UserRole.parent =>
+        buildParentNavSections(context, onDashboard: onDashboard),
+      null => const <WebNavSection>[],
+    };
+
+    return WebAppShell(
+      title: 'Announcements',
+      titleIcon: Icons.campaign_rounded,
+      navSections: navSections,
+      activeNavId: 'view_announcements',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: _body(context, roleValue, academyId),
+    );
+  }
+
+  Widget _body(BuildContext context, String roleValue, String academyId) {
+    return roleValue.isEmpty || academyId.isEmpty
+        ? Center(
+            child: Text('Please log in again.',
+                style: TextStyle(color: context.appColors.textSecondary)),
+          )
+        : StreamBuilder<List<Announcement>>(
+            stream: _service.watchForRole(roleValue, academyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Error loading announcements: ${snap.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                  ),
+                );
+              }
+              final list = snap.data ?? const [];
+              if (list.isEmpty) return _emptyState();
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _announcementTile(list[i]),
+              );
+            },
+          );
   }
 
   Widget _emptyState() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/theme_extensions.dart';
 
 /// Bright cyan primary button with a glow, matching the design.
 class PrimaryButton extends StatelessWidget {
@@ -158,8 +159,8 @@ class LabeledField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: context.appColors.textSecondary,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -171,7 +172,7 @@ class LabeledField extends StatelessWidget {
           keyboardType: keyboardType,
           obscureText: obscure,
           textInputAction: textInputAction,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: context.appColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
             suffixIcon: suffix,

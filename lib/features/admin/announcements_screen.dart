@@ -1,13 +1,18 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_extensions.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/announcement.dart';
 import '../../data/remote/announcement_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -24,6 +29,13 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     final user = context.watch<AuthProvider>().currentUser;
     final academyId = user?.uid ?? '';
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, academyId);
+    }
+    return _buildMobileLayout(context, academyId);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, String academyId) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -42,42 +54,88 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
-              ? const Center(child: Text("Invalid session"))
-              : StreamBuilder<List<Announcement>>(
-                  stream: _service.watchAll(academyId),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                              'Error loading announcements: ${snap.error}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.danger)),
-                        ),
-                      );
-                    }
-                    final list = snap.data ?? const [];
-                    if (list.isEmpty) return _emptyState();
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) =>
-                          _announcementTile(list[i], academyId),
-                    );
-                  },
-                ),
+          child: _body(academyId),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context, String academyId) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Announcements',
+      titleIcon: Icons.campaign_rounded,
+      navSections: navSections,
+      activeNavId: 'announcements',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Announcements',
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: context.appColors.textPrimary)),
+              ),
+              if (academyId.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => _openComposeSheet(academyId),
+                  icon: const Icon(Icons.campaign_rounded, size: 18),
+                  label: const Text('New Announcement'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _body(academyId)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(String academyId) {
+    return academyId.isEmpty
+        ? const Center(child: Text("Invalid session"))
+        : StreamBuilder<List<Announcement>>(
+            stream: _service.watchAll(academyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Error loading announcements: ${snap.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.danger)),
+                  ),
+                );
+              }
+              final list = snap.data ?? const [];
+              if (list.isEmpty) return _emptyState();
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _announcementTile(list[i], academyId),
+              );
+            },
+          );
   }
 
   Widget _emptyState() {
@@ -402,9 +460,9 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                     ? 'Title is required'
                     : null,
               ),
-              const Text('Message',
+              Text('Message',
                   style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: context.appColors.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
@@ -412,7 +470,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
                 controller: _messageCtrl,
                 minLines: 3,
                 maxLines: 6,
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: context.appColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'Write your message here...',
                 ),

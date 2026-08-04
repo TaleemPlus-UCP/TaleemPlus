@@ -1,13 +1,17 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/session_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../services/ocr_service.dart';
 import '../services/ocr_firestore_service.dart';
 
@@ -175,6 +179,13 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("OCR Scanner",
@@ -184,7 +195,34 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: _body(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'OCR Scanner',
+      titleIcon: Icons.document_scanner_rounded,
+      navSections: navSections,
+      activeNavId: 'ocr_scanner',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: _body(),
+        ),
+      ),
+    );
+  }
+
+  Widget _body() {
+    return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,10 +341,7 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Widget _choiceCard(String title, IconData icon, VoidCallback? onTap) {

@@ -10,31 +10,33 @@ TaleemPlus is a modern, cross-platform (Android, iOS, & Web) application designe
 ## 🌟 Key Features
 
 ### 🏢 Admin Portal (Command Center)
-*   **User Management:** Add, edit, and approve staff and students — including class-wise student enrollment with unique roll numbers and linking parents directly to existing student accounts.
-*   **Academic Structure:** 9th/10th/1st Year/2nd Year classes, with FSC Pre-Engineering, FSC Pre-Medical, ICS, ICOM, Arts, and Science programs for 1st/2nd Year sections.
+*   **User Management:** Add, edit, and approve staff and students — including class-wise student enrollment with unique roll numbers and searchable, multi-child parent↔student linking.
+*   **Academic Structure:** Admin-configurable levels and groups (defaults to Matric — Science/Arts and Intermediate — FSc Pre-Medical/FSc Pre-Engineering/ICS/ICom/FA), used everywhere classes are selected across admissions, attendance, fees, and reports.
 *   **Class & Section Management:** Create class+section rosters, view enrolled students, and manage teacher assignments per section.
 *   **Timetable Scheduling:** Class-wise and section-wise scheduling that proactively hides teachers already booked at a chosen time slot.
-*   **Fee Management:** Class+section-wise bulk challan generation, a class-wise fee ledger, and an academy-wide unpaid-students view.
-*   **AI Analytics:** Predict fee-delay risk and forecast student performance using trained on-device ML models (see below).
+*   **Fee Management:** Class+section-wise bulk challan generation, a read-only class+section fee analytics ledger (paid/pending/overdue/collection %), and an academy-wide unpaid-students view.
+*   **Class Reports:** Generate and delete point-in-time class+section snapshots covering attendance and fee standing.
+*   **AI Analytics:** Predict fee-delay risk and forecast student performance from real fee-ledger records using trained on-device ML models (see below).
 *   **Announcements:** Broadcast important notices to specific roles or the whole academy.
+*   **Dashboard at a Glance:** Role-specific stat cards for staff/student/parent counts, fee summary, today's attendance, and announcements.
 
 ### 👨‍🏫 Teacher Portal (Digital Classroom)
-*   **My Classes, Resources, and Queries:** Dedicated dashboard entries for attendance, shared classroom resources, and student queries.
-*   **AI Smart Grader:** Grade handwritten answer sheets offline via OCR and TF-IDF cosine-similarity scoring against teacher-defined keywords, with manual mark entry as a fallback and editable grading keywords.
+*   **My Classes, Resources, and Queries:** Dedicated dashboard entries for subject-wise attendance, shared classroom resources, and student queries.
 *   **AI Test Generator:** Scan textbook pages to auto-generate MCQ/Short/Long questions, grouped into sections with an auto-computed Total Marks and a matching sectioned PDF export.
-*   **Attendance Marking:** Digital presence tracking for all assigned classes.
+*   **Subject-wise Attendance Marking:** Digital presence tracking, with edit support, for every assigned class.
+*   **OCR → Resource Publishing:** Scanned documents land automatically in OCR Documents; publish selected ones straight to a class's Shared Resources — no manual resource uploads.
 *   **Performance Tracking:** Enter, edit, and delete individual student test scores.
 
 ### 🎓 Student Portal (Learning Console)
 *   **My Classroom Hub:** View subject-wise resources, and discuss topics with teachers.
-*   **Monthly Attendance:** Attendance broken down by enrolled course and month.
+*   **Day-by-Day Attendance:** Attendance history grouped by date, showing every subject attended that day at a glance — shared with the parent portal's child attendance view.
 *   **AI Summarizer:** TextRank-based extractive summaries from large study notes, 100% offline.
 *   **Performance Analytics:** Visual progress charts and detailed test reports.
 *   **Fee Status:** Real-time tracking of paid and pending challans.
 
 ### 👪 Parent Portal (Child Monitoring)
 *   **Multi-Child Support:** Link multiple children to a single parent dashboard (by an admin at account creation, or self-service from the parent dashboard).
-*   **Journey Monitoring:** Real-time visibility into children's attendance, marks, and fee dues.
+*   **Journey Monitoring:** Real-time visibility into children's day-by-day attendance, marks, and fee dues.
 *   **Direct Support:** Easy access to academy contact information and broadcasts.
 
 ---

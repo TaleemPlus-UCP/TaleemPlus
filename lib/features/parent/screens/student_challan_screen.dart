@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../data/remote/challan_pdf_service.dart';
@@ -80,6 +84,13 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fee Challan',
@@ -89,24 +100,47 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildMonthFilter(),
-              Expanded(
-                child: _loading
-                    ? const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent))
-                    : _errorMessage != null
-                        ? _buildErrorState()
-                        : _latestChallan == null
-                            ? _buildEmptyState()
-                            : _buildChallanDetails(),
-              ),
-            ],
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildParentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Fee Challan',
+      titleIcon: Icons.receipt_long_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: _body(),
+        ),
+      ),
+    );
+  }
+
+  Widget _body() {
+    return Column(
+      children: [
+        _buildMonthFilter(),
+        Expanded(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent))
+              : _errorMessage != null
+                  ? _buildErrorState()
+                  : _latestChallan == null
+                      ? _buildEmptyState()
+                      : _buildChallanDetails(),
+        ),
+      ],
     );
   }
 

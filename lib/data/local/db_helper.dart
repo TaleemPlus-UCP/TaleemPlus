@@ -29,7 +29,6 @@ class DbHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await _createMembers(db);
-    await _createFeeInvoices(db);
   }
 
   Future<void> _createMembers(Database db) async {
@@ -48,27 +47,8 @@ class DbHelper {
     ''');
   }
 
-  Future<void> _createFeeInvoices(Database db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS fee_invoices (
-        id                      TEXT PRIMARY KEY,
-        academy_id              TEXT NOT NULL DEFAULT '',
-        student_id              TEXT NOT NULL,
-        student_name            TEXT NOT NULL,
-        gross_amount_due        REAL NOT NULL,
-        accumulated_amount_paid REAL NOT NULL DEFAULT 0,
-        billing_month           TEXT NOT NULL,
-        due_date                TEXT NOT NULL,
-        paid_on                 TEXT,
-        status                  TEXT NOT NULL DEFAULT 'unpaid',
-        created_at              TEXT NOT NULL
-      )
-    ''');
-  }
-
   Future<void> clearAll() async {
     final db = await database;
     await db.delete('members');
-    await db.delete('fee_invoices');
   }
 }

@@ -1,13 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/class_entity.dart';
 import '../../logic/attendance_provider.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 /// Fig. 5 sequence flow — now backed by Firestore so all devices sync.
 class AttendanceMarkingScreen extends StatefulWidget {
@@ -104,6 +108,13 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -121,19 +132,65 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Consumer<AttendanceProvider>(
-            builder: (context, ap, _) {
-              if (ap.loading) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                );
-              }
-              if (_studentEntries.isEmpty) return _emptyState();
-              return _content(ap);
-            },
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: widget.classEntity.displayLabel,
+      titleIcon: Icons.fact_check_rounded,
+      navSections: navSections,
+      activeNavId: 'attendance',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(widget.classEntity.displayLabel,
+                    style: const TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              OutlinedButton.icon(
+                onPressed: _pickDate,
+                icon: const Icon(Icons.event_rounded, size: 18),
+                label: const Text('Change date'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  side: const BorderSide(color: AppColors.accent),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
+
+  Widget _body() {
+    return Consumer<AttendanceProvider>(
+      builder: (context, ap, _) {
+        if (ap.loading) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.accent),
+          );
+        }
+        if (_studentEntries.isEmpty) return _emptyState();
+        return _content(ap);
+      },
     );
   }
 

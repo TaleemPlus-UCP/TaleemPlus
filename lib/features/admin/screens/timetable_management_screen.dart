@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/app_user.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/timetable_slot.dart';
@@ -13,6 +15,8 @@ import '../../../logic/class_provider.dart';
 import '../../../logic/timetable_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class TimetableManagementScreen extends StatefulWidget {
   const TimetableManagementScreen({super.key});
@@ -48,6 +52,13 @@ class _TimetableManagementScreenState extends State<TimetableManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
     final academyId = user?.academyId ?? '';
     final classes = context.watch<ClassProvider>().classes;
@@ -70,57 +81,102 @@ class _TimetableManagementScreenState extends State<TimetableManagementScreen> {
             ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
-              ? const Center(child: Text('Invalid session'))
-              : Column(
-                  children: [
-                    _buildFilterBar(classes),
-                    Expanded(
-                      child: StreamBuilder<List<TimetableSlot>>(
-                        stream: context
-                            .read<TimetableProvider>()
-                            .watchAll(academyId),
-                        builder: (context, snap) {
-                          if (snap.connectionState == ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator(
-                                    color: AppColors.accent));
-                          }
-                          if (snap.hasError) {
-                            return Center(
-                                child: Text(
-                                    'Error loading timetable: ${snap.error}',
-                                    style: const TextStyle(
-                                        color: AppColors.danger)));
-                          }
-                          var slots = snap.data ?? const [];
-                          if (_dayFilter != null) {
-                            slots = slots
-                                .where((s) => s.dayOfWeek == _dayFilter)
-                                .toList();
-                          }
-                          if (_classFilter != null) {
-                            slots = slots
-                                .where((s) => s.classId == _classFilter)
-                                .toList();
-                          }
-                          if (_teacherFilter != null) {
-                            slots = slots
-                                .where((s) => s.teacherId == _teacherFilter)
-                                .toList();
-                          }
-                          if (slots.isEmpty) {
-                            return _emptyState();
-                          }
-                          return _buildGroupedList(slots, classes, academyId);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+          child: _body(academyId, classes),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final academyId = user?.academyId ?? '';
+    final classes = context.watch<ClassProvider>().classes;
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+
+    return WebAppShell(
+      title: 'Timetable Management',
+      titleIcon: Icons.schedule_rounded,
+      navSections: navSections,
+      activeNavId: 'timetable',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Timetable Management',
+                    style:
+                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              if (academyId.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => _openSlotSheet(academyId, classes),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add Slot'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _body(academyId, classes)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(String academyId, List<ClassEntity> classes) {
+    return academyId.isEmpty
+        ? const Center(child: Text('Invalid session'))
+        : Column(
+            children: [
+              _buildFilterBar(classes),
+              Expanded(
+                child: StreamBuilder<List<TimetableSlot>>(
+                  stream: context.read<TimetableProvider>().watchAll(academyId),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent));
+                    }
+                    if (snap.hasError) {
+                      return Center(
+                          child: Text('Error loading timetable: ${snap.error}',
+                              style: const TextStyle(color: AppColors.danger)));
+                    }
+                    var slots = snap.data ?? const [];
+                    if (_dayFilter != null) {
+                      slots =
+                          slots.where((s) => s.dayOfWeek == _dayFilter).toList();
+                    }
+                    if (_classFilter != null) {
+                      slots =
+                          slots.where((s) => s.classId == _classFilter).toList();
+                    }
+                    if (_teacherFilter != null) {
+                      slots = slots
+                          .where((s) => s.teacherId == _teacherFilter)
+                          .toList();
+                    }
+                    if (slots.isEmpty) {
+                      return _emptyState();
+                    }
+                    return _buildGroupedList(slots, classes, academyId);
+                  },
+                ),
+              ),
+            ],
+          );
   }
 
   Widget _buildFilterBar(List<ClassEntity> classes) {

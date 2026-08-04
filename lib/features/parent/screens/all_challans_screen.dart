@@ -1,9 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../logic/parent_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import 'student_challan_screen.dart';
 
 class AllChallansScreen extends StatelessWidget {
@@ -11,8 +16,13 @@ class AllChallansScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = context.watch<ParentProvider>().children;
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fee Challans',
@@ -22,20 +32,39 @@ class AllChallansScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: children.isEmpty
-              ? _buildNoChildrenState()
-              : ListView.separated(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: children.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, i) {
-                    final child = children[i];
-                    return _childChallanTile(context, child);
-                  },
-                ),
+          child: _body(context),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildParentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Fee Challans',
+      titleIcon: Icons.receipt_long_rounded,
+      navSections: navSections,
+      activeNavId: 'fee_challans',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final children = context.watch<ParentProvider>().children;
+    return children.isEmpty
+        ? _buildNoChildrenState()
+        : ListView.separated(
+            padding: const EdgeInsets.all(20),
+            itemCount: children.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, i) {
+              final child = children[i];
+              return _childChallanTile(context, child);
+            },
+          );
   }
 
   Widget _childChallanTile(BuildContext context, dynamic child) {

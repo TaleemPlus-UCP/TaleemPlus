@@ -1,15 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/remote/pdf_generator_service.dart';
 import 'create_quiz_screen.dart';
-import 'mark_entry_screen.dart';
-import 'ai_paper_grader_screen.dart';
 
 class TeacherQuizListScreen extends StatefulWidget {
   final bool isAiGen;
@@ -39,13 +41,13 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-    final classes = context
-        .watch<ClassProvider>()
-        .classes
-        .where((c) => c.primaryTeacherId == user?.uid)
-        .toList();
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -73,62 +75,128 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
           : null,
       body: GradientBackground(
         child: SafeArea(
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: widget.isAiGen ? 'AI Test Generator' : 'Grading & AI Paper Grader',
+      titleIcon: widget.isAiGen
+          ? Icons.auto_awesome_motion_rounded
+          : Icons.add_chart_rounded,
+      navSections: navSections,
+      activeNavId: widget.isAiGen ? 'ai_test_gen' : 'grading',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                    widget.isAiGen
+                        ? 'AI Test Generator'
+                        : 'Grading & AI Paper Grader',
+                    style: const TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              if (widget.isAiGen && _selectedClassId != null)
+                FilledButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreateQuizScreen(
+                        classId: _selectedClassId!,
+                        isAiGen: true,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Generate AI Test'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _body(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final classes = context
+        .watch<ClassProvider>()
+        .classes
+        .where((c) => c.primaryTeacherId == user?.uid)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('SELECT CLASS',
-                        style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1)),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedClassId,
-                          hint: const Text('Choose a class',
-                              style: TextStyle(color: AppColors.textSecondary)),
-                          dropdownColor: AppColors.surface,
-                          isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down,
-                              color: AppColors.accent),
-                          items: classes.map((c) {
-                            return DropdownMenuItem(
-                              value: c.id,
-                              child: Text("${c.className} (${c.section})",
-                                  style: const TextStyle(
-                                      color: AppColors.textPrimary)),
-                            );
-                          }).toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedClassId = val),
-                        ),
-                      ),
-                    ),
-                  ],
+              const Text('SELECT CLASS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1)),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
                 ),
-              ),
-              Expanded(
-                child: _selectedClassId == null
-                    ? _buildNoClassState()
-                    : _buildQuizList(_selectedClassId!),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedClassId,
+                    hint: const Text('Choose a class',
+                        style: TextStyle(color: AppColors.textSecondary)),
+                    dropdownColor: AppColors.surface,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down,
+                        color: AppColors.accent),
+                    items: classes.map((c) {
+                      return DropdownMenuItem(
+                        value: c.id,
+                        child: Text("${c.className} (${c.section})",
+                            style:
+                                const TextStyle(color: AppColors.textPrimary)),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedClassId = val),
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      ),
+        Expanded(
+          child: _selectedClassId == null
+              ? _buildNoClassState()
+              : _buildQuizList(_selectedClassId!),
+        ),
+      ],
     );
   }
 
@@ -253,96 +321,50 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (widget.isAiGen)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _pdfBusy
-                        ? null
-                        : () => _runPdfAction(
-                              () => PdfGeneratorService.printTestPaper(quiz),
-                              'Could not open print preview',
-                            ),
-                    icon: const Icon(Icons.print_rounded, size: 18),
-                    label: const Text("PRINT"),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accent,
-                      side: const BorderSide(color: AppColors.accent),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pdfBusy
+                      ? null
+                      : () => _runPdfAction(
+                            () => PdfGeneratorService.printTestPaper(quiz),
+                            'Could not open print preview',
+                          ),
+                  icon: const Icon(Icons.print_rounded, size: 18),
+                  label: const Text("PRINT"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    side: const BorderSide(color: AppColors.accent),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _pdfBusy
-                        ? null
-                        : () => _runPdfAction(
-                              () => PdfGeneratorService.shareTestPaper(quiz),
-                              'Could not share PDF',
-                            ),
-                    icon: const Icon(Icons.share_rounded, size: 18),
-                    label: const Text("SHARE PDF"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textOnAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _pdfBusy
+                      ? null
+                      : () => _runPdfAction(
+                            () => PdfGeneratorService.shareTestPaper(quiz),
+                            'Could not share PDF',
+                          ),
+                  icon: const Icon(Icons.share_rounded, size: 18),
+                  label: const Text("SHARE PDF"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => AiPaperGraderScreen(quiz: quiz)),
-                    ),
-                    icon: const Icon(Icons.auto_awesome, size: 18),
-                    label: const Text("AI SMART GRADER"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                      foregroundColor: AppColors.accent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                      side: const BorderSide(color: AppColors.accent),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => MarkEntryScreen(quiz: quiz)),
-                    ),
-                    icon: const Icon(Icons.add_chart_rounded, size: 18),
-                    label: const Text("ENTER MARKS"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textOnAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );

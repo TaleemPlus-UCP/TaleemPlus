@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/shared_resource.dart';
 import '../../../data/models/student_query.dart';
@@ -12,6 +14,8 @@ import '../../../data/remote/classroom_service.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/attendance_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class TeacherDetailsScreen extends StatefulWidget {
   final ClassEntity classEntity;
@@ -43,6 +47,13 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.classEntity.primaryTeacherName,
@@ -63,16 +74,67 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen>
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildResourcesTab(),
-              _buildAttendanceTab(),
-              _buildDiscussTab(),
-            ],
-          ),
+          child: _tabBarView(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildStudentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: widget.classEntity.primaryTeacherName,
+      titleIcon: Icons.person_rounded,
+      navSections: navSections,
+      activeNavId: 'classroom_hub',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      contentPadding: EdgeInsets.zero,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(widget.classEntity.primaryTeacherName,
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w800)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorColor: AppColors.accent,
+                labelColor: AppColors.accent,
+                unselectedLabelColor: context.appColors.textSecondary,
+                tabs: const [
+                  Tab(text: 'RESOURCES'),
+                  Tab(text: 'ATTENDANCE'),
+                  Tab(text: 'DISCUSS'),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(child: _tabBarView()),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabBarView() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildResourcesTab(),
+        _buildAttendanceTab(),
+        _buildDiscussTab(),
+      ],
     );
   }
 

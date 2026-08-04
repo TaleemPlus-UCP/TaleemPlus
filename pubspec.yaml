@@ -41,6 +41,9 @@ dependencies:
   uuid: ^4.4.0
 
   cupertino_icons: ^1.0.6
+  # Inter font for the Flutter Web SaaS-style redesign (lib/core/web,
+  # lib/widgets/web) — never referenced from mobile code paths.
+  google_fonts: ^6.2.1
   shared_preferences: ^2.5.5
   qr_flutter: ^4.1.0
   local_auth: ^2.3.0

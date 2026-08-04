@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/shared_resource.dart';
 import '../../../data/models/student_query.dart';
@@ -9,6 +11,8 @@ import '../../../data/remote/classroom_service.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class ClassroomManagementScreen extends StatefulWidget {
   final ClassEntity classEntity;
@@ -51,6 +55,13 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.classEntity.displayLabel,
@@ -70,15 +81,65 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildQueriesTab(),
-              _buildShareTab(),
-            ],
-          ),
+          child: _tabBarView(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: widget.classEntity.displayLabel,
+      titleIcon: Icons.door_sliding_rounded,
+      navSections: navSections,
+      activeNavId: widget.initialTabIndex == 1 ? 'resources' : 'queries',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      contentPadding: EdgeInsets.zero,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(widget.classEntity.displayLabel,
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w800)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorColor: AppColors.accent,
+                labelColor: AppColors.accent,
+                unselectedLabelColor: context.appColors.textSecondary,
+                tabs: const [
+                  Tab(text: 'STUDENT QUERIES'),
+                  Tab(text: 'SHARE CONTENT'),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(child: _tabBarView()),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabBarView() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildQueriesTab(),
+        _buildShareTab(),
+      ],
     );
   }
 
@@ -205,11 +266,14 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(20),
-          child: PrimaryButton(
-            label: "UPLOAD NEW RESOURCE",
-            icon: Icons.upload_file_rounded,
-            onPressed: _showUploadSheet,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Resources published from OCR Documents appear here for this class.',
+              style: TextStyle(
+                  color: context.appColors.textMuted, fontSize: 12),
+            ),
           ),
         ),
         Expanded(
@@ -251,90 +315,6 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
           ),
         ),
       ],
-    );
-  }
-
-  void _showUploadSheet() {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final linkCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          bool saving = false;
-
-          Future<void> submit() async {
-            final user = context.read<AuthProvider>().currentUser;
-            if (user?.academyId == null) return;
-            if (titleCtrl.text.trim().isEmpty) {
-              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                  content: Text('Title is required.'),
-                  backgroundColor: AppColors.danger));
-              return;
-            }
-
-            setSheetState(() => saving = true);
-            try {
-              final res = SharedResource(
-                id: '',
-                academyId: user!.academyId!,
-                classId: widget.classEntity.id,
-                teacherId: user.uid,
-                teacherName: user.fullName,
-                title: titleCtrl.text.trim(),
-                description: descCtrl.text.trim(),
-                fileUrl:
-                    linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim(),
-                createdAt: DateTime.now(),
-              );
-              await _classroomService.uploadResource(res);
-              if (ctx.mounted) Navigator.pop(ctx);
-            } catch (e) {
-              setSheetState(() => saving = false);
-              if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                    content: Text('Failed to share resource: $e'),
-                    backgroundColor: AppColors.danger));
-              }
-            }
-          }
-
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-                24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Share Study Material",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                LabeledField(
-                    label: "Title",
-                    hint: "e.g. Physics Chapter 1 Notes",
-                    controller: titleCtrl),
-                LabeledField(
-                    label: "Description",
-                    hint: "Summary or instructions...",
-                    controller: descCtrl),
-                LabeledField(
-                    label: "Link (optional)",
-                    hint: "https://... (notes/video link)",
-                    controller: linkCtrl,
-                    keyboardType: TextInputType.url),
-                const SizedBox(height: 20),
-                PrimaryButton(
-                    label: "POST TO CLASS",
-                    loading: saving,
-                    onPressed: saving ? null : submit),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 

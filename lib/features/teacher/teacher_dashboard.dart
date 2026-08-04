@@ -1,13 +1,20 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
+import '../../data/models/app_user.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../data/remote/auth_service.dart';
 import '../../data/remote/notification_service.dart'; // NEW
 import '../../widgets/app_widgets.dart';
+import '../../widgets/teacher_stats_row.dart';
+import '../../widgets/web/web_cards.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart'; // NEW
@@ -36,6 +43,13 @@ class TeacherDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user);
+    }
+    return _buildMobileLayout(context, user);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, AppUser? user) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -84,6 +98,9 @@ class TeacherDashboard extends StatelessWidget {
               Text('Your classroom overview',
                   style: TextStyle(color: context.appColors.textSecondary)),
               const SizedBox(height: 16),
+              if (user != null)
+                TeacherStatsRow(teacherUid: user.uid, academyId: user.academyId ?? ''),
+              const SizedBox(height: 16),
               _gridSection(context, 'CLASSROOM', [
                 _gridTile(
                   context,
@@ -129,17 +146,6 @@ class TeacherDashboard extends StatelessWidget {
                 ),
               ]),
               _gridSection(context, 'GRADING & TESTS', [
-                _gridTile(
-                  context,
-                  'Grading & AI Grader',
-                  'Enter or AI-grade marks',
-                  Icons.add_chart_rounded,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              const TeacherQuizListScreen(isAiGen: false))),
-                ),
                 _gridTile(
                   context,
                   'AI Test Generator',
@@ -207,6 +213,122 @@ class TeacherDashboard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context, AppUser? user) {
+    final navSections = buildTeacherNavSections(context, onDashboard: () {});
+
+    return WebAppShell(
+      title: 'Teacher Portal',
+      titleIcon: Icons.co_present_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: user,
+      onLogout: () => _logout(context),
+      onSecuritySettings: () => _showSecuritySettings(context),
+      body: ListView(
+        children: [
+          Text('Welcome back, ${user?.fullName ?? 'Teacher'}',
+              style: TextStyle(
+                  color: context.appColors.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('Here\'s your classroom overview.',
+              style: TextStyle(color: context.appColors.textSecondary)),
+          const SizedBox(height: 20),
+          if (user != null)
+            TeacherStatsRow(teacherUid: user.uid, academyId: user.academyId ?? ''),
+          const SizedBox(height: 24),
+          WebGridSection(title: 'CLASSROOM', tiles: [
+            WebNavTile(
+              title: 'Attendance',
+              subtitle: 'Mark daily attendance',
+              icon: Icons.fact_check_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const TeacherClassesScreen())),
+            ),
+            WebNavTile(
+              title: 'My Timetable',
+              subtitle: 'Weekly class schedule',
+              icon: Icons.schedule_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const MyTimetableScreen())),
+            ),
+            WebNavTile(
+              title: 'Resources',
+              subtitle: 'Share notes & materials',
+              icon: Icons.folder_shared_rounded,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherClassesScreen(
+                          jumpTo: ClassJumpTarget.resources))),
+            ),
+            WebNavTile(
+              title: 'Queries',
+              subtitle: 'Answer student questions',
+              icon: Icons.forum_rounded,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherClassesScreen(
+                          jumpTo: ClassJumpTarget.queries))),
+            ),
+          ]),
+          WebGridSection(title: 'GRADING & TESTS', tiles: [
+            WebNavTile(
+              title: 'AI Test Generator',
+              subtitle: 'Generate & print tests',
+              icon: Icons.auto_awesome_motion_rounded,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherQuizListScreen(isAiGen: true))),
+            ),
+            WebNavTile(
+              title: 'Monthly Performance',
+              subtitle: 'Compiled student results',
+              icon: Icons.insights_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
+            ),
+          ]),
+          WebGridSection(title: 'ANNOUNCEMENTS & TOOLS', tiles: [
+            WebNavTile(
+              title: 'View Announcements',
+              subtitle: 'Broadcasts from your academy',
+              icon: Icons.campaign_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ViewAnnouncementsScreen())),
+            ),
+            WebNavTile(
+              title: 'Manage Announcements',
+              subtitle: 'Reach parents & students',
+              icon: Icons.add_comment_rounded,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherAnnouncementsScreen())),
+            ),
+            WebNavTile(
+              title: 'OCR Scanner',
+              subtitle: 'Scan digitized notes',
+              icon: Icons.document_scanner_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const OcrScannerScreen())),
+            ),
+            WebNavTile(
+              title: 'OCR History',
+              subtitle: 'View scanned documents',
+              icon: Icons.history_rounded,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const OcrHistoryScreen())),
+            ),
+          ]),
+        ],
       ),
     );
   }

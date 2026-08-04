@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class StudentFeeScreen extends StatefulWidget {
   final String studentUid;
@@ -32,6 +36,13 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fee Status',
@@ -41,42 +52,59 @@ class _StudentFeeScreenState extends State<StudentFeeScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: FutureBuilder<List<FeeChallanModel>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent));
-              }
-
-              if (snapshot.hasError) {
-                return _buildErrorState('${snapshot.error}');
-              }
-
-              final challans = snapshot.data ?? [];
-
-              if (challans.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return Column(
-                children: [
-                  _buildSummaryHeader(challans),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: challans.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) =>
-                          _feeTile(challans[index]),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildStudentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Fee Status',
+      titleIcon: Icons.receipt_long_rounded,
+      navSections: navSections,
+      activeNavId: 'fee_status',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    return FutureBuilder<List<FeeChallanModel>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState('${snapshot.error}');
+        }
+
+        final challans = snapshot.data ?? [];
+
+        if (challans.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return Column(
+          children: [
+            _buildSummaryHeader(challans),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: challans.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => _feeTile(challans[index]),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -1,14 +1,18 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../data/remote/notification_service.dart'; // NEW
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 /// Admin screen: list users waiting for approval and approve/reject them.
 class ApprovalRequestsScreen extends StatefulWidget {
@@ -178,6 +182,13 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -193,6 +204,24 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
             child: _buildBody(),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Approval Requests',
+      titleIcon: Icons.how_to_reg_rounded,
+      navSections: navSections,
+      activeNavId: 'approvals',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: RefreshIndicator(
+        color: AppColors.accent,
+        onRefresh: _load,
+        child: _buildBody(),
       ),
     );
   }

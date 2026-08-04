@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import 'teacher_details_screen.dart';
 
 class MyClassroomHub extends StatefulWidget {
@@ -29,14 +33,13 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-    final classProv = context.watch<ClassProvider>();
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
-    // Find all classes where this student is enrolled
-    final enrolledClasses = classProv.classes
-        .where((c) => c.studentIds.contains(user?.uid))
-        .toList();
-
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Classroom Hub',
@@ -46,21 +49,47 @@ class _MyClassroomHubState extends State<MyClassroomHub> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: enrolledClasses.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(24),
-                      itemCount: enrolledClasses.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) =>
-                          _teacherTile(enrolledClasses[index]),
-                    ),
-            ),
-          ),
+          child: _body(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildStudentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'My Classroom Hub',
+      titleIcon: Icons.school_rounded,
+      navSections: navSections,
+      activeNavId: 'classroom_hub',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    final user = context.watch<AuthProvider>().currentUser;
+    final classProv = context.watch<ClassProvider>();
+
+    // Find all classes where this student is enrolled
+    final enrolledClasses = classProv.classes
+        .where((c) => c.studentIds.contains(user?.uid))
+        .toList();
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: enrolledClasses.isEmpty
+            ? _buildEmptyState()
+            : ListView.separated(
+                padding: const EdgeInsets.all(24),
+                itemCount: enrolledClasses.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (context, index) =>
+                    _teacherTile(enrolledClasses[index]),
+              ),
       ),
     );
   }

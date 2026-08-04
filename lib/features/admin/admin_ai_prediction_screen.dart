@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../logic/admin_ai_provider.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import 'fee_ledger_screen.dart';
 import 'admin_quiz_list_screen.dart';
 
@@ -32,6 +36,13 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Insights & Predictions',
@@ -41,38 +52,56 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Consumer<AdminAiProvider>(
-            builder: (context, ai, _) {
-              if (ai.loading) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent));
-              }
-
-              return ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  if (ai.error != null) ...[
-                    _aiErrorBanner(ai.error!),
-                    const SizedBox(height: 20),
-                  ],
-                  _aiStatusHeader(),
-                  const SizedBox(height: 24),
-                  _buildRiskPrediction(ai),
-                  const SizedBox(height: 20),
-                  _buildFeeDelayRiskPrediction(ai),
-                  const SizedBox(height: 20),
-                  _buildRevenueForecast(ai),
-                  const SizedBox(height: 20),
-                  _buildPerformanceForecast(ai),
-                  const SizedBox(height: 20),
-                  _buildAcademicInsights(ai),
-                  const SizedBox(height: 40),
-                ],
-              );
-            },
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'AI Insights & Predictions',
+      titleIcon: Icons.auto_awesome_rounded,
+      navSections: navSections,
+      activeNavId: 'ai_prediction',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    return Consumer<AdminAiProvider>(
+      builder: (context, ai, _) {
+        if (ai.loading) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            if (ai.error != null) ...[
+              _aiErrorBanner(ai.error!),
+              const SizedBox(height: 20),
+            ],
+            _aiStatusHeader(),
+            const SizedBox(height: 24),
+            _buildRiskPrediction(ai),
+            const SizedBox(height: 20),
+            _buildFeeDelayRiskPrediction(ai),
+            const SizedBox(height: 20),
+            _buildRevenueForecast(ai),
+            const SizedBox(height: 20),
+            _buildPerformanceForecast(ai),
+            const SizedBox(height: 20),
+            _buildAcademicInsights(ai),
+            const SizedBox(height: 40),
+          ],
+        );
+      },
     );
   }
 

@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../logic/auth_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
@@ -211,6 +213,30 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   Widget build(BuildContext context) {
     final loading = context.watch<AuthProvider>().isLoading;
+    final isWebWide = kIsWeb && !WebBreakpoints.isCompact(context);
+
+    final form = Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTypeToggle(),
+          const SizedBox(height: 32),
+          _buildFormFields(),
+          const SizedBox(height: 32),
+          PrimaryButton(
+            label: _tabController.index == 0
+                ? "REGISTER ACADEMY"
+                : "JOIN AS ${_selectedRole.name.toUpperCase()}",
+            icon: Icons.arrow_forward_rounded,
+            loading: loading,
+            onPressed: loading ? null : _submit,
+          ),
+          const SizedBox(height: 24),
+          _loginLink(),
+        ],
+      ),
+    );
 
     return Scaffold(
       body: GradientBackground(
@@ -221,28 +247,14 @@ class _SignupScreenState extends State<SignupScreen>
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildTypeToggle(),
-                        const SizedBox(height: 32),
-                        _buildFormFields(),
-                        const SizedBox(height: 32),
-                        PrimaryButton(
-                          label: _tabController.index == 0
-                              ? "REGISTER ACADEMY"
-                              : "JOIN AS ${_selectedRole.name.toUpperCase()}",
-                          icon: Icons.arrow_forward_rounded,
-                          loading: loading,
-                          onPressed: loading ? null : _submit,
-                        ),
-                        const SizedBox(height: 24),
-                        _loginLink(),
-                      ],
-                    ),
-                  ),
+                  child: isWebWide
+                      ? Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: form,
+                          ),
+                        )
+                      : form,
                 ),
               ),
             ],

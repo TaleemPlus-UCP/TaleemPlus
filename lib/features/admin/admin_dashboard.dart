@@ -1,17 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/app_user.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/member_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../data/remote/notification_service.dart';
+import '../../widgets/admin_extra_stats_row.dart';
 import '../../widgets/app_widgets.dart';
+import '../../widgets/web/web_cards.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import '../shared/notifications_screen.dart'; // NEW
 import '../../widgets/gradient_background.dart';
 import '../../widgets/security_question_dialog.dart';
@@ -28,6 +34,8 @@ import 'admin_ai_prediction_screen.dart';
 import 'screens/challan_generation_screen.dart';
 import 'screens/unpaid_students_screen.dart';
 import 'screens/timetable_management_screen.dart';
+import 'screens/academic_structure_screen.dart';
+import 'screens/class_reports_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -409,6 +417,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final user = context.watch<AuthProvider>().currentUser;
     final members = context.watch<MemberProvider>();
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, members);
+    }
+    return _buildMobileLayout(context, user, members);
+  }
+
+  Widget _buildMobileLayout(
+      BuildContext context, AppUser? user, MemberProvider members) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -522,6 +538,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                AdminExtraStatsRow(
+                  academyId: user?.uid ?? '',
+                  onFeeTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+                  onAnnouncementsTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AnnouncementsScreen())),
+                ),
                 const SizedBox(height: 8),
                 _gridSection('PEOPLE', [
                   _gridTile(
@@ -544,6 +570,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ]),
                 _gridSection('ACADEMICS', [
+                  _gridTile(
+                    'Academic Structure',
+                    'Configure levels & groups',
+                    Icons.school_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AcademicStructureScreen())),
+                  ),
                   _gridTile(
                     'Classes & Sections',
                     'Manage sections, enroll students',
@@ -629,10 +664,236 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         MaterialPageRoute(
                             builder: (_) => const AnnouncementsScreen())),
                   ),
+                  _gridTile(
+                    'Class Reports',
+                    'Attendance & fee snapshots',
+                    Icons.summarize_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ClassReportsScreen())),
+                  ),
                 ]),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(
+      BuildContext context, AppUser? user, MemberProvider members) {
+    final navSections =
+        buildAdminNavSections(context, onDashboard: () {});
+
+    return WebAppShell(
+      title: 'Admin Portal',
+      titleIcon: Icons.admin_panel_settings_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: user,
+      onLogout: _logout,
+      onSecuritySettings: () => _showSecuritySettings(context),
+      onAcademyInfo: () => _showAcademyInfoSettings(context, user),
+      body: RefreshIndicator(
+        color: AppColors.accent,
+        onRefresh: () async {
+          if (user != null) await members.load(user.uid);
+        },
+        child: ListView(
+          children: [
+            Text('Welcome back, ${user?.fullName ?? 'Admin'}',
+                style: TextStyle(
+                    color: context.appColors.textPrimary,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800)),
+            if (user?.academyName != null) ...[
+              const SizedBox(height: 6),
+              Text(user!.academyName!,
+                  style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+            ],
+            const SizedBox(height: 4),
+            Text('Here\'s what\'s happening across your academy today.',
+                style: TextStyle(color: context.appColors.textSecondary)),
+            const SizedBox(height: 24),
+            if (user?.academyCode != null)
+              _buildAcademyCodeCard(user!.academyCode!),
+            const SizedBox(height: 24),
+            LayoutBuilder(builder: (context, constraints) {
+              final stats = [
+                WebStatCard(
+                  label: 'Teachers',
+                  value: '${members.totalTeachers}',
+                  icon: Icons.co_present_rounded,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 0))),
+                ),
+                WebStatCard(
+                  label: 'Students',
+                  value: '${members.totalStudents}',
+                  icon: Icons.school_rounded,
+                  accent: AppColors.success,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 1))),
+                ),
+                WebStatCard(
+                  label: 'Parents',
+                  value: '${members.totalParents}',
+                  icon: Icons.family_restroom_rounded,
+                  accent: AppColors.warning,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const UserManagementScreen(initialIndex: 2))),
+                ),
+              ];
+              final narrow = constraints.maxWidth < 640;
+              return narrow
+                  ? Column(
+                      children: [
+                        for (final s in stats) ...[
+                          s,
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        for (int i = 0; i < stats.length; i++) ...[
+                          Expanded(child: stats[i]),
+                          if (i != stats.length - 1) const SizedBox(width: 16),
+                        ],
+                      ],
+                    );
+            }),
+            const SizedBox(height: 16),
+            AdminExtraStatsRow(
+              academyId: user?.uid ?? '',
+              onFeeTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+              onAnnouncementsTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
+            ),
+            const SizedBox(height: 8),
+            WebGridSection(title: 'PEOPLE', tiles: [
+              WebNavTile(
+                title: 'User Management',
+                subtitle: 'Teachers, students, parents',
+                icon: Icons.group_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+              ),
+              WebNavTile(
+                title: 'Approval Requests',
+                subtitle: 'Approve or reject signups',
+                icon: Icons.how_to_reg_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ApprovalRequestsScreen())),
+              ),
+            ]),
+            WebGridSection(title: 'ACADEMICS', tiles: [
+              WebNavTile(
+                title: 'Academic Structure',
+                subtitle: 'Configure levels & groups',
+                icon: Icons.school_rounded,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AcademicStructureScreen())),
+              ),
+              WebNavTile(
+                title: 'Classes & Sections',
+                subtitle: 'Manage sections, enroll students',
+                icon: Icons.groups_2_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ClassSectionsScreen())),
+              ),
+              WebNavTile(
+                title: 'Class Management',
+                subtitle: 'Assign subjects & teachers',
+                icon: Icons.class_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ClassManagementScreen())),
+              ),
+              WebNavTile(
+                title: 'Timetable',
+                subtitle: 'Weekly schedules, conflict checks',
+                icon: Icons.schedule_rounded,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const TimetableManagementScreen())),
+              ),
+              WebNavTile(
+                title: 'Test Reports & Grading',
+                subtitle: 'Student performance & results',
+                icon: Icons.analytics_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AdminQuizListScreen())),
+              ),
+            ]),
+            WebGridSection(title: 'FEES', tiles: [
+              WebNavTile(
+                title: 'Fee Ledger',
+                subtitle: 'Track fees and defaulters',
+                icon: Icons.receipt_long_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+              ),
+              WebNavTile(
+                title: 'Bulk Fee Challans',
+                subtitle: 'Generate monthly invoices',
+                icon: Icons.request_quote_rounded,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ChallanGenerationScreen())),
+              ),
+              WebNavTile(
+                title: 'Unpaid Students',
+                subtitle: 'Pending/overdue challans',
+                icon: Icons.money_off_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const UnpaidStudentsScreen())),
+              ),
+            ]),
+            WebGridSection(title: 'INSIGHTS & COMMUNICATION', tiles: [
+              WebNavTile(
+                title: 'AI Prediction & Insights',
+                subtitle: 'Risk & revenue trends',
+                icon: Icons.auto_awesome_rounded,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminAiPredictionScreen())),
+              ),
+              WebNavTile(
+                title: 'Announcements',
+                subtitle: 'Broadcast to the academy',
+                icon: Icons.campaign_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
+              ),
+              WebNavTile(
+                title: 'Class Reports',
+                subtitle: 'Attendance & fee snapshots',
+                icon: Icons.summarize_rounded,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ClassReportsScreen())),
+              ),
+            ]),
+          ],
         ),
       ),
     );

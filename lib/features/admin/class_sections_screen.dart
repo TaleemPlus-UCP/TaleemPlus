@@ -1,16 +1,21 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/app_user.dart';
 import '../../data/models/class_section.dart';
 import '../../data/remote/auth_service.dart';
+import '../../logic/academic_structure_provider.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_section_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/student_roster_dialog.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 /// Where enrollment actually lives: one roster per class+section.
 /// Subject offerings in Class Management just point at a section here
@@ -34,12 +39,20 @@ class _ClassSectionsScreenState extends State<ClassSectionsScreen> {
           Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<ClassSectionProvider>().listenAll(user.uid);
+        context.read<AcademicStructureProvider>().listenAll(user.uid);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -49,23 +62,42 @@ class _ClassSectionsScreenState extends State<ClassSectionsScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Consumer<ClassSectionProvider>(
-            builder: (context, sp, _) {
-              if (sp.loading) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                itemCount: AppClasses.all.length,
-                itemBuilder: (_, i) => _classGroup(
-                    AppClasses.all[i], sp.forClass(AppClasses.all[i])),
-              );
-            },
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Classes & Sections',
+      titleIcon: Icons.groups_2_rounded,
+      navSections: navSections,
+      activeNavId: 'class_sections',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    return Consumer2<ClassSectionProvider, AcademicStructureProvider>(
+      builder: (context, sp, structure, _) {
+        if (sp.loading || structure.loading) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.accent),
+          );
+        }
+        final classNames = structure.flatClassNames;
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          itemCount: classNames.length,
+          itemBuilder: (_, i) =>
+              _classGroup(classNames[i], sp.forClass(classNames[i])),
+        );
+      },
     );
   }
 

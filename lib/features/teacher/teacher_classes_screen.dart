@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/class_entity.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
 import '../../widgets/gradient_background.dart';
-import '../quiz/screens/teacher_quiz_list_screen.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import 'screens/classroom_management_screen.dart';
 import 'attendance_marking_screen.dart';
 
@@ -36,6 +39,13 @@ class TeacherClassesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user);
+    }
+    return _buildMobileLayout(context, user);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, dynamic user) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -45,36 +55,57 @@ class TeacherClassesScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: user == null
-              ? const _EmptyMessage(text: 'Please log in again.')
-              : StreamBuilder<List<ClassEntity>>(
-                  stream: context
-                      .read<ClassProvider>()
-                      .streamForTeacher(user.uid, user.academyId ?? ''),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return const _EmptyMessage(
-                          text: 'Could not load classes.');
-                    }
-                    final list = snap.data ?? const [];
-                    if (list.isEmpty) return _emptyState();
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) => _classTile(context, list[i]),
-                    );
-                  },
-                ),
+          child: _body(context, user),
         ),
       ),
     );
+  }
+
+  Widget _buildWebLayout(BuildContext context, dynamic user) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    final activeId = switch (jumpTo) {
+      ClassJumpTarget.resources => 'resources',
+      ClassJumpTarget.queries => 'queries',
+      null => 'attendance',
+    };
+    return WebAppShell(
+      title: _title,
+      titleIcon: Icons.class_rounded,
+      navSections: navSections,
+      activeNavId: activeId,
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: _body(context, user),
+    );
+  }
+
+  Widget _body(BuildContext context, dynamic user) {
+    return user == null
+        ? const _EmptyMessage(text: 'Please log in again.')
+        : StreamBuilder<List<ClassEntity>>(
+            stream: context
+                .read<ClassProvider>()
+                .streamForTeacher(user.uid, user.academyId ?? ''),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+              if (snap.hasError) {
+                return const _EmptyMessage(text: 'Could not load classes.');
+              }
+              final list = snap.data ?? const [];
+              if (list.isEmpty) return _emptyState();
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _classTile(context, list[i]),
+              );
+            },
+          );
   }
 
   Widget _emptyState() {
@@ -191,21 +222,6 @@ class TeacherClassesScreen extends StatelessWidget {
                     MaterialPageRoute(
                         builder: (_) =>
                             AttendanceMarkingScreen(classEntity: c)));
-              },
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.psychology_rounded, color: AppColors.accent),
-              title: const Text("AI Paper Grader"),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => TeacherQuizListScreen(
-                              isAiGen: false,
-                              initialClassId: c.id,
-                            )));
               },
             ),
             ListTile(

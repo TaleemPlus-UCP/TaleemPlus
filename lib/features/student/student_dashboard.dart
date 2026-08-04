@@ -1,20 +1,25 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
+import '../../data/models/app_user.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart';
 import '../../logic/attendance_provider.dart';
 import '../../logic/class_provider.dart';
 import '../../logic/quiz_provider.dart';
 import '../../data/models/class_entity.dart';
-import '../../data/models/quiz_model.dart';
 import '../../data/models/test_mark_model.dart';
 import '../../data/remote/auth_service.dart';
 import '../../data/remote/notification_service.dart';
 import 'screens/my_classroom_hub.dart';
 import '../../widgets/app_widgets.dart';
+import '../../widgets/latest_announcement_card.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import '../shared/notifications_screen.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/theme_toggle_widget.dart';
@@ -72,6 +77,18 @@ class StudentDashboard extends StatelessWidget {
     final uid = user?.uid ?? '';
     final academyId = user?.academyId ?? '';
 
+    // Built once and reused by whichever chrome (mobile Scaffold or web
+    // shell) ends up being returned below — the nested StreamBuilders only
+    // actually subscribe once Flutter mounts the branch that gets returned.
+    final content = _dashboardContent(context, user, uid, academyId);
+
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, content);
+    }
+    return _buildMobileLayout(context, user, content);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, AppUser? user, Widget content) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -104,23 +121,35 @@ class StudentDashboard extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: StreamBuilder<List<ClassEntity>>(
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context, AppUser? user, Widget content) {
+    final navSections = buildStudentNavSections(context, onDashboard: () {});
+    return WebAppShell(
+      title: 'Student Portal',
+      titleIcon: Icons.school_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: user,
+      onLogout: () => _logout(context),
+      onSecuritySettings: () => _showSecuritySettings(context),
+      contentPadding: EdgeInsets.zero,
+      body: content,
+    );
+  }
+
+  Widget _dashboardContent(
+      BuildContext context, AppUser? user, String uid, String academyId) {
+    return StreamBuilder<List<ClassEntity>>(
             stream:
                 context.read<ClassProvider>().streamForStudent(uid, academyId),
             builder: (context, classSnap) {
               final classes = classSnap.data ?? [];
-              final classIds = classes.map((c) => c.id).toList();
-              return StreamBuilder<List<QuizModel>>(
-                stream: context
-                    .read<QuizProvider>()
-                    .watchQuizzesForClasses(classIds, academyId),
-                builder: (context, quizSnap) {
-                  final now = DateTime.now();
-                  final upcoming = (quizSnap.data ?? [])
-                      .where((q) => q.testDate.isAfter(now))
-                      .toList()
-                    ..sort((a, b) => a.testDate.compareTo(b.testDate));
-                  return StreamBuilder<List<TestMarkModel>>(
+              return StreamBuilder<List<TestMarkModel>>(
                     stream: context
                         .read<QuizProvider>()
                         .watchStudentResults(uid, academyId),
@@ -136,23 +165,27 @@ class StudentDashboard extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         children: [
                           _welcomeCard(context, user, classes),
+                          const SizedBox(height: 12),
+                          LatestAnnouncementCard(
+                            role: 'student',
+                            academyId: academyId,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ViewAnnouncementsScreen())),
+                          ),
                           const SizedBox(height: 20),
                           _sectionLabel(context, 'QUICK STATISTICS'),
                           const SizedBox(height: 10),
-                          _quickStatsGrid(context, uid, academyId,
-                              classes.length, upcoming.length, avgPercent),
+                          _quickStatsGrid(
+                              context, uid, academyId, classes.length, avgPercent),
                           const SizedBox(height: 20),
                           _progressCard(context, avgPercent),
                           const SizedBox(height: 20),
                           _sectionLabel(context, 'QUICK ACTIONS'),
                           const SizedBox(height: 10),
                           _quickActionsRow(context, user),
-                          if (upcoming.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            _sectionLabel(context, 'UPCOMING ACTIVITIES'),
-                            const SizedBox(height: 10),
-                            _upcomingActivities(context, upcoming, user),
-                          ],
                           const SizedBox(height: 20),
                           _sectionLabel(context, 'LEARNING'),
                           const SizedBox(height: 10),
@@ -252,13 +285,8 @@ class StudentDashboard extends StatelessWidget {
                       );
                     },
                   );
-                },
-              );
             },
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Widget _sectionLabel(BuildContext context, String text) => Text(text,
@@ -325,7 +353,7 @@ class StudentDashboard extends StatelessWidget {
                             color: AppColors.accentDark, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(_quoteOfTheDay(),
+                          child: Text('"${_quoteOfTheDay()}"',
                               style: TextStyle(
                                   color: context.appColors.textSecondary,
                                   fontSize: 12,
@@ -344,41 +372,41 @@ class StudentDashboard extends StatelessWidget {
   }
 
   Widget _quickStatsGrid(BuildContext context, String uid, String academyId,
-      int subjectCount, int upcomingCount, double? avgPercent) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      int subjectCount, double? avgPercent) {
+    return Row(
       children: [
-        StreamBuilder<List<dynamic>>(
-          stream: context
-              .read<AttendanceProvider>()
-              .watchStudentAttendance(uid, academyId),
-          builder: (context, snap) {
-            final records = snap.data ?? [];
-            String value = '--';
-            if (records.isNotEmpty) {
-              final present =
-                  records.where((r) => r.isPresent || r.isLate).length;
-              value = '${((present / records.length) * 100).round()}%';
-            }
-            return _statCard(context, Icons.fact_check_rounded,
-                AppColors.success, value, 'Attendance');
-          },
+        Expanded(
+          child: StreamBuilder<List<dynamic>>(
+            stream: context
+                .read<AttendanceProvider>()
+                .watchStudentAttendance(uid, academyId),
+            builder: (context, snap) {
+              final records = snap.data ?? [];
+              String value = '--';
+              if (records.isNotEmpty) {
+                final present =
+                    records.where((r) => r.isPresent || r.isLate).length;
+                value = '${((present / records.length) * 100).round()}%';
+              }
+              return _statCard(context, Icons.fact_check_rounded,
+                  AppColors.success, value, 'Attendance');
+            },
+          ),
         ),
-        _statCard(context, Icons.menu_book_rounded, AppColors.accentDark,
-            '$subjectCount', 'Subjects'),
-        _statCard(context, Icons.event_rounded, AppColors.warning,
-            '$upcomingCount', 'Upcoming Tests'),
-        _statCard(
-            context,
-            Icons.grade_rounded,
-            AppColors.accent,
-            avgPercent == null ? '--' : '${avgPercent.round()}%',
-            'Average Marks'),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statCard(context, Icons.menu_book_rounded,
+              AppColors.accentDark, '$subjectCount', 'Subjects'),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statCard(
+              context,
+              Icons.grade_rounded,
+              AppColors.accent,
+              avgPercent == null ? '--' : '${avgPercent.round()}%',
+              'Average Marks'),
+        ),
       ],
     );
   }
@@ -508,13 +536,16 @@ class StudentDashboard extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(a.icon, color: AppColors.accentDark, size: 22),
                             const SizedBox(height: 6),
                             Text(a.title,
                                 textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10.5,
                                     color: context.appColors.textPrimary,
                                     fontWeight: FontWeight.w600)),
                           ],
@@ -525,38 +556,6 @@ class StudentDashboard extends StatelessWidget {
                 ),
               ))
           .toList(),
-    );
-  }
-
-  Widget _upcomingActivities(
-      BuildContext context, List<QuizModel> upcoming, dynamic user) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: upcoming.take(3).map((q) {
-          final daysLeft = q.testDate.difference(DateTime.now()).inDays;
-          return ListTile(
-            leading: const Icon(Icons.event_note_rounded,
-                color: AppColors.accentDark),
-            title: Text(q.title,
-                style: TextStyle(
-                    color: context.appColors.textPrimary,
-                    fontWeight: FontWeight.w600)),
-            subtitle: Text('${q.subject} • ${q.classLabel}',
-                style: TextStyle(
-                    color: context.appColors.textMuted, fontSize: 12)),
-            trailing: Text(daysLeft <= 0 ? 'Today' : 'in ${daysLeft}d',
-                style: const TextStyle(
-                    color: AppColors.warning, fontWeight: FontWeight.w700)),
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => StudentTestReportScreen(
-                        studentUid: user?.uid ?? '',
-                        studentName: user?.fullName ?? 'Student'))),
-          );
-        }).toList(),
-      ),
     );
   }
 

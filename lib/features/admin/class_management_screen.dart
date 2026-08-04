@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/app_user.dart';
 import '../../data/models/class_entity.dart';
 import '../../data/models/class_section.dart';
 import '../../data/remote/auth_service.dart';
+import '../../logic/academic_structure_provider.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_provider.dart';
 import '../../logic/class_section_provider.dart';
@@ -15,6 +18,8 @@ import 'screens/class_fee_status_screen.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/student_roster_dialog.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 class ClassManagementScreen extends StatefulWidget {
   const ClassManagementScreen({super.key});
@@ -33,12 +38,20 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       if (user != null) {
         context.read<ClassProvider>().listenAll(user.uid);
         context.read<ClassSectionProvider>().listenAll(user.uid);
+        context.read<AcademicStructureProvider>().listenAll(user.uid);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -65,26 +78,87 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Consumer<ClassProvider>(
-            builder: (context, cp, _) {
-              if (cp.loading) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                );
-              }
-              if (cp.classes.isEmpty) return _emptyState();
-              return RepaintBoundary(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-                  itemCount: cp.classes.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) => _classTile(cp.classes[i]),
-                ),
-              );
-            },
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Class Management',
+      titleIcon: Icons.class_rounded,
+      navSections: navSections,
+      activeNavId: 'class_management',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Class Management',
+                    style:
+                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ClassSectionsScreen())),
+                icon: const Icon(Icons.groups_2_rounded, size: 18),
+                label: const Text('Classes & Sections'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  side: const BorderSide(color: AppColors.accent),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: _openAddSheet,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New Class'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.textOnAccent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
+
+  Widget _body() {
+    return Consumer<ClassProvider>(
+      builder: (context, cp, _) {
+        if (cp.loading) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.accent),
+          );
+        }
+        if (cp.classes.isEmpty) return _emptyState();
+        return RepaintBoundary(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+            itemCount: cp.classes.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => _classTile(cp.classes[i]),
+          ),
+        );
+      },
     );
   }
 
@@ -598,7 +672,9 @@ class _AddClassSheetState extends State<_AddClassSheet> {
                     hint: const Text('Select a class',
                         style: TextStyle(color: AppColors.textMuted)),
                     style: const TextStyle(color: AppColors.textPrimary),
-                    items: AppClasses.all
+                    items: context
+                        .watch<AcademicStructureProvider>()
+                        .flatClassNames
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (c) => setState(() {

@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/attendance_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/attendance_record.dart';
 import '../../../data/models/class_entity.dart';
 
@@ -15,9 +19,13 @@ class StudentAttendanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    final academyId = user?.academyId ?? '';
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Attendance',
@@ -27,7 +35,31 @@ class StudentAttendanceScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildStudentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'My Attendance',
+      titleIcon: Icons.fact_check_rounded,
+      navSections: navSections,
+      activeNavId: 'my_attendance',
+      user: Provider.of<AuthProvider>(context).currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final academyId = user?.academyId ?? '';
+
+    return academyId.isEmpty
               ? const Center(child: Text("Academy session error"))
               : StreamBuilder<List<ClassEntity>>(
                   stream: context
@@ -89,17 +121,14 @@ class StudentAttendanceScreen extends StatelessWidget {
                           children: [
                             _buildStatsHeader(records),
                             Expanded(
-                              child: _buildCourseGroupedView(courses, records),
+                              child: _buildDateGroupedView(courses, records),
                             ),
                           ],
                         );
                       },
                     );
                   },
-                ),
-        ),
-      ),
-    );
+                );
   }
 
   Widget _buildStatsHeader(List<AttendanceRecord> records) {
@@ -144,110 +173,65 @@ class StudentAttendanceScreen extends StatelessWidget {
     );
   }
 
-  /// Groups attendance records by enrolled course (subject offering), then
-  /// by month within each course — a flat chronological list previously
-  /// gave no way to see "how am I doing in Physics this month" at a glance.
-  Widget _buildCourseGroupedView(
+  /// Groups attendance records by day (newest first), showing every subject
+  /// attended that day with its status — so "how many lectures did I attend
+  /// today" is answerable at a glance, matching how parents/students think
+  /// about a day's attendance rather than one subject's history at a time.
+  Widget _buildDateGroupedView(
       List<ClassEntity> courses, List<AttendanceRecord> records) {
+    if (records.isEmpty) return _buildEmptyState();
+
     final courseById = {for (final c in courses) c.id: c};
-    final Map<String, List<AttendanceRecord>> byCourse = {};
+    final Map<String, List<AttendanceRecord>> byDate = {};
     for (final r in records) {
-      byCourse.putIfAbsent(r.classId, () => []).add(r);
+      byDate
+          .putIfAbsent(DateFormat('yyyy-MM-dd').format(r.logDate), () => [])
+          .add(r);
     }
-    // Show every currently-enrolled course even before it has any records.
-    for (final c in courses) {
-      byCourse.putIfAbsent(c.id, () => []);
-    }
+    final dateKeys = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
 
-    if (byCourse.isEmpty) return _buildEmptyState();
-
-    final courseIds = byCourse.keys.toList()
-      ..sort((a, b) {
-        final aLabel = courseById[a]?.displayLabel ?? a;
-        final bLabel = courseById[b]?.displayLabel ?? b;
-        return aLabel.compareTo(bLabel);
-      });
-
-    return ListView(
+    return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      children: courseIds
-          .map((id) => _courseSection(courseById[id], id, byCourse[id]!))
-          .toList(),
+      itemCount: dateKeys.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) =>
+          _dayCard(dateKeys[i], byDate[dateKeys[i]]!, courseById),
     );
   }
 
-  Widget _courseSection(
-      ClassEntity? course, String classId, List<AttendanceRecord> records) {
-    final label = course?.displayLabel ?? 'Unknown Course';
-    final total = records.length;
+  Widget _dayCard(String dateKey, List<AttendanceRecord> records,
+      Map<String, ClassEntity> courseById) {
+    final date = DateFormat('yyyy-MM-dd').parse(dateKey);
     final present = records.where((r) => r.isPresent).length;
     final late = records.where((r) => r.isLate).length;
+    final total = records.length;
     final pct = total == 0 ? 0.0 : ((present + late) / total) * 100;
 
-    final Map<String, List<AttendanceRecord>> byMonth = {};
-    for (final r in records) {
-      byMonth
-          .putIfAbsent(DateFormat('yyyy-MM').format(r.logDate), () => [])
-          .add(r);
-    }
-    final months = byMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+    // Alphabetical by subject so the same day reads consistently every time.
+    final sorted = [...records]..sort((a, b) {
+        final aLabel = courseById[a.classId]?.subject ?? a.classId;
+        final bLabel = courseById[b.classId]?.subject ?? b.classId;
+        return aLabel.compareTo(bLabel);
+      });
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
-      child: ExpansionTile(
-        initiallyExpanded: months.isNotEmpty,
-        title: Text(label,
-            style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 15)),
-        subtitle: Text(
-          total == 0
-              ? 'No records yet'
-              : '${pct.toStringAsFixed(1)}% overall · $total marked',
-          style: const TextStyle(color: AppColors.accent, fontSize: 12),
-        ),
-        children: months.isEmpty
-            ? [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Text('No attendance recorded for this course yet.',
-                      style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                ),
-              ]
-            : months.map((m) => _monthSection(m, byMonth[m]!)).toList(),
-      ),
-    );
-  }
-
-  Widget _monthSection(String monthKey, List<AttendanceRecord> records) {
-    final monthLabel =
-        DateFormat('MMMM yyyy').format(DateFormat('yyyy-MM').parse(monthKey));
-    final total = records.length;
-    final present = records.where((r) => r.isPresent).length;
-    final late = records.where((r) => r.isLate).length;
-    final absent = total - present - late;
-    final pct = total == 0 ? 0.0 : ((present + late) / total) * 100;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(monthLabel,
+              Text(DateFormat('EEEE, d MMMM yyyy').format(date),
                   style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+                      fontSize: 15)),
               Text('${pct.toStringAsFixed(0)}%',
                   style: TextStyle(
                       color: pct >= 75 ? AppColors.success : AppColors.warning,
@@ -255,23 +239,19 @@ class StudentAttendanceScreen extends StatelessWidget {
                       fontSize: 13)),
             ],
           ),
-          const SizedBox(height: 4),
-          Text('Present $present · Late $late · Absent $absent',
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-          const SizedBox(height: 8),
-          ...records.map((r) => Padding(
+          const SizedBox(height: 12),
+          ...sorted.map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _attendanceTile(r),
+                child: _subjectRow(r, courseById[r.classId]),
               )),
         ],
       ),
     );
   }
 
-  Widget _attendanceTile(AttendanceRecord r) {
+  Widget _subjectRow(AttendanceRecord r, ClassEntity? course) {
     Color statusColor;
     IconData icon;
-
     switch (r.status) {
       case 'present':
         statusColor = AppColors.success;
@@ -285,53 +265,26 @@ class StudentAttendanceScreen extends StatelessWidget {
         statusColor = AppColors.danger;
         icon = Icons.cancel_rounded;
     }
+    final label = course?.subject.isNotEmpty == true
+        ? course!.subject
+        : (course?.displayLabel ?? 'Unknown Subject');
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: statusColor, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat('EEEE, MMMM d, yyyy').format(r.logDate),
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  "Marked on ${DateFormat('h:mm a').format(r.recordedAt)}",
-                  style:
-                      const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            r.status.toUpperCase(),
+    return Row(
+      children: [
+        Icon(icon, color: statusColor, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label,
+              style: const TextStyle(
+                  color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+        ),
+        Text(r.status.toUpperCase(),
             style: TextStyle(
                 color: statusColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-                letterSpacing: 1),
-          ),
-        ],
-      ),
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.5)),
+      ],
     );
   }
 

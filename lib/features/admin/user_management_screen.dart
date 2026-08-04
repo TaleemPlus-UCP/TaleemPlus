@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/models/academy_member.dart';
 import '../../data/models/class_section.dart';
 import '../../data/remote/auth_service.dart';
+import '../../logic/academic_structure_provider.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/class_section_provider.dart';
 import '../../logic/member_provider.dart';
@@ -14,6 +17,9 @@ import '../../data/models/app_user.dart';
 import '../../logic/class_provider.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/student_picker_field.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 import '../../core/theme/theme_extensions.dart';
 
 /// "className|program|section" key format used to store a teacher's real
@@ -81,6 +87,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         context.read<MemberProvider>().load(user.uid);
+        context.read<AcademicStructureProvider>().listenAll(user.uid);
       }
     });
   }
@@ -93,6 +100,101 @@ class _UserManagementScreenState extends State<UserManagementScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+
+    return WebAppShell(
+      title: 'User Management',
+      titleIcon: Icons.group_rounded,
+      navSections: navSections,
+      activeNavId: 'user_management',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      contentPadding: EdgeInsets.zero,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('User Management',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: context.appColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      Text('Manage teachers, students and parents.',
+                          style:
+                              TextStyle(color: context.appColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                ListenableBuilder(
+                  listenable: _tabController,
+                  builder: (ctx, _) {
+                    final role = _roles[_tabController.index];
+                    return FilledButton.icon(
+                      onPressed: () => _openAddSheet(context, role),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                      label: Text('Add ${_labelFor(role)}'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.textOnAccent,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorColor: AppColors.accent,
+                labelColor: AppColors.accent,
+                unselectedLabelColor: context.appColors.textSecondary,
+                tabs: const [
+                  Tab(text: 'Teachers'),
+                  Tab(text: 'Students'),
+                  Tab(text: 'Parents'),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: _roles.map((r) => _RoleListTab(role: r)).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -175,8 +277,37 @@ class _RoleListTabState extends State<_RoleListTab>
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = "";
 
+  // Student tab only: studentUid -> assigned parent's name, so the admin can
+  // see at a glance who each student is linked to (AppUser.linkedChildren is
+  // stored on the parent's own doc, so this is a reverse lookup built once
+  // per tab load rather than one query per student tile).
+  Map<String, String> _parentNameByStudentUid = {};
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.role == 'student') {
+      _loadParentNames();
+    }
+  }
+
+  Future<void> _loadParentNames() async {
+    final admin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (admin == null) return;
+    final parents =
+        await AuthService().getApprovedByRole(UserRole.parent, admin.uid);
+    if (!mounted) return;
+    final map = <String, String>{};
+    for (final parent in parents) {
+      for (final childUid in parent.linkedChildren) {
+        map[childUid] = parent.fullName;
+      }
+    }
+    setState(() => _parentNameByStudentUid = map);
+  }
 
   @override
   void dispose() {
@@ -336,6 +467,15 @@ class _RoleListTabState extends State<_RoleListTab>
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           color: AppColors.accent, fontSize: 12)),
+                if (m.role == 'student' &&
+                    _parentNameByStudentUid.containsKey(m.id))
+                  Text('Parent: ${_parentNameByStudentUid[m.id]}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: context.appColors.textSecondary,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic)),
                 if (m.email.isNotEmpty)
                   Text(m.email,
                       maxLines: 1,
@@ -577,6 +717,11 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   final Set<String> _selectedSectionKeys = {};
   bool _saving = false;
 
+  // Parent: current + edited set of linked children.
+  List<AppUser> _selectedChildren = [];
+  List<String> _originalChildUids = [];
+  bool _loadingChildren = false;
+
   @override
   void initState() {
     super.initState();
@@ -594,6 +739,24 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
         context.read<ClassSectionProvider>().listenAll(admin.uid);
       }
     }
+    if (widget.member.role == 'parent') {
+      _loadLinkedChildren();
+    }
+  }
+
+  Future<void> _loadLinkedChildren() async {
+    setState(() => _loadingChildren = true);
+    final auth = AuthService();
+    final profile = await auth.getProfile(widget.member.id);
+    final children = profile == null
+        ? <AppUser>[]
+        : await auth.getProfilesByIds(profile.linkedChildren);
+    if (!mounted) return;
+    setState(() {
+      _selectedChildren = children;
+      _originalChildUids = children.map((c) => c.uid).toList();
+      _loadingChildren = false;
+    });
   }
 
   @override
@@ -650,6 +813,17 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
             : null,
       );
 
+      if (widget.member.role == 'parent') {
+        final newUids = _selectedChildren.map((c) => c.uid).toSet();
+        final oldUids = _originalChildUids.toSet();
+        for (final uid in newUids.difference(oldUids)) {
+          await auth.addLinkedChild(widget.member.id, uid);
+        }
+        for (final uid in oldUids.difference(newUids)) {
+          await auth.removeLinkedChild(widget.member.id, uid);
+        }
+      }
+
       if (mounted) {
         final auth = Provider.of<AuthProvider>(context, listen: false);
         final admin = auth.currentUser;
@@ -678,7 +852,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final label = AcademyMember.extraLabelFor(widget.member.role);
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
@@ -697,8 +873,19 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 controller: _nameCtrl,
                 validator: Validators.fullName),
             if (widget.member.role == 'parent')
-              LabeledField(
-                  label: label, hint: 'Enter $label', controller: _extraCtrl),
+              _loadingChildren
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent, strokeWidth: 2)),
+                    )
+                  : StudentPickerField(
+                      academyId: academyId,
+                      initiallySelected: _selectedChildren,
+                      onChanged: (children) =>
+                          setState(() => _selectedChildren = children),
+                    ),
             LabeledField(
                 label: 'Phone',
                 hint: '+92...',
@@ -809,7 +996,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _extraCtrl = TextEditingController();
   final _rollNumberCtrl = TextEditingController();
   final _qualificationCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
@@ -823,6 +1009,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   // Student: class-wise enrollment target.
   String? _selectedClassName;
   ClassSectionEntity? _selectedSection;
+
+  // Parent: students to link on creation.
+  List<AppUser> _selectedChildren = [];
 
   bool _saving = false;
 
@@ -841,7 +1030,6 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
-    _extraCtrl.dispose();
     _rollNumberCtrl.dispose();
     _qualificationCtrl.dispose();
     _subjectCtrl.dispose();
@@ -906,11 +1094,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         password: _passwordCtrl.text,
         role: UserRole.values.firstWhere((r) => r.name == widget.role),
         academyId: admin.uid, // PASS ACADEMY ID
-        extraInfo: widget.role == 'teacher'
-            ? _qualificationCtrl.text
-            : widget.role == 'parent'
-                ? _extraCtrl.text
-                : null,
+        extraInfo: widget.role == 'teacher' ? _qualificationCtrl.text : null,
         subject: widget.role == 'teacher' ? _subjectCtrl.text : null,
         joiningDate: _joiningDate,
         sections:
@@ -927,6 +1111,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             section: section,
             students: [...currentStudents, newUser],
           );
+        }
+      }
+
+      // 2b. Parent: link the selected children (existing linkedChildren
+      // backend, see AuthService.addLinkedChild).
+      if (widget.role == 'parent' && _selectedChildren.isNotEmpty) {
+        for (final child in _selectedChildren) {
+          await auth.addLinkedChild(newUser.uid, child.uid);
         }
       }
 
@@ -954,7 +1146,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final label = AcademyMember.extraLabelFor(widget.role);
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1010,13 +1204,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 validator: Validators.password,
               ),
               if (widget.role == 'parent')
-                LabeledField(
-                  label: label,
-                  hint: 'Enter $label',
-                  controller: _extraCtrl,
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? '$label is required'
-                      : null,
+                StudentPickerField(
+                  academyId: academyId,
+                  onChanged: (children) =>
+                      setState(() => _selectedChildren = children),
                 ),
               LabeledField(
                 label: 'Phone',
@@ -1065,7 +1256,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     value: _selectedClassName,
                     isExpanded: true,
                     hint: const Text('Select class'),
-                    items: AppClasses.all
+                    items: context
+                        .watch<AcademicStructureProvider>()
+                        .flatClassNames
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (v) => setState(() {

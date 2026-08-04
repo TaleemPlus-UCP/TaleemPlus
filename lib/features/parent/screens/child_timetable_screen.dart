@@ -4,6 +4,7 @@ import '../../../data/models/app_user.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../logic/timetable_provider.dart';
+import '../../../widgets/web/web_nav_items.dart';
 import '../../shared/timetable_view.dart';
 
 class ChildTimetableScreen extends StatefulWidget {
@@ -44,6 +45,10 @@ class _ChildTimetableScreenState extends State<ChildTimetableScreen> {
       stream: context
           .read<TimetableProvider>()
           .watchForClassIds(childClassIds, academyId),
+      webNavSections: buildParentNavSections(context,
+          onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst)),
+      webActiveNavId: 'dashboard',
+      webUser: user,
     );
   }
 }

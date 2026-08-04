@@ -1,18 +1,20 @@
 // Taleem Plus - Academy Management System
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/web/web_theme.dart';
 import 'logic/auth_provider.dart';
 import 'logic/member_provider.dart';
-import 'logic/fee_provider.dart';
 import 'logic/class_provider.dart';
 import 'logic/class_section_provider.dart';
 import 'logic/attendance_provider.dart';
 import 'logic/quiz_provider.dart';
 import 'logic/timetable_provider.dart';
+import 'logic/academic_structure_provider.dart';
 import 'logic/theme_provider.dart';
 import 'logic/admin_ai_provider.dart';
 import 'logic/parent_provider.dart';
@@ -38,13 +40,13 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MemberProvider()),
-        ChangeNotifierProvider(create: (_) => FeeProvider()),
         ChangeNotifierProvider(create: (_) => ClassProvider()),
         ChangeNotifierProvider(create: (_) => ClassSectionProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => AdminAiProvider()),
+        ChangeNotifierProvider(create: (_) => AcademicStructureProvider()),
         ChangeNotifierProxyProvider<AuthProvider, ParentProvider>(
           create: (_) => ParentProvider(),
           update: (_, auth, parent) => parent!..syncWithUser(auth.currentUser),
@@ -101,8 +103,12 @@ class TaleemPlusApp extends StatelessWidget {
             navigatorObservers: [_activityNavigatorObserver],
             title: 'Taleem Plus',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
+            // Web gets the SaaS-redesign theme (Inter font, softer surfaces,
+            // smoother transitions); mobile keeps the original theme
+            // untouched — `kIsWeb` is a compile-time constant, so mobile
+            // builds never even include the `AppWebTheme` branch.
+            theme: kIsWeb ? AppWebTheme.light : AppTheme.light,
+            darkTheme: kIsWeb ? AppWebTheme.dark : AppTheme.dark,
             themeMode: theme.themeMode,
             initialRoute: AppRoutes.splash,
             routes: {

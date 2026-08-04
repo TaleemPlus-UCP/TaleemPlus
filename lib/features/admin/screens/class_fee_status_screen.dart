@@ -1,12 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/class_entity.dart';
 import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class ClassFeeStatusScreen extends StatefulWidget {
   final ClassEntity classEntity;
@@ -37,11 +41,13 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final academyId =
-        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
-            '';
-    final studentIds = widget.classEntity.studentIds;
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.classEntity.className} - Fee Status',
@@ -50,52 +56,69 @@ class _ClassFeeStatusScreenState extends State<ClassFeeStatusScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildMonthFilter(),
-              Expanded(
-                child: studentIds.isEmpty
-                    ? _buildEmptyState("No students enrolled in this class.")
-                    : FutureBuilder<Map<String, FeeChallanModel?>>(
-                        future: _repo.getLatestForStudents(
-                            studentIds, academyId,
-                            month: _selectedMonth),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator(
-                                    color: AppColors.accent));
-                          }
-                          if (snapshot.hasError) {
-                            return Center(
-                                child: Text(
-                                    'Error loading fee status: ${snapshot.error}',
-                                    style: const TextStyle(
-                                        color: AppColors.danger)));
-                          }
-                          final challansByStudent = snapshot.data ?? {};
-                          return ListView.separated(
-                            padding: const EdgeInsets.all(20),
-                            itemCount: studentIds.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final sid = studentIds[index];
-                              final sname =
-                                  widget.classEntity.studentNames[sid] ??
-                                      'Student';
-                              return _studentFeeTile(
-                                  sname, challansByStudent[sid]);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+          child: _body(),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: '${widget.classEntity.className} - Fee Status',
+      titleIcon: Icons.receipt_long_rounded,
+      navSections: navSections,
+      activeNavId: 'class_management',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    final academyId =
+        Provider.of<AuthProvider>(context, listen: false).currentUser?.uid ??
+            '';
+    final studentIds = widget.classEntity.studentIds;
+
+    return Column(
+      children: [
+        _buildMonthFilter(),
+        Expanded(
+          child: studentIds.isEmpty
+              ? _buildEmptyState("No students enrolled in this class.")
+              : FutureBuilder<Map<String, FeeChallanModel?>>(
+                  future: _repo.getLatestForStudents(studentIds, academyId,
+                      month: _selectedMonth),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.accent));
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: Text(
+                              'Error loading fee status: ${snapshot.error}',
+                              style: const TextStyle(color: AppColors.danger)));
+                    }
+                    final challansByStudent = snapshot.data ?? {};
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: studentIds.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final sid = studentIds[index];
+                        final sname =
+                            widget.classEntity.studentNames[sid] ?? 'Student';
+                        return _studentFeeTile(sname, challansByStudent[sid]);
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 

@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/class_entity.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
@@ -47,6 +51,13 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
     final classes = context
         .watch<ClassProvider>()
@@ -63,18 +74,42 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildFilters(classes),
-              Expanded(
-                child: _selectedClassId == null
-                    ? _buildNoClassState()
-                    : _buildReportList(),
-              ),
-            ],
-          ),
+          child: _body(classes),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final classes = context
+        .watch<ClassProvider>()
+        .classes
+        .where((c) => c.primaryTeacherId == user?.uid)
+        .toList();
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Monthly Reports',
+      titleIcon: Icons.insights_rounded,
+      navSections: navSections,
+      activeNavId: 'monthly_report',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: _body(classes),
+    );
+  }
+
+  Widget _body(List<ClassEntity> classes) {
+    return Column(
+      children: [
+        _buildFilters(classes),
+        Expanded(
+          child: _selectedClassId == null
+              ? _buildNoClassState()
+              : _buildReportList(),
+        ),
+      ],
     );
   }
 

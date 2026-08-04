@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../data/models/app_user.dart';
 import '../../../data/models/class_section.dart';
 import '../../../data/remote/auth_service.dart';
@@ -13,6 +15,8 @@ import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../widgets/gradient_background.dart';
 import '../../../widgets/app_widgets.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class ChallanGenerationScreen extends StatefulWidget {
   const ChallanGenerationScreen({super.key});
@@ -85,8 +89,14 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sections = context.watch<ClassSectionProvider>().sections;
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
+    final sections = context.watch<ClassSectionProvider>().sections;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Generate Challans',
@@ -95,58 +105,83 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildClassSelector(sections),
-              const SizedBox(height: 16),
-              _buildMonthSelector(),
-              const SizedBox(height: 24),
-              const Text("FEE STRUCTURE",
-                  style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2)),
-              const SizedBox(height: 16),
-              LabeledField(
-                  label: "Monthly Tuition Fee",
-                  hint: "3000",
-                  controller: _monthlyFeeCtrl,
-                  keyboardType: TextInputType.number),
-              LabeledField(
-                  label: "Admission Fee (One-time)",
-                  hint: "0",
-                  controller: _admissionFeeCtrl,
-                  keyboardType: TextInputType.number),
-              LabeledField(
-                  label: "Exam Fee",
-                  hint: "0",
-                  controller: _examFeeCtrl,
-                  keyboardType: TextInputType.number),
-              LabeledField(
-                  label: "Fine / Arrears",
-                  hint: "0",
-                  controller: _fineCtrl,
-                  keyboardType: TextInputType.number),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: "GENERATE FOR SECTION",
-                icon: Icons.auto_awesome_motion_rounded,
-                loading: _isGenerating,
-                onPressed: (_selectedSection == null || _isGenerating)
-                    ? null
-                    : _confirmAndGenerate,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                  "Note: This will create pending challans for all students enrolled in the selected class+section.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-            ],
-          ),
+          child: _body(sections),
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final sections = context.watch<ClassSectionProvider>().sections;
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Generate Challans',
+      titleIcon: Icons.request_quote_rounded,
+      navSections: navSections,
+      activeNavId: 'bulk_challans',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: _body(sections),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(List<ClassSectionEntity> sections) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildClassSelector(sections),
+        const SizedBox(height: 16),
+        _buildMonthSelector(),
+        const SizedBox(height: 24),
+        const Text("FEE STRUCTURE",
+            style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2)),
+        const SizedBox(height: 16),
+        LabeledField(
+            label: "Monthly Tuition Fee",
+            hint: "3000",
+            controller: _monthlyFeeCtrl,
+            keyboardType: TextInputType.number),
+        LabeledField(
+            label: "Admission Fee (One-time)",
+            hint: "0",
+            controller: _admissionFeeCtrl,
+            keyboardType: TextInputType.number),
+        LabeledField(
+            label: "Exam Fee",
+            hint: "0",
+            controller: _examFeeCtrl,
+            keyboardType: TextInputType.number),
+        LabeledField(
+            label: "Fine / Arrears",
+            hint: "0",
+            controller: _fineCtrl,
+            keyboardType: TextInputType.number),
+        const SizedBox(height: 24),
+        PrimaryButton(
+          label: "GENERATE FOR SECTION",
+          icon: Icons.auto_awesome_motion_rounded,
+          loading: _isGenerating,
+          onPressed: (_selectedSection == null || _isGenerating)
+              ? null
+              : _confirmAndGenerate,
+        ),
+        const SizedBox(height: 12),
+        const Text(
+            "Note: This will create pending challans for all students enrolled in the selected class+section.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+      ],
     );
   }
 

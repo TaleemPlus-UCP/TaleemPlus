@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,8 @@ import 'package:uuid/uuid.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../logic/class_provider.dart';
@@ -13,6 +16,8 @@ import '../../../logic/session_provider.dart';
 import '../../../logic/text_rank_summarizer.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/quiz_model.dart';
 
 class CreateQuizScreen extends StatefulWidget {
@@ -554,6 +559,13 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isAiGen ? 'AI Test Generator' : 'Create Test',
@@ -563,7 +575,34 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Form(
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: widget.isAiGen ? 'AI Test Generator' : 'Create Test',
+      titleIcon: Icons.auto_awesome_motion_rounded,
+      navSections: navSections,
+      activeNavId: widget.isAiGen ? 'ai_test_gen' : 'grading',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    return Form(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -648,10 +687,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                 const SizedBox(height: 40),
               ],
             ),
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Widget _buildAiScanButton() {
@@ -960,8 +996,8 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                         contentPadding: EdgeInsets.zero,
                         title: TextField(
                           controller: entry.value,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 14),
+                          style: TextStyle(
+                              color: context.appColors.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Option ${i + 1}',
                             contentPadding: const EdgeInsets.symmetric(

@@ -1,12 +1,20 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
+import '../../../logic/auth_provider.dart';
+import '../../../logic/class_provider.dart';
 import '../../../widgets/app_widgets.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../models/ocr_document_model.dart';
 import '../services/ocr_firestore_service.dart';
+import '../services/ocr_publish_service.dart';
 
 class OcrDocumentViewScreen extends StatefulWidget {
   final OcrDocumentModel document;
@@ -31,6 +39,12 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
     _textController =
         TextEditingController(text: widget.document.extractedText);
     _titleController = TextEditingController(text: widget.document.title);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().currentUser;
+      if (user != null) {
+        context.read<ClassProvider>().listenAll(user.academyId ?? '');
+      }
+    });
   }
 
   @override
@@ -83,37 +97,97 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr =
-        DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? "Edit Document" : "View Document",
             style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit_rounded, color: AppColors.accent),
-              onPressed: () => setState(() => _isEditing = true),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppColors.danger),
-              onPressed: () {
-                setState(() {
-                  _isEditing = false;
-                  _titleController.text = widget.document.title;
-                  _textController.text = widget.document.extractedText;
-                });
-              },
-            ),
-        ],
+        actions: [_publishButton(), _editToggleButton()],
       ),
       body: GradientBackground(
         child: SafeArea(
+          child: _body(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildTeacherNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: _isEditing ? "Edit Document" : "View Document",
+      titleIcon: Icons.description_rounded,
+      navSections: navSections,
+      activeNavId: 'ocr_history',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_isEditing ? "Edit Document" : "View Document",
+                        style: const TextStyle(
+                            fontSize: 26, fontWeight: FontWeight.w800)),
+                  ),
+                  _publishButton(),
+                  _editToggleButton(),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(child: _body()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _publishButton() {
+    return IconButton(
+      icon: const Icon(Icons.publish_rounded, color: AppColors.accent),
+      tooltip: 'Publish to Resources',
+      onPressed: () => publishOcrDocumentsToClass(context, [widget.document]),
+    );
+  }
+
+  Widget _editToggleButton() {
+    return !_isEditing
+        ? IconButton(
+            icon: const Icon(Icons.edit_rounded, color: AppColors.accent),
+            onPressed: () => setState(() => _isEditing = true),
+          )
+        : IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.danger),
+            onPressed: () {
+              setState(() {
+                _isEditing = false;
+                _titleController.text = widget.document.title;
+                _textController.text = widget.document.extractedText;
+              });
+            },
+          );
+  }
+
+  Widget _body() {
+    final dateStr =
+        DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
+
+    return Column(
             children: [
               Expanded(
                 child: SingleChildScrollView(
@@ -250,9 +324,6 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
                       ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
+          );
   }
 }

@@ -1,9 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/models/test_mark_model.dart';
 
@@ -13,6 +18,13 @@ class QuizResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Test Results',
@@ -28,7 +40,47 @@ class QuizResultsScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildAdminNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Test Results',
+      titleIcon: Icons.analytics_rounded,
+      navSections: navSections,
+      activeNavId: 'quiz_reports',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Test Results',
+                    style:
+                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                tooltip: 'Delete',
+                onPressed: () => _confirmDelete(context),
+              ),
+            ],
+          ),
+          Expanded(child: _body(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _quizHeader(),
@@ -74,10 +126,7 @@ class QuizResultsScreen extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Widget _quizHeader() {

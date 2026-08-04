@@ -1,8 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
+import '../../../logic/auth_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/app_user.dart';
 import '../../../data/remote/auth_service.dart';
 
@@ -12,6 +18,13 @@ class AcademyContactScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Academy Support',
@@ -20,7 +33,34 @@ class AcademyContactScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: FutureBuilder<AppUser?>(
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildParentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Academy Support',
+      titleIcon: Icons.support_agent_rounded,
+      navSections: navSections,
+      activeNavId: 'academy_support',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    return FutureBuilder<AppUser?>(
             future: AuthService().getProfile(academyId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -68,10 +108,7 @@ class AcademyContactScreen extends StatelessWidget {
                 ],
               );
             },
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Future<void> _callNumber(BuildContext context, String phone) async {

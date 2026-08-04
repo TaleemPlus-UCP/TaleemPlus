@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart'; // NEW
 import '../../core/utils/validators.dart';
+import '../../core/web/web_breakpoints.dart';
 import '../../data/remote/auth_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/session_provider.dart'; // NEW
@@ -222,13 +224,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final loading = context.watch<AuthProvider>().isLoading;
+    final isWebWide = kIsWeb && !WebBreakpoints.isCompact(context);
 
-    return Scaffold(
-      body: GradientBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Form(
+    final form = Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -291,7 +289,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                 ],
               ),
-            ),
+            );
+
+    return Scaffold(
+      body: GradientBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: isWebWide
+                ? Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: form,
+                    ),
+                  )
+                : form,
           ),
         ),
       ),

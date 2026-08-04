@@ -1,10 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
+import '../../../data/models/app_user.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/test_mark_model.dart';
 
 class StudentTestReportScreen extends StatelessWidget {
@@ -22,6 +28,13 @@ class StudentTestReportScreen extends StatelessWidget {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     final academyId = user?.academyId ?? '';
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, academyId);
+    }
+    return _buildMobileLayout(context, academyId);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, String academyId) {
     return Scaffold(
       appBar: AppBar(
         title: Text("$studentName's Report",
@@ -31,7 +44,40 @@ class StudentTestReportScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
+          child: _body(context, academyId),
+        ),
+      ),
+    );
+  }
+
+  /// Reached from both the student's own dashboard and a parent viewing a
+  /// child's report, so — like [NotificationsScreen] — the sidebar resolves
+  /// to whichever role is currently logged in.
+  Widget _buildWebLayout(BuildContext context, AppUser? user, String academyId) {
+    void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
+    final navSections = switch (user?.role) {
+      UserRole.student =>
+        buildStudentNavSections(context, onDashboard: onDashboard),
+      UserRole.parent =>
+        buildParentNavSections(context, onDashboard: onDashboard),
+      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.teacher =>
+        buildTeacherNavSections(context, onDashboard: onDashboard),
+      null => const <WebNavSection>[],
+    };
+    return WebAppShell(
+      title: "$studentName's Report",
+      titleIcon: Icons.analytics_rounded,
+      navSections: navSections,
+      activeNavId: 'test_reports',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: _body(context, academyId),
+    );
+  }
+
+  Widget _body(BuildContext context, String academyId) {
+    return academyId.isEmpty
               ? const Center(child: Text("Academy session error"))
               : StreamBuilder<List<TestMarkModel>>(
                   stream: context
@@ -87,10 +133,7 @@ class StudentTestReportScreen extends StatelessWidget {
                       ],
                     );
                   },
-                ),
-        ),
-      ),
-    );
+                );
   }
 
   Widget _buildSummaryHeader(List<TestMarkModel> results) {

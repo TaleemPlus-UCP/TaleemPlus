@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/quiz_provider.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/test_mark_model.dart';
 
 class StudentProgressChartScreen extends StatefulWidget {
@@ -20,9 +24,13 @@ class _StudentProgressChartScreenState
     extends State<StudentProgressChartScreen> {
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    final academyId = user?.academyId ?? '';
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Performance Analytics',
@@ -32,7 +40,31 @@ class _StudentProgressChartScreenState
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildStudentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: 'Performance Analytics',
+      titleIcon: Icons.show_chart_rounded,
+      navSections: navSections,
+      activeNavId: 'progress_charts',
+      user: Provider.of<AuthProvider>(context).currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final academyId = user?.academyId ?? '';
+
+    return academyId.isEmpty
               ? const Center(
                   child: Text("Session error",
                       style: TextStyle(color: AppColors.textSecondary)))
@@ -91,10 +123,7 @@ class _StudentProgressChartScreenState
                       ),
                     );
                   },
-                ),
-        ),
-      ),
-    );
+                );
   }
 
   /// Chart-safe percentage (0-100 ke andar)

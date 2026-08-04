@@ -1,12 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/web/web_breakpoints.dart';
 import '../../../logic/auth_provider.dart';
 import '../../../logic/attendance_provider.dart';
 import '../../../data/models/attendance_record.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../widgets/web/web_nav_items.dart';
+import '../../../widgets/web/web_shell.dart';
 
 class ChildAlertsScreen extends StatelessWidget {
   final String childName;
@@ -17,11 +21,13 @@ class ChildAlertsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final academyId = Provider.of<AuthProvider>(context, listen: false)
-            .currentUser
-            ?.academyId ??
-        '';
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('$childName\'s Alerts',
@@ -30,7 +36,33 @@ class ChildAlertsScreen extends StatelessWidget {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: academyId.isEmpty
+          child: _body(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final navSections = buildParentNavSections(context,
+        onDashboard: () => Navigator.of(context).popUntil((r) => r.isFirst));
+    return WebAppShell(
+      title: '$childName\'s Alerts',
+      titleIcon: Icons.notifications_active_rounded,
+      navSections: navSections,
+      activeNavId: 'dashboard',
+      user: context.watch<AuthProvider>().currentUser,
+      onLogout: () => performWebLogout(context),
+      body: _body(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final academyId = Provider.of<AuthProvider>(context, listen: false)
+            .currentUser
+            ?.academyId ??
+        '';
+
+    return academyId.isEmpty
               ? const Center(child: Text("Session error"))
               : StreamBuilder<List<AttendanceRecord>>(
                   stream: context
@@ -81,10 +113,7 @@ class ChildAlertsScreen extends StatelessWidget {
                           _alertTile(context, absences[i]),
                     );
                   },
-                ),
-        ),
-      ),
-    );
+                );
   }
 
   Widget _alertTile(BuildContext context, AttendanceRecord r) {

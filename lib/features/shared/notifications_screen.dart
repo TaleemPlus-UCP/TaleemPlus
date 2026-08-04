@@ -1,12 +1,18 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/web/web_breakpoints.dart';
+import '../../data/models/app_user.dart';
 import '../../logic/auth_provider.dart';
 import '../../data/models/notification_model.dart';
 import '../../data/remote/notification_service.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/web/web_nav_items.dart';
+import '../../widgets/web/web_shell.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -24,6 +30,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final uid = user?.uid ?? '';
     final academyId = user?.academyId ?? '';
 
+    if (kIsWeb && !WebBreakpoints.isCompact(context)) {
+      return _buildWebLayout(context, user, uid, academyId);
+    }
+    return _buildMobileLayout(context, uid, academyId);
+  }
+
+  Widget _buildMobileLayout(BuildContext context, String uid, String academyId) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications',
@@ -48,44 +61,111 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: uid.isEmpty
-              ? _buildEmptyState('Please log in again.')
-              : StreamBuilder<List<NotificationModel>>(
-                  stream: _service.watchForUser(uid, academyId),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(color: AppColors.accent),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Error loading notifications: ${snap.error}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.danger),
-                          ),
-                        ),
-                      );
-                    }
-                    final list = snap.data ?? const [];
-                    if (list.isEmpty) {
-                      return _buildEmptyState('No notifications yet');
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (ctx, i) => _notifTile(ctx, list[i]),
-                    );
-                  },
-                ),
+          child: _body(uid, academyId),
         ),
       ),
     );
+  }
+
+  /// Every role can open this screen from its topbar bell, so the sidebar
+  /// mirrors whichever role is currently logged in — same idea as
+  /// [TimetableView]'s `webNavSections` parameter, just resolved internally
+  /// here since this screen already reads [AuthProvider] for its data.
+  Widget _buildWebLayout(
+      BuildContext context, AppUser? user, String uid, String academyId) {
+    void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
+    final navSections = switch (user?.role) {
+      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.teacher =>
+        buildTeacherNavSections(context, onDashboard: onDashboard),
+      UserRole.student =>
+        buildStudentNavSections(context, onDashboard: onDashboard),
+      UserRole.parent =>
+        buildParentNavSections(context, onDashboard: onDashboard),
+      null => const <WebNavSection>[],
+    };
+
+    return WebAppShell(
+      title: 'Notifications',
+      titleIcon: Icons.notifications_rounded,
+      navSections: navSections,
+      activeNavId: 'notifications',
+      user: user,
+      onLogout: () => performWebLogout(context),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Notifications',
+                        style: TextStyle(
+                            fontSize: 26, fontWeight: FontWeight.w800)),
+                  ),
+                  if (uid.isNotEmpty)
+                    StreamBuilder<List<NotificationModel>>(
+                      stream: _service.watchForUser(uid, academyId),
+                      builder: (context, snap) {
+                        final list = snap.data ?? const [];
+                        final hasUnread = list.any((n) => !n.isRead);
+                        if (!hasUnread) return const SizedBox.shrink();
+                        return TextButton(
+                          onPressed: () => _markAllAsRead(uid, academyId),
+                          child: const Text("Mark all as read",
+                              style: TextStyle(color: AppColors.accent)),
+                        );
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(child: _body(uid, academyId)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(String uid, String academyId) {
+    return uid.isEmpty
+        ? _buildEmptyState('Please log in again.')
+        : StreamBuilder<List<NotificationModel>>(
+            stream: _service.watchForUser(uid, academyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Error loading notifications: ${snap.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                  ),
+                );
+              }
+              final list = snap.data ?? const [];
+              if (list.isEmpty) {
+                return _buildEmptyState('No notifications yet');
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (ctx, i) => _notifTile(ctx, list[i]),
+              );
+            },
+          );
   }
 
   Future<void> _markAllAsRead(String uid, String academyId) async {
