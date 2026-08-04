@@ -198,6 +198,11 @@ List<WebNavSection> buildTeacherNavSections(
     ]),
     WebNavSection(title: 'GRADING & TESTS', items: [
       WebNavItem(
+          id: 'grading',
+          label: 'Grading & AI Grader',
+          icon: Icons.add_chart_rounded,
+          onTap: () => push(const TeacherQuizListScreen(isAiGen: false))),
+      WebNavItem(
           id: 'ai_test_gen',
           label: 'AI Test Generator',
           icon: Icons.auto_awesome_motion_rounded,

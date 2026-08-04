@@ -12,6 +12,8 @@ import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/remote/pdf_generator_service.dart';
 import 'create_quiz_screen.dart';
+import 'mark_entry_screen.dart';
+import 'ai_paper_grader_screen.dart';
 
 class TeacherQuizListScreen extends StatefulWidget {
   final bool isAiGen;
@@ -321,50 +323,96 @@ class _TeacherQuizListScreenState extends State<TeacherQuizListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _pdfBusy
-                      ? null
-                      : () => _runPdfAction(
-                            () => PdfGeneratorService.printTestPaper(quiz),
-                            'Could not open print preview',
-                          ),
-                  icon: const Icon(Icons.print_rounded, size: 18),
-                  label: const Text("PRINT"),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accent,
-                    side: const BorderSide(color: AppColors.accent),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+          if (widget.isAiGen)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pdfBusy
+                        ? null
+                        : () => _runPdfAction(
+                              () => PdfGeneratorService.printTestPaper(quiz),
+                              'Could not open print preview',
+                            ),
+                    icon: const Icon(Icons.print_rounded, size: 18),
+                    label: const Text("PRINT"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _pdfBusy
-                      ? null
-                      : () => _runPdfAction(
-                            () => PdfGeneratorService.shareTestPaper(quiz),
-                            'Could not share PDF',
-                          ),
-                  icon: const Icon(Icons.share_rounded, size: 18),
-                  label: const Text("SHARE PDF"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.textOnAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pdfBusy
+                        ? null
+                        : () => _runPdfAction(
+                              () => PdfGeneratorService.shareTestPaper(quiz),
+                              'Could not share PDF',
+                            ),
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text("SHARE PDF"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.textOnAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => AiPaperGraderScreen(quiz: quiz)),
+                    ),
+                    icon: const Icon(Icons.auto_awesome, size: 18),
+                    label: const Text("AI SMART GRADER"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                      foregroundColor: AppColors.accent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      side: const BorderSide(color: AppColors.accent),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => MarkEntryScreen(quiz: quiz)),
+                    ),
+                    icon: const Icon(Icons.add_chart_rounded, size: 18),
+                    label: const Text("ENTER MARKS"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.textOnAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );

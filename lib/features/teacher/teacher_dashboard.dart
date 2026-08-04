@@ -149,6 +149,17 @@ class TeacherDashboard extends StatelessWidget {
               _gridSection(context, 'GRADING & TESTS', [
                 _gridTile(
                   context,
+                  'Grading & AI Grader',
+                  'Enter or AI-grade marks',
+                  Icons.add_chart_rounded,
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const TeacherQuizListScreen(isAiGen: false))),
+                ),
+                _gridTile(
+                  context,
                   'AI Test Generator',
                   'Generate & print tests',
                   Icons.auto_awesome_motion_rounded,
@@ -283,6 +294,16 @@ class TeacherDashboard extends StatelessWidget {
             ),
           ]),
           WebGridSection(title: 'GRADING & TESTS', tiles: [
+            WebNavTile(
+              title: 'Grading & AI Grader',
+              subtitle: 'Enter or AI-grade marks',
+              icon: Icons.add_chart_rounded,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const TeacherQuizListScreen(isAiGen: false))),
+            ),
             WebNavTile(
               title: 'AI Test Generator',
               subtitle: 'Generate & print tests',
