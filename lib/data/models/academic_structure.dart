@@ -11,8 +11,8 @@ class AcademicLevel {
 
   Map<String, dynamic> toMap() => {'name': name, 'groups': groups};
 
-  factory AcademicLevel.fromMap(Map<String, dynamic> map) => AcademicLevel(
-        name: (map['name'] ?? '') as String,
+  factory AcademicLevel.fromMap(Map<dynamic, dynamic> map) => AcademicLevel(
+        name: (map['name'] ?? '').toString(),
         groups: (map['groups'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
@@ -53,12 +53,12 @@ class AcademicStructure {
   Map<String, dynamic> toMap() =>
       {'levels': levels.map((l) => l.toMap()).toList()};
 
-  factory AcademicStructure.fromMap(Map<String, dynamic> map) {
+  factory AcademicStructure.fromMap(Map<dynamic, dynamic> map) {
     final rawLevels = map['levels'] as List<dynamic>?;
     if (rawLevels == null || rawLevels.isEmpty) return defaults;
     return AcademicStructure(
       levels: rawLevels
-          .map((e) => AcademicLevel.fromMap(e as Map<String, dynamic>))
+          .map((e) => AcademicLevel.fromMap(e as Map<dynamic, dynamic>))
           .toList(),
     );
   }

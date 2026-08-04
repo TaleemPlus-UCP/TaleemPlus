@@ -29,11 +29,18 @@ class AcademicStructureProvider extends ChangeNotifier {
     // Ensure a doc exists (seeding defaults) before attaching the live
     // listener, so a brand-new academy doesn't briefly show an empty list.
     _service.getOrSeed(academyId);
-    _sub = _service.watch(academyId).listen((structure) {
-      _structure = structure;
-      _loading = false;
-      notifyListeners();
-    });
+    _sub = _service.watch(academyId).listen(
+      (structure) {
+        _structure = structure;
+        _loading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint('Error listening to academic structure: $e');
+        _loading = false;
+        notifyListeners();
+      },
+    );
   }
 
   Future<void> updateStructure(AcademicStructure structure) async {

@@ -14,7 +14,7 @@ class AcademicStructureService {
     final doc = await _settings.doc(academyId).get();
     if (doc.exists && doc.data()?['academic_structure'] != null) {
       return AcademicStructure.fromMap(
-          doc.data()!['academic_structure'] as Map<String, dynamic>);
+          doc.data()!['academic_structure'] as Map<dynamic, dynamic>);
     }
     await _settings.doc(academyId).set({
       'academic_structure': AcademicStructure.defaults.toMap(),
@@ -26,7 +26,7 @@ class AcademicStructureService {
     return _settings.doc(academyId).snapshots().map((doc) {
       final raw = doc.data()?['academic_structure'];
       if (raw == null) return AcademicStructure.defaults;
-      return AcademicStructure.fromMap(raw as Map<String, dynamic>);
+      return AcademicStructure.fromMap(raw as Map<dynamic, dynamic>);
     });
   }
 
