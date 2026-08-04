@@ -154,6 +154,22 @@ service cloud.firestore {
           sameAcademy(resource.data.academy_id);
     }
 
+    // Per-academy configurable academic levels/groups (doc ID == academyId
+    // itself, not a field on the doc).
+    match /academy_settings/{academyId} {
+      allow read: if isApproved() && sameAcademy(academyId);
+      allow write: if isApproved() && isAdmin() && sameAcademy(academyId);
+    }
+
+    // Point-in-time class+section attendance/fee snapshots.
+    match /class_reports/{reportId} {
+      allow read: if isApproved() && sameAcademy(resource.data.academy_id);
+      allow create, update: if isApproved() && isAdmin() &&
+          sameAcademy(request.resource.data.academy_id);
+      allow delete: if isApproved() && isAdmin() &&
+          sameAcademy(resource.data.academy_id);
+    }
+
     match /timetables/{slotId} {
       allow read: if isApproved() && sameAcademy(resource.data.academy_id);
       allow create, update: if isApproved() && isAdmin() &&
