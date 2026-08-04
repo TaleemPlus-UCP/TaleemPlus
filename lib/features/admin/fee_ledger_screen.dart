@@ -196,7 +196,8 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
 
   Widget _body() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.accent));
     }
     if (_error != null) {
       return Center(
@@ -356,15 +357,15 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
         WebTableColumn<ClassFeeAnalytics>(
           label: 'COLLECTION %',
           sortValue: (a) => a.collectionPercent,
-          cellBuilder: (context, a) => Text(
-              '${a.collectionPercent.toStringAsFixed(0)}%',
-              style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: a.collectionPercent >= 75
-                      ? AppColors.success
-                      : a.collectionPercent >= 40
-                          ? AppColors.warning
-                          : AppColors.danger)),
+          cellBuilder: (context, a) =>
+              Text('${a.collectionPercent.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: a.collectionPercent >= 75
+                          ? AppColors.success
+                          : a.collectionPercent >= 40
+                              ? AppColors.warning
+                              : AppColors.danger)),
         ),
       ],
     );
@@ -405,7 +406,8 @@ class _FeeLedgerScreenState extends State<FeeLedgerScreen> {
             ),
             const SizedBox(height: 4),
             Text('${a.totalStudents} students',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                style:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 12)),
             const SizedBox(height: 10),
             Row(
               children: [

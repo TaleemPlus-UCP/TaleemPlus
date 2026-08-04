@@ -81,52 +81,50 @@ class QuizResultsScreen extends StatelessWidget {
 
   Widget _body(BuildContext context) {
     return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _quizHeader(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Text('STUDENT RECORDS',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1)),
-              ),
-              Expanded(
-                child: StreamBuilder<List<TestMarkModel>>(
-                  stream: context
-                      .read<QuizProvider>()
-                      .watchQuizResults(quiz.id, quiz.academyId),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
-                    if (snap.hasError) {
-                      return Center(
-                          child: Text('Error loading marks: ${snap.error}',
-                              style: const TextStyle(color: AppColors.danger)));
-                    }
-                    final list = snap.data ?? [];
-                    if (list.isEmpty) {
-                      return const Center(
-                          child: Text('No marks uploaded yet',
-                              style:
-                                  TextStyle(color: AppColors.textSecondary)));
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) => _markTile(context, list[i]),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _quizHeader(),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Text('STUDENT RECORDS',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
+        ),
+        Expanded(
+          child: StreamBuilder<List<TestMarkModel>>(
+            stream: context
+                .read<QuizProvider>()
+                .watchQuizResults(quiz.id, quiz.academyId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
+              }
+              if (snap.hasError) {
+                return Center(
+                    child: Text('Error loading marks: ${snap.error}',
+                        style: const TextStyle(color: AppColors.danger)));
+              }
+              final list = snap.data ?? [];
+              if (list.isEmpty) {
+                return const Center(
+                    child: Text('No marks uploaded yet',
+                        style: TextStyle(color: AppColors.textSecondary)));
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, i) => _markTile(context, list[i]),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _quizHeader() {

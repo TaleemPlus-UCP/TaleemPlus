@@ -119,8 +119,8 @@ class _TimetableManagementScreenState extends State<TimetableManagementScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.textOnAccent,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
@@ -156,12 +156,14 @@ class _TimetableManagementScreenState extends State<TimetableManagementScreen> {
                     }
                     var slots = snap.data ?? const [];
                     if (_dayFilter != null) {
-                      slots =
-                          slots.where((s) => s.dayOfWeek == _dayFilter).toList();
+                      slots = slots
+                          .where((s) => s.dayOfWeek == _dayFilter)
+                          .toList();
                     }
                     if (_classFilter != null) {
-                      slots =
-                          slots.where((s) => s.classId == _classFilter).toList();
+                      slots = slots
+                          .where((s) => s.classId == _classFilter)
+                          .toList();
                     }
                     if (_teacherFilter != null) {
                       slots = slots

@@ -111,7 +111,8 @@ class _WebPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    final curved =
+        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(
@@ -143,8 +144,8 @@ class AppWebTheme {
   static ThemeData get light => _apply(AppTheme.light, WebColorsExtension.light,
       AppColors.borderLight, AppColors.surfaceLight);
 
-  static ThemeData get dark => _apply(
-      AppTheme.dark, WebColorsExtension.dark, AppColors.borderDark, AppColors.surfaceDark);
+  static ThemeData get dark => _apply(AppTheme.dark, WebColorsExtension.dark,
+      AppColors.borderDark, AppColors.surfaceDark);
 
   static ThemeData _apply(ThemeData base, WebColorsExtension webColors,
       Color border, Color surface) {

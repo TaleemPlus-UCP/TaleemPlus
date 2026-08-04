@@ -81,7 +81,8 @@ class _WebAppShellState extends State<WebAppShell> {
   void _toggleCollapsed() {
     final next = !_collapsed;
     setState(() => _collapsed = next);
-    SharedPreferences.getInstance().then((p) => p.setBool(_kCollapsedPrefKey, next));
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool(_kCollapsedPrefKey, next));
   }
 
   @override
@@ -118,7 +119,8 @@ class _WebAppShellState extends State<WebAppShell> {
                   color: webColors.sidebarBackground,
                   border: Border(
                       right: BorderSide(
-                          color: context.appColors.border.withValues(alpha: 0.5))),
+                          color:
+                              context.appColors.border.withValues(alpha: 0.5))),
                 ),
                 child: SafeArea(
                   right: false,
@@ -139,7 +141,8 @@ class _WebAppShellState extends State<WebAppShell> {
                     user: widget.user,
                     navSections: widget.navSections,
                     showSidebarToggle: !showSidebar,
-                    onToggleSidebar: () => _scaffoldKey.currentState?.openDrawer(),
+                    onToggleSidebar: () =>
+                        _scaffoldKey.currentState?.openDrawer(),
                     onLogout: widget.onLogout,
                     onSecuritySettings: widget.onSecuritySettings,
                     onAcademyInfo: widget.onAcademyInfo,
@@ -148,9 +151,11 @@ class _WebAppShellState extends State<WebAppShell> {
                     child: Align(
                       alignment: Alignment.topCenter,
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: widget.maxContentWidth),
+                        constraints:
+                            BoxConstraints(maxWidth: widget.maxContentWidth),
                         child: Padding(
-                          padding: widget.contentPadding ?? const EdgeInsets.all(28),
+                          padding:
+                              widget.contentPadding ?? const EdgeInsets.all(28),
                           child: widget.body,
                         ),
                       ),
@@ -219,7 +224,8 @@ class _SidebarContent extends StatelessWidget {
             ],
           ),
         ),
-        Divider(height: 1, color: context.appColors.border.withValues(alpha: 0.6)),
+        Divider(
+            height: 1, color: context.appColors.border.withValues(alpha: 0.6)),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
@@ -253,7 +259,9 @@ class _SidebarContent extends StatelessWidget {
               alignment: collapsed ? Alignment.center : Alignment.centerRight,
               child: IconButton(
                 icon: Icon(
-                    collapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                    collapsed
+                        ? Icons.chevron_right_rounded
+                        : Icons.chevron_left_rounded,
                     color: context.appColors.textSecondary),
                 tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
                 onPressed: onToggleCollapse,
@@ -291,7 +299,9 @@ class _NavTileState extends State<_NavTile> {
     final bg = widget.active
         ? webColors.activeTint
         : (_hovering ? webColors.hoverTint : Colors.transparent);
-    final fg = widget.active ? webColors.activeIndicator : context.appColors.textSecondary;
+    final fg = widget.active
+        ? webColors.activeIndicator
+        : context.appColors.textSecondary;
 
     final tile = MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -300,7 +310,8 @@ class _NavTileState extends State<_NavTile> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         margin: const EdgeInsets.symmetric(vertical: 2),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        decoration:
+            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -324,8 +335,9 @@ class _NavTileState extends State<_NavTile> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   fontSize: 13.5,
-                                  fontWeight:
-                                      widget.active ? FontWeight.w700 : FontWeight.w500,
+                                  fontWeight: widget.active
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                   color: fg)),
                         ),
                       ],
@@ -336,6 +348,8 @@ class _NavTileState extends State<_NavTile> {
       ),
     );
 
-    return widget.collapsed ? Tooltip(message: widget.item.label, child: tile) : tile;
+    return widget.collapsed
+        ? Tooltip(message: widget.item.label, child: tile)
+        : tile;
   }
 }

@@ -51,8 +51,7 @@ Future<void> publishOcrDocumentsToClass(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
       ],
     ),
   );

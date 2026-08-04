@@ -133,7 +133,8 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -146,10 +147,11 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
                   fontSize: 16)),
           subtitle: Text(
               '${level.groups.length} group${level.groups.length == 1 ? '' : 's'}',
-              style:
-                  TextStyle(color: context.appColors.textSecondary, fontSize: 12)),
+              style: TextStyle(
+                  color: context.appColors.textSecondary, fontSize: 12)),
           trailing: PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, color: context.appColors.textMuted),
+            icon: Icon(Icons.more_vert_rounded,
+                color: context.appColors.textMuted),
             onSelected: (v) {
               if (v == 'add_group') _addGroup(provider, index, level);
               if (v == 'delete_level') _deleteLevel(provider, index);
@@ -168,11 +170,13 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
               ),
             for (final group in level.groups)
               ListTile(
-                leading: const Icon(Icons.class_rounded, color: AppColors.accent),
+                leading:
+                    const Icon(Icons.class_rounded, color: AppColors.accent),
                 title: Text(group,
                     style: TextStyle(color: context.appColors.textPrimary)),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  icon:
+                      const Icon(Icons.delete_outline, color: AppColors.danger),
                   onPressed: () => _deleteGroup(provider, index, level, group),
                 ),
               ),
@@ -193,8 +197,7 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
             label: 'Level name', hint: 'e.g. Matric', controller: ctrl),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
               child: const Text('Create')),
@@ -202,12 +205,15 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
       ),
     );
     if (name == null || name.isEmpty) return;
-    final levels = [...provider.structure.levels, AcademicLevel(name: name, groups: const [])];
+    final levels = [
+      ...provider.structure.levels,
+      AcademicLevel(name: name, groups: const [])
+    ];
     await provider.updateStructure(provider.structure.copyWith(levels: levels));
   }
 
-  Future<void> _addGroup(
-      AcademicStructureProvider provider, int index, AcademicLevel level) async {
+  Future<void> _addGroup(AcademicStructureProvider provider, int index,
+      AcademicLevel level) async {
     final ctrl = TextEditingController();
     final group = await showDialog<String>(
       context: context,
@@ -217,8 +223,7 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
             label: 'Group name', hint: 'e.g. Science', controller: ctrl),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
               child: const Text('Add')),
@@ -239,7 +244,8 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
     await provider.updateStructure(provider.structure.copyWith(levels: levels));
   }
 
-  Future<void> _deleteLevel(AcademicStructureProvider provider, int index) async {
+  Future<void> _deleteLevel(
+      AcademicStructureProvider provider, int index) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

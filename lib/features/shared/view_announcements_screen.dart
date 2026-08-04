@@ -59,11 +59,12 @@ class _ViewAnnouncementsScreenState extends State<ViewAnnouncementsScreen> {
 
   /// Reached from every role's dashboard, so — like [NotificationsScreen] —
   /// the sidebar resolves to whichever role is currently logged in.
-  Widget _buildWebLayout(BuildContext context, AppUser? user, String roleValue,
-      String academyId) {
+  Widget _buildWebLayout(
+      BuildContext context, AppUser? user, String roleValue, String academyId) {
     void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
     final navSections = switch (user?.role) {
-      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.admin =>
+        buildAdminNavSections(context, onDashboard: onDashboard),
       UserRole.teacher =>
         buildTeacherNavSections(context, onDashboard: onDashboard),
       UserRole.student =>

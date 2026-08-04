@@ -50,7 +50,8 @@ class ParentDashboard extends StatelessWidget {
     return _buildMobileLayout(context, user, content);
   }
 
-  Widget _buildMobileLayout(BuildContext context, AppUser? user, Widget content) {
+  Widget _buildMobileLayout(
+      BuildContext context, AppUser? user, Widget content) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,

@@ -336,8 +336,8 @@ List<WebNavSection> buildParentNavSections(
           onTap: () {
             final children = context.read<ParentProvider>().children;
             if (children.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Please link a child first.')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please link a child first.')));
               return;
             }
             push(AcademyContactScreen(

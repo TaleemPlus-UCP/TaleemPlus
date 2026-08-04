@@ -158,7 +158,8 @@ class _AdminQuizListScreenState extends State<AdminQuizListScreen> {
                     return DropdownMenuItem(
                       value: c.id,
                       child: Text("${c.className} (${c.section})",
-                          style: TextStyle(color: context.appColors.textPrimary)),
+                          style:
+                              TextStyle(color: context.appColors.textPrimary)),
                     );
                   }).toList(),
                   onChanged: (val) => setState(() => _selectedClassId = val),

@@ -11,7 +11,6 @@ import '../data/repositories/fee_challan_repository.dart';
 import '../logic/quiz_provider.dart';
 import 'dashboard_stat_card.dart';
 
-
 final _currency =
     NumberFormat.currency(locale: 'en_PK', symbol: 'PKR ', decimalDigits: 0);
 
@@ -54,8 +53,7 @@ class _ParentStatsRowState extends State<ParentStatsRow> {
   Future<double?> _computeAttendance() async {
     if (widget.children.isEmpty) return null;
     final childUids = widget.children.map((c) => c.uid).toSet();
-    final all =
-        await AttendanceRepository().getAllForAcademy(widget.academyId);
+    final all = await AttendanceRepository().getAllForAcademy(widget.academyId);
     final records = all.where((r) => childUids.contains(r.studentId)).toList();
     if (records.isEmpty) return null;
     final present = records.where((r) => r.isPresent || r.isLate).length;
@@ -101,7 +99,8 @@ class _ParentStatsRowState extends State<ParentStatsRow> {
         const SizedBox(width: 10),
         Expanded(
           child: StreamBuilder(
-            stream: AnnouncementService().watchForRole('parent', widget.academyId),
+            stream:
+                AnnouncementService().watchForRole('parent', widget.academyId),
             builder: (context, snap) {
               final list = (snap.data as List?) ?? const [];
               return DashboardStatCard(
@@ -128,7 +127,9 @@ class _ParentStatsRowState extends State<ParentStatsRow> {
                     final marks = snap.data ?? const [];
                     final avg = marks.isEmpty
                         ? null
-                        : marks.map((m) => m.percentage).reduce((a, b) => a + b) /
+                        : marks
+                                .map((m) => m.percentage)
+                                .reduce((a, b) => a + b) /
                             marks.length;
                     return DashboardStatCard(
                         label: 'Performance',

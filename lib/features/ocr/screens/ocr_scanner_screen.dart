@@ -223,125 +223,124 @@ class _OcrScannerScreenState extends State<OcrScannerScreen> {
 
   Widget _body() {
     return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Selection Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: _choiceCard(
-                        "Take Photo",
-                        Icons.camera_alt_rounded,
-                        _isProcessing ? null : () => _pickImage(true),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _choiceCard(
-                        "Gallery",
-                        Icons.photo_library_rounded,
-                        _isProcessing ? null : () => _pickImage(false),
-                      ),
-                    ),
-                  ],
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Selection Buttons
+          Row(
+            children: [
+              Expanded(
+                child: _choiceCard(
+                  "Take Photo",
+                  Icons.camera_alt_rounded,
+                  _isProcessing ? null : () => _pickImage(true),
                 ),
-                const SizedBox(height: 20),
-
-                // OCR Tips for better accuracy
-                _buildTipsBanner(),
-                const SizedBox(height: 24),
-
-                // Image Preview
-                if (_image != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Image.file(_image!, fit: BoxFit.cover),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Extracted Text Area
-                const Text(
-                  "EXTRACTED TEXT",
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _choiceCard(
+                  "Gallery",
+                  Icons.photo_library_rounded,
+                  _isProcessing ? null : () => _pickImage(false),
                 ),
-                const SizedBox(height: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
 
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.inputFill,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: _isProcessing
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40),
-                            child: CircularProgressIndicator(
-                                color: AppColors.accent),
-                          ),
-                        )
-                      : TextField(
-                          controller: _textController,
-                          maxLines: 12,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 14),
-                          decoration: const InputDecoration(
-                            hintText: "Extracted text will appear here...",
-                            border: InputBorder.none,
-                            hintStyle: TextStyle(color: AppColors.textMuted),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 24),
+          // OCR Tips for better accuracy
+          _buildTipsBanner(),
+          const SizedBox(height: 24),
 
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _copyToClipboard,
-                        icon: const Icon(Icons.copy_rounded, size: 18),
-                        label: const Text("COPY"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textSecondary,
-                          side: const BorderSide(color: AppColors.border),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: PrimaryButton(
-                        label: "SAVE DOCUMENT",
-                        onPressed: _saveDocument,
-                        loading: _isSaving,
-                        icon: Icons.save_rounded,
-                      ),
-                    ),
-                  ],
+          // Image Preview
+          if (_image != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border.all(color: AppColors.border),
                 ),
-              ],
+                child: Image.file(_image!, fit: BoxFit.cover),
+              ),
             ),
-          );
+            const SizedBox(height: 24),
+          ],
+
+          // Extracted Text Area
+          const Text(
+            "EXTRACTED TEXT",
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: _isProcessing
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    ),
+                  )
+                : TextField(
+                    controller: _textController,
+                    maxLines: 12,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary, fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: "Extracted text will appear here...",
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(color: AppColors.textMuted),
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 24),
+
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _copyToClipboard,
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text("COPY"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: const BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: PrimaryButton(
+                  label: "SAVE DOCUMENT",
+                  onPressed: _saveDocument,
+                  loading: _isSaving,
+                  icon: Icons.save_rounded,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _choiceCard(String title, IconData icon, VoidCallback? onTap) {

@@ -116,7 +116,8 @@ class _UnpaidStudentsScreenState extends State<UnpaidStudentsScreen> {
     }
 
     return _loading
-        ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+        ? const Center(
+            child: CircularProgressIndicator(color: AppColors.accent))
         : _error != null
             ? Center(
                 child: Text(_error!,

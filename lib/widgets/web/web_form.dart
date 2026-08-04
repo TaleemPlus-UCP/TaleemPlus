@@ -54,7 +54,8 @@ class WebLabeledField extends StatelessWidget {
             obscureText: obscure,
             maxLines: obscure ? 1 : maxLines,
             textInputAction: textInputAction,
-            style: TextStyle(color: context.appColors.textPrimary, fontSize: 14),
+            style:
+                TextStyle(color: context.appColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               prefixIcon: icon != null
@@ -73,7 +74,8 @@ class WebLabeledField extends StatelessWidget {
                   borderSide: BorderSide(color: border)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.accent, width: 1.6),
+                borderSide:
+                    const BorderSide(color: AppColors.accent, width: 1.6),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -81,7 +83,8 @@ class WebLabeledField extends StatelessWidget {
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.danger, width: 1.6),
+                borderSide:
+                    const BorderSide(color: AppColors.danger, width: 1.6),
               ),
             ),
           ),
@@ -138,7 +141,8 @@ class WebDropdownField<T> extends StatelessWidget {
                 value: value,
                 isExpanded: true,
                 hint: Text(hint,
-                    style: TextStyle(color: context.appColors.textMuted, fontSize: 14)),
+                    style: TextStyle(
+                        color: context.appColors.textMuted, fontSize: 14)),
                 icon: Icon(Icons.keyboard_arrow_down_rounded,
                     color: context.appColors.textMuted),
                 items: items
@@ -148,7 +152,8 @@ class WebDropdownField<T> extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (icon != null) ...[
-                                Icon(icon, size: 17, color: AppColors.accentDark),
+                                Icon(icon,
+                                    size: 17, color: AppColors.accentDark),
                                 const SizedBox(width: 10),
                               ],
                               Flexible(

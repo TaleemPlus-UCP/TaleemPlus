@@ -84,7 +84,8 @@ class _WebQuickSearchState extends State<WebQuickSearch> {
                         size: 18, color: overlayCtx.appColors.textSecondary),
                     title: Text(item.label,
                         style: TextStyle(
-                            fontSize: 13, color: overlayCtx.appColors.textPrimary)),
+                            fontSize: 13,
+                            color: overlayCtx.appColors.textPrimary)),
                     onTap: () {
                       _controller.clear();
                       _focusNode.unfocus();
@@ -124,7 +125,8 @@ class _WebQuickSearchState extends State<WebQuickSearch> {
           decoration: InputDecoration(
             isDense: true,
             hintText: 'Search or jump to...',
-            hintStyle: TextStyle(fontSize: 13, color: context.appColors.textMuted),
+            hintStyle:
+                TextStyle(fontSize: 13, color: context.appColors.textMuted),
             prefixIcon: Icon(Icons.search_rounded,
                 size: 18, color: context.appColors.textMuted),
             filled: true,

@@ -60,75 +60,71 @@ class StudentAttendanceScreen extends StatelessWidget {
     final academyId = user?.academyId ?? '';
 
     return academyId.isEmpty
-              ? const Center(child: Text("Academy session error"))
-              : StreamBuilder<List<ClassEntity>>(
-                  stream: context
-                      .read<ClassProvider>()
-                      .streamForStudent(studentUid, academyId),
-                  builder: (context, courseSnap) {
-                    final courses = courseSnap.data ?? const [];
-                    return StreamBuilder<List<AttendanceRecord>>(
-                      stream: context
-                          .read<AttendanceProvider>()
-                          .watchStudentAttendance(studentUid, academyId),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                                ConnectionState.waiting &&
-                            courseSnap.connectionState ==
-                                ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.accent));
-                        }
+        ? const Center(child: Text("Academy session error"))
+        : StreamBuilder<List<ClassEntity>>(
+            stream: context
+                .read<ClassProvider>()
+                .streamForStudent(studentUid, academyId),
+            builder: (context, courseSnap) {
+              final courses = courseSnap.data ?? const [];
+              return StreamBuilder<List<AttendanceRecord>>(
+                stream: context
+                    .read<AttendanceProvider>()
+                    .watchStudentAttendance(studentUid, academyId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      courseSnap.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent));
+                  }
 
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.error_outline_rounded,
-                                      color: AppColors.danger, size: 48),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "Error loading records: ${snapshot.error}",
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: AppColors.danger),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final records = snapshot.data ?? [];
-
-                        if (records.isEmpty && courses.isEmpty) {
-                          return _buildEmptyState();
-                        }
-
-                        return Column(
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildStatsHeader(records),
-                            Expanded(
-                              child: _buildDateGroupedView(courses, records),
+                            const Icon(Icons.error_outline_rounded,
+                                color: AppColors.danger, size: 48),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Error loading records: ${snapshot.error}",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.danger),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "If you see an 'index' error, please wait a minute for Firestore to auto-generate it or check your rules.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: AppColors.textMuted, fontSize: 12),
                             ),
                           ],
-                        );
-                      },
+                        ),
+                      ),
                     );
-                  },
-                );
+                  }
+
+                  final records = snapshot.data ?? [];
+
+                  if (records.isEmpty && courses.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  return Column(
+                    children: [
+                      _buildStatsHeader(records),
+                      Expanded(
+                        child: _buildDateGroupedView(courses, records),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
   }
 
   Widget _buildStatsHeader(List<AttendanceRecord> records) {

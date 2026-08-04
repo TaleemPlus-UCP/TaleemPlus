@@ -37,7 +37,8 @@ class _TeacherAnnouncementsScreenState
     return _buildMobileLayout(context, user, academyId);
   }
 
-  Widget _buildMobileLayout(BuildContext context, dynamic user, String academyId) {
+  Widget _buildMobileLayout(
+      BuildContext context, dynamic user, String academyId) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -90,8 +91,8 @@ class _TeacherAnnouncementsScreenState
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.textOnAccent,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),

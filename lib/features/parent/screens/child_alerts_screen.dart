@@ -63,57 +63,54 @@ class ChildAlertsScreen extends StatelessWidget {
         '';
 
     return academyId.isEmpty
-              ? const Center(child: Text("Session error"))
-              : StreamBuilder<List<AttendanceRecord>>(
-                  stream: context
-                      .read<AttendanceProvider>()
-                      .watchStudentAttendance(childUid, academyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
+        ? const Center(child: Text("Session error"))
+        : StreamBuilder<List<AttendanceRecord>>(
+            stream: context
+                .read<AttendanceProvider>()
+                .watchStudentAttendance(childUid, academyId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
+              }
 
-                    if (snapshot.hasError) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline_rounded,
-                                  size: 48, color: AppColors.danger),
-                              SizedBox(height: 12),
-                              Text(
-                                  "Could not load attendance alerts. "
-                                  "Check your connection.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppColors.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final absences = (snapshot.data ?? [])
-                        .where((r) => r.status == 'absent')
-                        .toList();
-
-                    if (absences.isEmpty) {
-                      return _buildEmptyState(context);
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: absences.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) =>
-                          _alertTile(context, absences[i]),
-                    );
-                  },
+              if (snapshot.hasError) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.error_outline_rounded,
+                            size: 48, color: AppColors.danger),
+                        SizedBox(height: 12),
+                        Text(
+                            "Could not load attendance alerts. "
+                            "Check your connection.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
                 );
+              }
+
+              final absences = (snapshot.data ?? [])
+                  .where((r) => r.status == 'absent')
+                  .toList();
+
+              if (absences.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: absences.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) => _alertTile(context, absences[i]),
+              );
+            },
+          );
   }
 
   Widget _alertTile(BuildContext context, AttendanceRecord r) {

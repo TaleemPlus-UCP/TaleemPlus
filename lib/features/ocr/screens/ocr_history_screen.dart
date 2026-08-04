@@ -51,7 +51,8 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
     final user = context.watch<AuthProvider>().currentUser;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selecting ? '${_selectedIds.length} selected' : "OCR History",
+        title: Text(
+            _selecting ? '${_selectedIds.length} selected' : "OCR History",
             style: const TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -120,11 +121,13 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.history_rounded,
-                    size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
+                    size: 64,
+                    color: AppColors.textMuted.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 const Text(
                   "No scanned documents yet.",
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 16),
                 ),
               ],
             ),
@@ -138,7 +141,8 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
                 itemCount: docs.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _documentTile(context, docs[index]),
+                itemBuilder: (context, index) =>
+                    _documentTile(context, docs[index]),
               ),
             ),
             if (_selecting) _publishBar(context, docs),
@@ -165,7 +169,8 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
             backgroundColor: AppColors.accent,
             foregroundColor: AppColors.textOnAccent,
             minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),
@@ -190,8 +195,10 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
               }
             });
           } else {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => OcrDocumentViewScreen(document: doc)));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => OcrDocumentViewScreen(document: doc)));
           }
         },
         onLongPress: () => setState(() => _selectedIds.add(doc.id)),
@@ -246,12 +253,14 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
                     const SizedBox(height: 4),
                     Text(
                       dateStr,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       doc.extractedText,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -271,7 +280,8 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, OcrDocumentModel doc) async {
+  Future<void> _confirmDelete(
+      BuildContext context, OcrDocumentModel doc) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -283,12 +293,14 @@ class _OcrHistoryScreenState extends State<OcrHistoryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("CANCEL", style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text("CANCEL",
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text("DELETE",
-                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: AppColors.danger, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

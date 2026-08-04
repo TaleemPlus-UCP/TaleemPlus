@@ -68,84 +68,82 @@ class ChildOverviewScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-              _childProfileHeader(context),
-              const SizedBox(height: 24),
-              const Text('LEARNING PROGRESS',
-                  style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2)),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Attendance History',
-                'View daily presence records',
-                Icons.fact_check_rounded,
-                () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            StudentAttendanceScreen(studentUid: child.uid))),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Important Alerts',
-                'Absence and performance notifications',
-                Icons.notifications_active_rounded,
-                () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => ChildAlertsScreen(
-                            childName: child.fullName, childUid: child.uid))),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Test Reports',
-                'Check marks and subject grades',
-                Icons.analytics_rounded,
-                () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => StudentTestReportScreen(
-                            studentUid: child.uid,
-                            studentName: child.fullName))),
-              ),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Performance Analytics',
-                'Growth charts and trends',
-                Icons.insights_rounded,
-                () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            StudentProgressChartScreen(studentUid: child.uid))),
-              ),
-              const SizedBox(height: 24),
-              const Text('FINANCE',
-                  style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2)),
-              const SizedBox(height: 12),
-              _actionTile(
-                context,
-                'Fee Statements',
-                'Payment history and pending dues',
-                Icons.receipt_long_rounded,
-                () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            StudentChallanScreen(studentUid: child.uid))),
-              ),
-            ],
-          );
+        _childProfileHeader(context),
+        const SizedBox(height: 24),
+        const Text('LEARNING PROGRESS',
+            style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
+        const SizedBox(height: 12),
+        _actionTile(
+          context,
+          'Attendance History',
+          'View daily presence records',
+          Icons.fact_check_rounded,
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      StudentAttendanceScreen(studentUid: child.uid))),
+        ),
+        const SizedBox(height: 12),
+        _actionTile(
+          context,
+          'Important Alerts',
+          'Absence and performance notifications',
+          Icons.notifications_active_rounded,
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ChildAlertsScreen(
+                      childName: child.fullName, childUid: child.uid))),
+        ),
+        const SizedBox(height: 12),
+        _actionTile(
+          context,
+          'Test Reports',
+          'Check marks and subject grades',
+          Icons.analytics_rounded,
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => StudentTestReportScreen(
+                      studentUid: child.uid, studentName: child.fullName))),
+        ),
+        const SizedBox(height: 12),
+        _actionTile(
+          context,
+          'Performance Analytics',
+          'Growth charts and trends',
+          Icons.insights_rounded,
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      StudentProgressChartScreen(studentUid: child.uid))),
+        ),
+        const SizedBox(height: 24),
+        const Text('FINANCE',
+            style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
+        const SizedBox(height: 12),
+        _actionTile(
+          context,
+          'Fee Statements',
+          'Payment history and pending dues',
+          Icons.receipt_long_rounded,
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => StudentChallanScreen(studentUid: child.uid))),
+        ),
+      ],
+    );
   }
 
   Widget _childProfileHeader(BuildContext context) {

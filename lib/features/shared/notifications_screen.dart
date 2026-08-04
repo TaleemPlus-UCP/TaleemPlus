@@ -36,7 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return _buildMobileLayout(context, uid, academyId);
   }
 
-  Widget _buildMobileLayout(BuildContext context, String uid, String academyId) {
+  Widget _buildMobileLayout(
+      BuildContext context, String uid, String academyId) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications',
@@ -75,7 +76,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       BuildContext context, AppUser? user, String uid, String academyId) {
     void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
     final navSections = switch (user?.role) {
-      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.admin =>
+        buildAdminNavSections(context, onDashboard: onDashboard),
       UserRole.teacher =>
         buildTeacherNavSections(context, onDashboard: onDashboard),
       UserRole.student =>

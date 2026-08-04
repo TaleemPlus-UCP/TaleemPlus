@@ -105,8 +105,10 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                         TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
               ),
               OutlinedButton.icon(
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ClassSectionsScreen())),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ClassSectionsScreen())),
                 icon: const Icon(Icons.groups_2_rounded, size: 18),
                 label: const Text('Classes & Sections'),
                 style: OutlinedButton.styleFrom(

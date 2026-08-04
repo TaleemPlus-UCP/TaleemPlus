@@ -106,7 +106,8 @@ class _StudentPickerFieldState extends State<StudentPickerField> {
                                 color: context.appColors.textPrimary,
                                 fontSize: 12)),
                         onDeleted: () => _remove(s),
-                        backgroundColor: AppColors.accent.withValues(alpha: 0.12),
+                        backgroundColor:
+                            AppColors.accent.withValues(alpha: 0.12),
                         deleteIconColor: AppColors.accent,
                         side: BorderSide.none,
                       ))
@@ -119,8 +120,8 @@ class _StudentPickerFieldState extends State<StudentPickerField> {
           style: TextStyle(color: context.appColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Search student by name or email...',
-            prefixIcon:
-                const Icon(Icons.search_rounded, color: AppColors.accent, size: 20),
+            prefixIcon: const Icon(Icons.search_rounded,
+                color: AppColors.accent, size: 20),
             suffixIcon: _searching
                 ? const Padding(
                     padding: EdgeInsets.all(14),
@@ -152,8 +153,8 @@ class _StudentPickerFieldState extends State<StudentPickerField> {
                   title: Text(s.fullName,
                       style: TextStyle(color: context.appColors.textPrimary)),
                   subtitle: Text(s.email,
-                      style:
-                          TextStyle(color: context.appColors.textMuted, fontSize: 11)),
+                      style: TextStyle(
+                          color: context.appColors.textMuted, fontSize: 11)),
                   onTap: () => _select(s),
                 );
               },

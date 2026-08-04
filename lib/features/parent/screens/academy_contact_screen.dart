@@ -61,54 +61,53 @@ class AcademyContactScreen extends StatelessWidget {
 
   Widget _body(BuildContext context) {
     return FutureBuilder<AppUser?>(
-            future: AuthService().getProfile(academyId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent));
-              }
+      future: AuthService().getProfile(academyId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent));
+        }
 
-              final academy = snapshot.data;
-              final name = academy?.academyName ?? "SRS Tech Matrix";
-              final address =
-                  academy?.academyAddress ?? "123 Education Lane, Lahore";
-              final phone = academy?.academyPhone ?? "03014334151";
+        final academy = snapshot.data;
+        final name = academy?.academyName ?? "SRS Tech Matrix";
+        final address = academy?.academyAddress ?? "123 Education Lane, Lahore";
+        final phone = academy?.academyPhone ?? "03014334151";
 
-              return ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  _buildHeader(context, name),
-                  const SizedBox(height: 32),
-                  const Text('CONTACT CHANNELS',
-                      style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2)),
-                  const SizedBox(height: 16),
-                  _contactTile(
-                    context,
-                    'Official WhatsApp',
-                    phone,
-                    Icons.chat_bubble_rounded,
-                    AppColors.success,
-                    () => _openWhatsApp(context, phone),
-                  ),
-                  const SizedBox(height: 12),
-                  _contactTile(
-                    context,
-                    'Helpline / Call',
-                    phone,
-                    Icons.call_rounded,
-                    AppColors.accent,
-                    () => _callNumber(context, phone),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildLocationCard(context, address),
-                ],
-              );
-            },
-          );
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            _buildHeader(context, name),
+            const SizedBox(height: 32),
+            const Text('CONTACT CHANNELS',
+                style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2)),
+            const SizedBox(height: 16),
+            _contactTile(
+              context,
+              'Official WhatsApp',
+              phone,
+              Icons.chat_bubble_rounded,
+              AppColors.success,
+              () => _openWhatsApp(context, phone),
+            ),
+            const SizedBox(height: 12),
+            _contactTile(
+              context,
+              'Helpline / Call',
+              phone,
+              Icons.call_rounded,
+              AppColors.accent,
+              () => _callNumber(context, phone),
+            ),
+            const SizedBox(height: 32),
+            _buildLocationCard(context, address),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _callNumber(BuildContext context, String phone) async {

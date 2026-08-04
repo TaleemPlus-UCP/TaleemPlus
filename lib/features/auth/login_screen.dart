@@ -227,69 +227,67 @@ class _LoginScreenState extends State<LoginScreen> {
     final isWebWide = kIsWeb && !WebBreakpoints.isCompact(context);
 
     final form = Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 28),
-                  _logo(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'TaleemPlus',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.appColors.textPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Welcome back! Enter your credentials to securely access your local academy dashboard.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: context.appColors.textSecondary,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  _card(),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Log In',
-                          icon: Icons.login_rounded,
-                          loading: loading,
-                          onPressed: loading ? null : _submit,
-                        ),
-                      ),
-                      if (context
-                          .watch<SessionProvider>()
-                          .biometricEnabled) ...[
-                        const SizedBox(width: 12),
-                        IconButton.filled(
-                          onPressed: loading ? null : _biometricSignIn,
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: AppColors.textOnAccent,
-                            fixedSize: const Size(56, 56),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                          icon: const Icon(Icons.fingerprint_rounded, size: 28),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _signupLink(),
-                  const SizedBox(height: 12),
-                ],
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 28),
+          _logo(),
+          const SizedBox(height: 16),
+          Text(
+            'TaleemPlus',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.appColors.textPrimary,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Welcome back! Enter your credentials to securely access your local academy dashboard.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.appColors.textSecondary,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 28),
+          _card(),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Log In',
+                  icon: Icons.login_rounded,
+                  loading: loading,
+                  onPressed: loading ? null : _submit,
+                ),
               ),
-            );
+              if (context.watch<SessionProvider>().biometricEnabled) ...[
+                const SizedBox(width: 12),
+                IconButton.filled(
+                  onPressed: loading ? null : _biometricSignIn,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.textOnAccent,
+                    fixedSize: const Size(56, 56),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.fingerprint_rounded, size: 28),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 24),
+          _signupLink(),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
 
     return Scaffold(
       body: GradientBackground(

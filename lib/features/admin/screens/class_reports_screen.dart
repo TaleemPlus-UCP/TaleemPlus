@@ -171,7 +171,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +193,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
             ],
           ),
           Text(DateFormat('d MMM yyyy, h:mm a').format(r.generatedAt),
-              style: TextStyle(color: context.appColors.textMuted, fontSize: 11)),
+              style:
+                  TextStyle(color: context.appColors.textMuted, fontSize: 11)),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -205,8 +207,10 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('Fee Paid: ${r.feePaid} (${_currency.format(r.feePaidAmount)})',
-                    style: const TextStyle(color: AppColors.success, fontSize: 12)),
+                child: Text(
+                    'Fee Paid: ${r.feePaid} (${_currency.format(r.feePaidAmount)})',
+                    style: const TextStyle(
+                        color: AppColors.success, fontSize: 12)),
               ),
             ],
           ),
@@ -215,7 +219,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
               Expanded(
                 child: Text(
                     'Fee Pending: ${r.feePending} (${_currency.format(r.feePendingAmount)})',
-                    style: const TextStyle(color: AppColors.warning, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.warning, fontSize: 12)),
               ),
             ],
           ),
@@ -229,7 +234,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
       child: Column(
         children: [
           Text(value,
-              style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 16)),
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w800, fontSize: 16)),
           Text(label, style: TextStyle(color: color, fontSize: 10)),
         ],
       ),
@@ -262,8 +268,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
   Future<void> _pickClassAndGenerate() async {
     final sections = context.read<ClassSectionProvider>().sections;
     if (sections.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Create a class section first.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Create a class section first.')));
       return;
     }
     final section = await showDialog<ClassSectionEntity>(
@@ -284,8 +290,7 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ],
       ),
     );
@@ -313,7 +318,8 @@ class _ClassReportsScreenState extends State<ClassReportsScreen> {
       final challans = await _feeRepo.getAll(academyId);
       final analytics =
           FeeAnalyticsService.computeClassAnalytics(challans, [section]);
-      final match = analytics.where((a) => a.classLabel == section.displayLabel);
+      final match =
+          analytics.where((a) => a.classLabel == section.displayLabel);
       final feeSummary = match.isEmpty ? null : match.first;
 
       final report = ClassReportModel(

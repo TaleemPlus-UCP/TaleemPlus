@@ -53,14 +53,16 @@ class StudentTestReportScreen extends StatelessWidget {
   /// Reached from both the student's own dashboard and a parent viewing a
   /// child's report, so — like [NotificationsScreen] — the sidebar resolves
   /// to whichever role is currently logged in.
-  Widget _buildWebLayout(BuildContext context, AppUser? user, String academyId) {
+  Widget _buildWebLayout(
+      BuildContext context, AppUser? user, String academyId) {
     void onDashboard() => Navigator.of(context).popUntil((r) => r.isFirst);
     final navSections = switch (user?.role) {
       UserRole.student =>
         buildStudentNavSections(context, onDashboard: onDashboard),
       UserRole.parent =>
         buildParentNavSections(context, onDashboard: onDashboard),
-      UserRole.admin => buildAdminNavSections(context, onDashboard: onDashboard),
+      UserRole.admin =>
+        buildAdminNavSections(context, onDashboard: onDashboard),
       UserRole.teacher =>
         buildTeacherNavSections(context, onDashboard: onDashboard),
       null => const <WebNavSection>[],
@@ -78,62 +80,58 @@ class StudentTestReportScreen extends StatelessWidget {
 
   Widget _body(BuildContext context, String academyId) {
     return academyId.isEmpty
-              ? const Center(child: Text("Academy session error"))
-              : StreamBuilder<List<TestMarkModel>>(
-                  stream: context
-                      .read<QuizProvider>()
-                      .watchStudentResults(studentUid, academyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                          child: Text(
-                              'Error loading results: ${snapshot.error}',
-                              style: const TextStyle(color: AppColors.danger)));
-                    }
+        ? const Center(child: Text("Academy session error"))
+        : StreamBuilder<List<TestMarkModel>>(
+            stream: context
+                .read<QuizProvider>()
+                .watchStudentResults(studentUid, academyId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
+              }
+              if (snapshot.hasError) {
+                return Center(
+                    child: Text('Error loading results: ${snapshot.error}',
+                        style: const TextStyle(color: AppColors.danger)));
+              }
 
-                    final results = snapshot.data ?? [];
+              final results = snapshot.data ?? [];
 
-                    if (results.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.analytics_outlined,
-                                size: 64,
-                                color:
-                                    AppColors.textMuted.withValues(alpha: 0.3)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              "No test records found for this student.",
-                              style: TextStyle(color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        _buildSummaryHeader(results),
-                        Expanded(
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                            itemCount: results.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) =>
-                                _resultTile(results[index]),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+              if (results.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.analytics_outlined,
+                          size: 64,
+                          color: AppColors.textMuted.withValues(alpha: 0.3)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "No test records found for this student.",
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 );
+              }
+
+              return Column(
+                children: [
+                  _buildSummaryHeader(results),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      itemCount: results.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) =>
+                          _resultTile(results[index]),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
   }
 
   Widget _buildSummaryHeader(List<TestMarkModel> results) {

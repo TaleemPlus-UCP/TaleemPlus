@@ -136,8 +136,8 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                               color: context.appColors.textPrimary)),
                       const SizedBox(height: 4),
                       Text('Manage teachers, students and parents.',
-                          style:
-                              TextStyle(color: context.appColors.textSecondary)),
+                          style: TextStyle(
+                              color: context.appColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -147,7 +147,8 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                     final role = _roles[_tabController.index];
                     return FilledButton.icon(
                       onPressed: () => _openAddSheet(context, role),
-                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                      icon:
+                          const Icon(Icons.person_add_alt_1_rounded, size: 18),
                       label: Text('Add ${_labelFor(role)}'),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.accent,

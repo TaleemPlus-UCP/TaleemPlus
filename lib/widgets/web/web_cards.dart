@@ -88,7 +88,8 @@ class WebStatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: context.appColors.surface,
           borderRadius: radius,
-          border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+          border: Border.all(
+              color: context.appColors.border.withValues(alpha: 0.5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +102,10 @@ class WebStatCard extends StatelessWidget {
                   height: 42,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [tint.withValues(alpha: 0.22), tint.withValues(alpha: 0.08)],
+                      colors: [
+                        tint.withValues(alpha: 0.22),
+                        tint.withValues(alpha: 0.08)
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -123,8 +127,9 @@ class WebStatCard extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color:
-                                  trendUp ? AppColors.success : AppColors.danger)),
+                              color: trendUp
+                                  ? AppColors.success
+                                  : AppColors.danger)),
                     ],
                   ),
               ],
@@ -171,7 +176,8 @@ class WebSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.appColors.surface,
         borderRadius: radius,
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,7 +187,8 @@ class WebSectionCard extends StatelessWidget {
               width: 4,
               decoration: const BoxDecoration(
                 gradient: AppColors.accentButton,
-                borderRadius: BorderRadius.horizontal(left: Radius.circular(18)),
+                borderRadius:
+                    BorderRadius.horizontal(left: Radius.circular(18)),
               ),
             ),
           Expanded(child: Padding(padding: padding, child: child)),

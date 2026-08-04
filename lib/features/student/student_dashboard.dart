@@ -88,7 +88,8 @@ class StudentDashboard extends StatelessWidget {
     return _buildMobileLayout(context, user, content);
   }
 
-  Widget _buildMobileLayout(BuildContext context, AppUser? user, Widget content) {
+  Widget _buildMobileLayout(
+      BuildContext context, AppUser? user, Widget content) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -145,148 +146,138 @@ class StudentDashboard extends StatelessWidget {
   Widget _dashboardContent(
       BuildContext context, AppUser? user, String uid, String academyId) {
     return StreamBuilder<List<ClassEntity>>(
-            stream:
-                context.read<ClassProvider>().streamForStudent(uid, academyId),
-            builder: (context, classSnap) {
-              final classes = classSnap.data ?? [];
-              return StreamBuilder<List<TestMarkModel>>(
-                    stream: context
-                        .read<QuizProvider>()
-                        .watchStudentResults(uid, academyId),
-                    builder: (context, marksSnap) {
-                      final marks = marksSnap.data ?? [];
-                      final avgPercent = marks.isEmpty
-                          ? null
-                          : marks
-                                  .map((m) => m.percentage)
-                                  .reduce((a, b) => a + b) /
-                              marks.length;
-                      return ListView(
-                        padding: const EdgeInsets.all(20),
-                        children: [
-                          _welcomeCard(context, user, classes),
-                          const SizedBox(height: 12),
-                          LatestAnnouncementCard(
-                            role: 'student',
-                            academyId: academyId,
-                            onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ViewAnnouncementsScreen())),
-                          ),
-                          const SizedBox(height: 20),
-                          _sectionLabel(context, 'QUICK STATISTICS'),
-                          const SizedBox(height: 10),
-                          _quickStatsGrid(
-                              context, uid, academyId, classes.length, avgPercent),
-                          const SizedBox(height: 20),
-                          _progressCard(context, avgPercent),
-                          const SizedBox(height: 20),
-                          _sectionLabel(context, 'QUICK ACTIONS'),
-                          const SizedBox(height: 10),
-                          _quickActionsRow(context, user),
-                          const SizedBox(height: 20),
-                          _sectionLabel(context, 'LEARNING'),
-                          const SizedBox(height: 10),
-                          _moduleGroup(context, Icons.menu_book_rounded, [
-                            _ModuleItem(
-                                'My Classroom Hub',
-                                'Teacher resources & discussions',
-                                Icons.school_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const MyClassroomHub()))),
-                            _ModuleItem(
-                                'AI Notes Summarizer',
-                                'Instantly summarize notes (100% Offline)',
-                                Icons.auto_awesome_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const AiSummarizerScreen()))),
-                          ]),
-                          const SizedBox(height: 16),
-                          _sectionLabel(context, 'DAILY'),
-                          const SizedBox(height: 10),
-                          _moduleGroup(context, Icons.today_rounded, [
-                            _ModuleItem(
-                                'My Timetable',
-                                'View your weekly class schedule',
-                                Icons.schedule_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const MyTimetableScreen()))),
-                            _ModuleItem(
-                                'My Attendance',
-                                'Track your daily presence and percentage',
-                                Icons.fact_check_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => StudentAttendanceScreen(
-                                            studentUid: uid)))),
-                          ]),
-                          const SizedBox(height: 16),
-                          _sectionLabel(context, 'PERFORMANCE'),
-                          const SizedBox(height: 10),
-                          _moduleGroup(context, Icons.insights_rounded, [
-                            _ModuleItem(
-                                'Test Reports',
-                                'Check your marks and performance',
-                                Icons.analytics_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => StudentTestReportScreen(
-                                            studentUid: uid,
-                                            studentName:
-                                                user?.fullName ?? 'Student')))),
-                            _ModuleItem(
-                                'Performance Analytics',
-                                'Visual progress charts and trends',
-                                Icons.show_chart_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            StudentProgressChartScreen(
-                                                studentUid: uid)))),
-                          ]),
-                          const SizedBox(height: 16),
-                          _sectionLabel(context, 'ACADEMY'),
-                          const SizedBox(height: 10),
-                          _moduleGroup(context, Icons.account_balance_rounded, [
-                            _ModuleItem(
-                                'Announcements',
-                                'View broadcasts from your academy',
-                                Icons.campaign_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const ViewAnnouncementsScreen()))),
-                            _ModuleItem(
-                                'Fee Status',
-                                'View your payment history and dues',
-                                Icons.receipt_long_rounded,
-                                () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => StudentFeeScreen(
-                                            studentUid: uid)))),
-                          ]),
-                        ],
-                      );
-                    },
-                  );
-            },
-          );
+      stream: context.read<ClassProvider>().streamForStudent(uid, academyId),
+      builder: (context, classSnap) {
+        final classes = classSnap.data ?? [];
+        return StreamBuilder<List<TestMarkModel>>(
+          stream:
+              context.read<QuizProvider>().watchStudentResults(uid, academyId),
+          builder: (context, marksSnap) {
+            final marks = marksSnap.data ?? [];
+            final avgPercent = marks.isEmpty
+                ? null
+                : marks.map((m) => m.percentage).reduce((a, b) => a + b) /
+                    marks.length;
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _welcomeCard(context, user, classes),
+                const SizedBox(height: 12),
+                LatestAnnouncementCard(
+                  role: 'student',
+                  academyId: academyId,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ViewAnnouncementsScreen())),
+                ),
+                const SizedBox(height: 20),
+                _sectionLabel(context, 'QUICK STATISTICS'),
+                const SizedBox(height: 10),
+                _quickStatsGrid(
+                    context, uid, academyId, classes.length, avgPercent),
+                const SizedBox(height: 20),
+                _progressCard(context, avgPercent),
+                const SizedBox(height: 20),
+                _sectionLabel(context, 'QUICK ACTIONS'),
+                const SizedBox(height: 10),
+                _quickActionsRow(context, user),
+                const SizedBox(height: 20),
+                _sectionLabel(context, 'LEARNING'),
+                const SizedBox(height: 10),
+                _moduleGroup(context, Icons.menu_book_rounded, [
+                  _ModuleItem(
+                      'My Classroom Hub',
+                      'Teacher resources & discussions',
+                      Icons.school_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const MyClassroomHub()))),
+                  _ModuleItem(
+                      'AI Notes Summarizer',
+                      'Instantly summarize notes (100% Offline)',
+                      Icons.auto_awesome_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AiSummarizerScreen()))),
+                ]),
+                const SizedBox(height: 16),
+                _sectionLabel(context, 'DAILY'),
+                const SizedBox(height: 10),
+                _moduleGroup(context, Icons.today_rounded, [
+                  _ModuleItem(
+                      'My Timetable',
+                      'View your weekly class schedule',
+                      Icons.schedule_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const MyTimetableScreen()))),
+                  _ModuleItem(
+                      'My Attendance',
+                      'Track your daily presence and percentage',
+                      Icons.fact_check_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  StudentAttendanceScreen(studentUid: uid)))),
+                ]),
+                const SizedBox(height: 16),
+                _sectionLabel(context, 'PERFORMANCE'),
+                const SizedBox(height: 10),
+                _moduleGroup(context, Icons.insights_rounded, [
+                  _ModuleItem(
+                      'Test Reports',
+                      'Check your marks and performance',
+                      Icons.analytics_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => StudentTestReportScreen(
+                                  studentUid: uid,
+                                  studentName: user?.fullName ?? 'Student')))),
+                  _ModuleItem(
+                      'Performance Analytics',
+                      'Visual progress charts and trends',
+                      Icons.show_chart_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => StudentProgressChartScreen(
+                                  studentUid: uid)))),
+                ]),
+                const SizedBox(height: 16),
+                _sectionLabel(context, 'ACADEMY'),
+                const SizedBox(height: 10),
+                _moduleGroup(context, Icons.account_balance_rounded, [
+                  _ModuleItem(
+                      'Announcements',
+                      'View broadcasts from your academy',
+                      Icons.campaign_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const ViewAnnouncementsScreen()))),
+                  _ModuleItem(
+                      'Fee Status',
+                      'View your payment history and dues',
+                      Icons.receipt_long_rounded,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  StudentFeeScreen(studentUid: uid)))),
+                ]),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _sectionLabel(BuildContext context, String text) => Text(text,

@@ -603,91 +603,89 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   Widget _body(BuildContext context) {
     return Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                if (widget.isAiGen) ...[
-                  _buildAiScanButton(),
-                  const SizedBox(height: 24),
-                ],
-                _buildFormSection('TEST BASICS', [
-                  LabeledField(
-                      label: 'Test Title',
-                      hint: 'e.g. Unit 1 Quiz',
-                      controller: _titleCtrl,
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Title is required'
-                          : null),
-                  LabeledField(
-                      label: 'Subject',
-                      hint: 'e.g. Physics',
-                      controller: _subjectCtrl,
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Subject is required'
-                          : null),
-                ]),
-                _buildFormSection('ACADEMY DETAILS', [
-                  _buildDropdownField('Month', _selectedMonth, _months,
-                      (v) => setState(() => _selectedMonth = v!)),
-                  const SizedBox(height: 16),
-                  LabeledField(
-                      label: 'Test Session',
-                      hint: 'e.g. Annual 2024',
-                      controller: _sessionCtrl),
-                  LabeledField(
-                      label: 'Chapter / Topic',
-                      hint: 'e.g. Kinematics',
-                      controller: _chapterCtrl),
-                ]),
-                _buildFormSection('SPECIFICATIONS', [
-                  _buildDropdownField(
-                      'Difficulty',
-                      _difficulty,
-                      ['Easy', 'Medium', 'Hard'],
-                      (v) => setState(() => _difficulty = v!)),
-                  const SizedBox(height: 16),
-                  _totalMarksDisplay(),
-                  LabeledField(
-                      label: 'Instructions',
-                      hint: 'e.g. No calculators',
-                      controller: _instructionsCtrl),
-                ]),
-                const SizedBox(height: 10),
-                const Text('QUESTIONS',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1)),
-                const SizedBox(height: 12),
-                ..._buildQuestionSections(),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _addQuestion,
-                  icon: const Icon(Icons.add_circle_outline,
-                      color: AppColors.accent),
-                  label: const Text('Add Question',
-                      style: TextStyle(color: AppColors.accent)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.border),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                PrimaryButton(
-                  label: 'Save & Publish Test',
-                  icon: Icons.cloud_upload_rounded,
-                  loading: context.watch<QuizProvider>().loading,
-                  onPressed:
-                      context.watch<QuizProvider>().loading ? null : _saveQuiz,
-                ),
-                const SizedBox(height: 40),
-              ],
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (widget.isAiGen) ...[
+            _buildAiScanButton(),
+            const SizedBox(height: 24),
+          ],
+          _buildFormSection('TEST BASICS', [
+            LabeledField(
+                label: 'Test Title',
+                hint: 'e.g. Unit 1 Quiz',
+                controller: _titleCtrl,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Title is required'
+                    : null),
+            LabeledField(
+                label: 'Subject',
+                hint: 'e.g. Physics',
+                controller: _subjectCtrl,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Subject is required'
+                    : null),
+          ]),
+          _buildFormSection('ACADEMY DETAILS', [
+            _buildDropdownField('Month', _selectedMonth, _months,
+                (v) => setState(() => _selectedMonth = v!)),
+            const SizedBox(height: 16),
+            LabeledField(
+                label: 'Test Session',
+                hint: 'e.g. Annual 2024',
+                controller: _sessionCtrl),
+            LabeledField(
+                label: 'Chapter / Topic',
+                hint: 'e.g. Kinematics',
+                controller: _chapterCtrl),
+          ]),
+          _buildFormSection('SPECIFICATIONS', [
+            _buildDropdownField(
+                'Difficulty',
+                _difficulty,
+                ['Easy', 'Medium', 'Hard'],
+                (v) => setState(() => _difficulty = v!)),
+            const SizedBox(height: 16),
+            _totalMarksDisplay(),
+            LabeledField(
+                label: 'Instructions',
+                hint: 'e.g. No calculators',
+                controller: _instructionsCtrl),
+          ]),
+          const SizedBox(height: 10),
+          const Text('QUESTIONS',
+              style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1)),
+          const SizedBox(height: 12),
+          ..._buildQuestionSections(),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _addQuestion,
+            icon: const Icon(Icons.add_circle_outline, color: AppColors.accent),
+            label: const Text('Add Question',
+                style: TextStyle(color: AppColors.accent)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.border),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
-          );
+          ),
+          const SizedBox(height: 32),
+          PrimaryButton(
+            label: 'Save & Publish Test',
+            icon: Icons.cloud_upload_rounded,
+            loading: context.watch<QuizProvider>().loading,
+            onPressed: context.watch<QuizProvider>().loading ? null : _saveQuiz,
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
   }
 
   Widget _buildAiScanButton() {
@@ -997,7 +995,8 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                         title: TextField(
                           controller: entry.value,
                           style: TextStyle(
-                              color: context.appColors.textPrimary, fontSize: 14),
+                              color: context.appColors.textPrimary,
+                              fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Option ${i + 1}',
                             contentPadding: const EdgeInsets.symmetric(

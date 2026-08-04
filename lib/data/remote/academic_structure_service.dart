@@ -31,8 +31,7 @@ class AcademicStructureService {
   }
 
   Future<void> update(String academyId, AcademicStructure structure) async {
-    await _settings
-        .doc(academyId)
-        .set({'academic_structure': structure.toMap()}, SetOptions(merge: true));
+    await _settings.doc(academyId).set(
+        {'academic_structure': structure.toMap()}, SetOptions(merge: true));
   }
 }

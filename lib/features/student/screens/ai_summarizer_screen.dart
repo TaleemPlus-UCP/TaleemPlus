@@ -158,7 +158,8 @@ class _AiSummarizerScreenState extends State<AiSummarizerScreen> {
           _buildActionButtons(),
           const SizedBox(height: 20),
           if (_isProcessing)
-            const Center(child: CircularProgressIndicator(color: AppColors.accent))
+            const Center(
+                child: CircularProgressIndicator(color: AppColors.accent))
           else if (_summary.isNotEmpty)
             _buildSummaryCard()
           else

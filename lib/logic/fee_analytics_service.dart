@@ -57,16 +57,15 @@ class FeeAnalyticsService {
       final list = byClass[label] ?? const <FeeChallanModel>[];
       final paid = list.where((c) => c.isPaid).toList();
       final overdue = list.where((c) => c.isOverdue).toList();
-      final pending =
-          list.where((c) => !c.isPaid && !c.isOverdue).toList();
+      final pending = list.where((c) => !c.isPaid && !c.isOverdue).toList();
 
       double sumOf(List<FeeChallanModel> l) =>
           l.fold(0.0, (sum, c) => sum + c.totalAmount);
 
       return ClassFeeAnalytics(
         classLabel: label,
-        totalStudents: rosterByLabel[label] ??
-            list.map((c) => c.studentId).toSet().length,
+        totalStudents:
+            rosterByLabel[label] ?? list.map((c) => c.studentId).toSet().length,
         paidCount: paid.length,
         pendingCount: pending.length,
         overdueCount: overdue.length,

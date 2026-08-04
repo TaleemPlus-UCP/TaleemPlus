@@ -69,16 +69,17 @@ class _WebDataTableState<T> extends State<WebDataTable<T>> {
     var list = widget.items;
     if (widget.searchText != null && _query.trim().isNotEmpty) {
       final q = _query.trim().toLowerCase();
-      list =
-          list.where((e) => widget.searchText!(e).toLowerCase().contains(q)).toList();
+      list = list
+          .where((e) => widget.searchText!(e).toLowerCase().contains(q))
+          .toList();
     }
     final sortIndex = _sortIndex;
     if (sortIndex != null) {
       final col = widget.columns[sortIndex];
       if (col.sortValue != null) {
-        list = [...list]
-          ..sort((a, b) {
-            final cmp = Comparable.compare(col.sortValue!(a), col.sortValue!(b));
+        list = [...list]..sort((a, b) {
+            final cmp =
+                Comparable.compare(col.sortValue!(a), col.sortValue!(b));
             return _sortAsc ? cmp : -cmp;
           });
       }
@@ -122,8 +123,8 @@ class _WebDataTableState<T> extends State<WebDataTable<T>> {
           decoration: BoxDecoration(
             color: context.appColors.surface,
             borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: context.appColors.border.withValues(alpha: 0.5)),
+            border: Border.all(
+                color: context.appColors.border.withValues(alpha: 0.5)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -141,7 +142,8 @@ class _WebDataTableState<T> extends State<WebDataTable<T>> {
                 _headerRow(context),
                 for (int i = 0; i < pageItems.length; i++)
                   _row(context, pageItems[i], i != pageItems.length - 1),
-                if (totalPages > 1) _pagination(context, page, totalPages, filtered.length),
+                if (totalPages > 1)
+                  _pagination(context, page, totalPages, filtered.length),
               ],
             ],
           ),
@@ -162,16 +164,19 @@ class _WebDataTableState<T> extends State<WebDataTable<T>> {
         decoration: InputDecoration(
           isDense: true,
           hintText: widget.searchHint,
-          hintStyle: TextStyle(fontSize: 13, color: context.appColors.textMuted),
+          hintStyle:
+              TextStyle(fontSize: 13, color: context.appColors.textMuted),
           prefixIcon: Icon(Icons.search_rounded,
               size: 18, color: context.appColors.textMuted),
           filled: true,
           fillColor: context.webColors.scrollTrack,
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.accent, width: 1.4),
@@ -256,26 +261,30 @@ class _WebDataTableState<T> extends State<WebDataTable<T>> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
-            top: BorderSide(color: context.appColors.border.withValues(alpha: 0.5))),
+            top: BorderSide(
+                color: context.appColors.border.withValues(alpha: 0.5))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('${page * widget.rowsPerPage + 1}-$rangeEnd of $totalItems',
-              style: TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+              style: TextStyle(
+                  fontSize: 12, color: context.appColors.textSecondary)),
           Row(
             children: [
               IconButton(
                 icon: const Icon(Icons.chevron_left_rounded, size: 20),
-                onPressed: page > 0 ? () => setState(() => _page = page - 1) : null,
+                onPressed:
+                    page > 0 ? () => setState(() => _page = page - 1) : null,
               ),
               Text('${page + 1} / $totalPages',
-                  style:
-                      TextStyle(fontSize: 12, color: context.appColors.textSecondary)),
+                  style: TextStyle(
+                      fontSize: 12, color: context.appColors.textSecondary)),
               IconButton(
                 icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                onPressed:
-                    page < totalPages - 1 ? () => setState(() => _page = page + 1) : null,
+                onPressed: page < totalPages - 1
+                    ? () => setState(() => _page = page + 1)
+                    : null,
               ),
             ],
           ),
@@ -302,7 +311,8 @@ class _HoverRowState extends State<_HoverRow> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor:
+          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       child: Container(

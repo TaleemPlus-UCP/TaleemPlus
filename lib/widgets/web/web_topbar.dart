@@ -43,8 +43,8 @@ class WebTopBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: webColors.topbarBackground,
         border: Border(
-            bottom:
-                BorderSide(color: context.appColors.border.withValues(alpha: 0.6))),
+            bottom: BorderSide(
+                color: context.appColors.border.withValues(alpha: 0.6))),
       ),
       child: Row(
         children: [
@@ -91,15 +91,19 @@ class _NotificationBell extends StatelessWidget {
     return StreamBuilder<List<dynamic>>(
       stream: NotificationService().watchForUser(u.uid, u.academyId ?? ''),
       builder: (context, snap) {
-        final count = snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
+        final count =
+            snap.hasData ? snap.data!.where((n) => !n.isRead).length : 0;
         return Stack(
           alignment: Alignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: AppColors.accent),
+              icon: const Icon(Icons.notifications_rounded,
+                  color: AppColors.accent),
               tooltip: 'Notifications',
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen())),
             ),
             if (count > 0)
               Positioned(
@@ -149,9 +153,11 @@ class _ProfileMenu extends StatelessWidget {
             children: [
               Text(name,
                   style: TextStyle(
-                      fontWeight: FontWeight.w700, color: ctx.appColors.textPrimary)),
+                      fontWeight: FontWeight.w700,
+                      color: ctx.appColors.textPrimary)),
               Text(user?.role.label ?? '',
-                  style: TextStyle(fontSize: 12, color: ctx.appColors.textSecondary)),
+                  style: TextStyle(
+                      fontSize: 12, color: ctx.appColors.textSecondary)),
             ],
           ),
         ),
@@ -171,8 +177,8 @@ class _ProfileMenu extends StatelessWidget {
         radius: 18,
         backgroundColor: AppColors.accent.withValues(alpha: 0.15),
         child: Text(initial,
-            style:
-                const TextStyle(color: AppColors.accentDark, fontWeight: FontWeight.w800)),
+            style: const TextStyle(
+                color: AppColors.accentDark, fontWeight: FontWeight.w800)),
       ),
     );
   }

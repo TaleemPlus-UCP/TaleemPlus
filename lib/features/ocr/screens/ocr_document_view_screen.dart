@@ -188,142 +188,141 @@ class _OcrDocumentViewScreenState extends State<OcrDocumentViewScreen> {
         DateFormat('MMMM d, yyyy • h:mm a').format(widget.document.createdAt);
 
     return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Info
-                      if (!_isEditing) ...[
-                        Text(
-                          widget.document.title,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Scanned on $dateStr",
-                          style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 13),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "By ${widget.document.createdByName}",
-                          style: const TextStyle(
-                              color: AppColors.accent,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ] else ...[
-                        const Text(
-                          "DOCUMENT TITLE",
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _titleController,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700),
-                          decoration: InputDecoration(
-                            hintText: "Enter title...",
-                            filled: true,
-                            fillColor: AppColors.inputFill,
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none),
-                          ),
-                        ),
-                      ],
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Info
+                if (!_isEditing) ...[
+                  Text(
+                    widget.document.title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Scanned on $dateStr",
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "By ${widget.document.createdByName}",
+                    style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ] else ...[
+                  const Text(
+                    "DOCUMENT TITLE",
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _titleController,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      hintText: "Enter title...",
+                      filled: true,
+                      fillColor: AppColors.inputFill,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                ],
 
-                      const SizedBox(height: 24),
-                      const Divider(color: AppColors.border, thickness: 1),
-                      const SizedBox(height: 24),
+                const SizedBox(height: 24),
+                const Divider(color: AppColors.border, thickness: 1),
+                const SizedBox(height: 24),
 
-                      // Extracted Text
-                      const Text(
-                        "EXTRACTED CONTENT",
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: AppColors.border.withValues(alpha: 0.5)),
-                        ),
-                        child: TextField(
-                          controller: _textController,
-                          enabled: _isEditing,
-                          maxLines: null,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            height: 1.6,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "No text content",
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
+                // Extracted Text
+                const Text(
+                  "EXTRACTED CONTENT",
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
                   ),
                 ),
-              ),
+                const SizedBox(height: 12),
 
-              // Bottom Actions
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: _isEditing
-                    ? PrimaryButton(
-                        label: "SAVE CHANGES",
-                        onPressed: _updateDocument,
-                        loading: _isSaving,
-                        icon: Icons.check_circle_rounded,
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _copyToClipboard,
-                              icon: const Icon(Icons.copy_rounded, size: 18),
-                              label: const Text("COPY ALL"),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.textSecondary,
-                                side: const BorderSide(color: AppColors.border),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                        ],
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.5)),
+                  ),
+                  child: TextField(
+                    controller: _textController,
+                    enabled: _isEditing,
+                    maxLines: null,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      height: 1.6,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "No text content",
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+
+        // Bottom Actions
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: _isEditing
+              ? PrimaryButton(
+                  label: "SAVE CHANGES",
+                  onPressed: _updateDocument,
+                  loading: _isSaving,
+                  icon: Icons.check_circle_rounded,
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _copyToClipboard,
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: const Text("COPY ALL"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
                       ),
-              ),
-            ],
-          );
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
   }
 }

@@ -99,7 +99,8 @@ class TeacherDashboard extends StatelessWidget {
                   style: TextStyle(color: context.appColors.textSecondary)),
               const SizedBox(height: 16),
               if (user != null)
-                TeacherStatsRow(teacherUid: user.uid, academyId: user.academyId ?? ''),
+                TeacherStatsRow(
+                    teacherUid: user.uid, academyId: user.academyId ?? ''),
               const SizedBox(height: 16),
               _gridSection(context, 'CLASSROOM', [
                 _gridTile(
@@ -240,15 +241,18 @@ class TeacherDashboard extends StatelessWidget {
               style: TextStyle(color: context.appColors.textSecondary)),
           const SizedBox(height: 20),
           if (user != null)
-            TeacherStatsRow(teacherUid: user.uid, academyId: user.academyId ?? ''),
+            TeacherStatsRow(
+                teacherUid: user.uid, academyId: user.academyId ?? ''),
           const SizedBox(height: 24),
           WebGridSection(title: 'CLASSROOM', tiles: [
             WebNavTile(
               title: 'Attendance',
               subtitle: 'Mark daily attendance',
               icon: Icons.fact_check_rounded,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const TeacherClassesScreen())),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TeacherClassesScreen())),
             ),
             WebNavTile(
               title: 'My Timetable',
@@ -286,14 +290,17 @@ class TeacherDashboard extends StatelessWidget {
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const TeacherQuizListScreen(isAiGen: true))),
+                      builder: (_) =>
+                          const TeacherQuizListScreen(isAiGen: true))),
             ),
             WebNavTile(
               title: 'Monthly Performance',
               subtitle: 'Compiled student results',
               icon: Icons.insights_rounded,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const MonthlyReportScreen())),
             ),
           ]),
           WebGridSection(title: 'ANNOUNCEMENTS & TOOLS', tiles: [
@@ -301,8 +308,10 @@ class TeacherDashboard extends StatelessWidget {
               title: 'View Announcements',
               subtitle: 'Broadcasts from your academy',
               icon: Icons.campaign_rounded,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ViewAnnouncementsScreen())),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ViewAnnouncementsScreen())),
             ),
             WebNavTile(
               title: 'Manage Announcements',

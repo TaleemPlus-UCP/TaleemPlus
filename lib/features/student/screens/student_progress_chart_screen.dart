@@ -65,65 +65,64 @@ class _StudentProgressChartScreenState
     final academyId = user?.academyId ?? '';
 
     return academyId.isEmpty
-              ? const Center(
-                  child: Text("Session error",
-                      style: TextStyle(color: AppColors.textSecondary)))
-              : StreamBuilder<List<TestMarkModel>>(
-                  stream: context
-                      .read<QuizProvider>()
-                      .watchStudentResults(widget.studentUid, academyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accent));
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Error loading results: ${snapshot.error}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.danger),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final results = snapshot.data ?? [];
-                    if (results.isEmpty) return _buildEmptyState();
-
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStatsRow(results),
-                          const SizedBox(height: 32),
-                          const Text("PROGRESS TREND",
-                              style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2)),
-                          const SizedBox(height: 16),
-                          _buildLineChart(results),
-                          const SizedBox(height: 32),
-                          const Text("SUBJECT WISE PERFORMANCE",
-                              style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2)),
-                          const SizedBox(height: 16),
-                          _buildSubjectBarChart(results),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
-                    );
-                  },
+        ? const Center(
+            child: Text("Session error",
+                style: TextStyle(color: AppColors.textSecondary)))
+        : StreamBuilder<List<TestMarkModel>>(
+            stream: context
+                .read<QuizProvider>()
+                .watchStudentResults(widget.studentUid, academyId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent));
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Error loading results: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                  ),
                 );
+              }
+
+              final results = snapshot.data ?? [];
+              if (results.isEmpty) return _buildEmptyState();
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStatsRow(results),
+                    const SizedBox(height: 32),
+                    const Text("PROGRESS TREND",
+                        style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2)),
+                    const SizedBox(height: 16),
+                    _buildLineChart(results),
+                    const SizedBox(height: 32),
+                    const Text("SUBJECT WISE PERFORMANCE",
+                        style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2)),
+                    const SizedBox(height: 16),
+                    _buildSubjectBarChart(results),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              );
+            },
+          );
   }
 
   /// Chart-safe percentage (0-100 ke andar)

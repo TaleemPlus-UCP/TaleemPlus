@@ -541,8 +541,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 const SizedBox(height: 12),
                 AdminExtraStatsRow(
                   academyId: user?.uid ?? '',
-                  onFeeTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+                  onFeeTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const FeeLedgerScreen())),
                   onAnnouncementsTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -684,8 +686,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildWebLayout(
       BuildContext context, AppUser? user, MemberProvider members) {
-    final navSections =
-        buildAdminNavSections(context, onDashboard: () {});
+    final navSections = buildAdminNavSections(context, onDashboard: () {});
 
     return WebAppShell(
       title: 'Admin Portal',
@@ -782,8 +783,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               academyId: user?.uid ?? '',
               onFeeTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
-              onAnnouncementsTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
+              onAnnouncementsTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AnnouncementsScreen())),
             ),
             const SizedBox(height: 8),
             WebGridSection(title: 'PEOPLE', tiles: [
@@ -791,15 +794,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title: 'User Management',
                 subtitle: 'Teachers, students, parents',
                 icon: Icons.group_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const UserManagementScreen())),
               ),
               WebNavTile(
                 title: 'Approval Requests',
                 subtitle: 'Approve or reject signups',
                 icon: Icons.how_to_reg_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ApprovalRequestsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ApprovalRequestsScreen())),
               ),
             ]),
             WebGridSection(title: 'ACADEMICS', tiles: [
@@ -816,15 +823,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title: 'Classes & Sections',
                 subtitle: 'Manage sections, enroll students',
                 icon: Icons.groups_2_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ClassSectionsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ClassSectionsScreen())),
               ),
               WebNavTile(
                 title: 'Class Management',
                 subtitle: 'Assign subjects & teachers',
                 icon: Icons.class_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ClassManagementScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ClassManagementScreen())),
               ),
               WebNavTile(
                 title: 'Timetable',
@@ -839,8 +850,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title: 'Test Reports & Grading',
                 subtitle: 'Student performance & results',
                 icon: Icons.analytics_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AdminQuizListScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminQuizListScreen())),
               ),
             ]),
             WebGridSection(title: 'FEES', tiles: [
@@ -864,8 +877,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title: 'Unpaid Students',
                 subtitle: 'Pending/overdue challans',
                 icon: Icons.money_off_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const UnpaidStudentsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const UnpaidStudentsScreen())),
               ),
             ]),
             WebGridSection(title: 'INSIGHTS & COMMUNICATION', tiles: [
@@ -882,15 +897,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title: 'Announcements',
                 subtitle: 'Broadcast to the academy',
                 icon: Icons.campaign_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AnnouncementsScreen())),
               ),
               WebNavTile(
                 title: 'Class Reports',
                 subtitle: 'Attendance & fee snapshots',
                 icon: Icons.summarize_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ClassReportsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ClassReportsScreen())),
               ),
             ]),
           ],

@@ -271,8 +271,8 @@ class _ClassroomManagementScreenState extends State<ClassroomManagementScreen>
             alignment: Alignment.centerLeft,
             child: Text(
               'Resources published from OCR Documents appear here for this class.',
-              style: TextStyle(
-                  color: context.appColors.textMuted, fontSize: 12),
+              style:
+                  TextStyle(color: context.appColors.textMuted, fontSize: 12),
             ),
           ),
         ),
