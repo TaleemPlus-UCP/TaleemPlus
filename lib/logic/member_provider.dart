@@ -34,8 +34,10 @@ class MemberProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Fetch SQLite local members for THIS academy
-      final sqliteMembers = await _repo.getAll(academyId);
+      // 1. Fetch SQLite local members for THIS academy — sqflite has no web
+      // implementation, so skip it there and rely on Firestore alone.
+      final sqliteMembers =
+          kIsWeb ? <AcademyMember>[] : await _repo.getAll(academyId);
 
       // 2. Fetch Firestore approved users profiles for THIS academy
       final firestoreTeachers =
@@ -122,13 +124,18 @@ class MemberProvider extends ChangeNotifier {
       extra: extra.trim(),
       createdAt: DateTime.now(),
     );
-    await _repo.add(member);
+    if (!kIsWeb) {
+      await _repo.add(member);
+    }
     await load(academyId);
   }
 
   Future<void> removeMember(String id, String academyId) async {
-    // 1. Attempt to delete from local SQLite (if it exists there)
-    await _repo.delete(id);
+    // 1. Attempt to delete from local SQLite (if it exists there) — no-op
+    // on web since sqflite isn't available there.
+    if (!kIsWeb) {
+      await _repo.delete(id);
+    }
 
     // 2. Attempt to delete from Firestore (if it exists there)
     final doc = await _authService.getProfile(id);
