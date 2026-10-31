@@ -41,11 +41,11 @@ class MemberProvider extends ChangeNotifier {
 
       // 2. Fetch Firestore approved users profiles for THIS academy
       final firestoreTeachers =
-          await _authService.getApprovedByRole(UserRole.teacher, academyId);
+          await _authService.getApprovedByRole(academyId, UserRole.teacher);
       final firestoreStudents =
-          await _authService.getApprovedByRole(UserRole.student, academyId);
+          await _authService.getApprovedByRole(academyId, UserRole.student);
       final firestoreParents =
-          await _authService.getApprovedByRole(UserRole.parent, academyId);
+          await _authService.getApprovedByRole(academyId, UserRole.parent);
 
       // 3. Convert Firestore users to AcademyMember model for a unified list
       final List<AcademyMember> firestoreMembers = [

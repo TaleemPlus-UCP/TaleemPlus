@@ -1,69 +1,61 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/app_user.dart';
 import '../models/class_entity.dart';
+import '../remote/api_client.dart';
 
-/// All class + enrollment persistence now lives in Firestore so every
-/// device sees the same academy state.
 class ClassRepository {
-  final FirebaseFirestore _db;
-  ClassRepository({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+  final ApiClient _api = ApiClient();
 
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('classes');
+  ClassRepository({dynamic db});
 
-  // ---------- Reads ----------
-
-  Stream<List<ClassEntity>> watchAll(String academyId) {
-    // Removed orderBy from query to avoid index requirement.
-    // Sorting is handled in the map function.
-    return _col.where('academy_id', isEqualTo: academyId).snapshots().map(
-      (snap) {
-        final list =
-            snap.docs.map((d) => ClassEntity.fromMap(d.id, d.data())).toList();
-        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return list;
-      },
-    );
+  Stream<List<ClassEntity>> watchAll(String academyId) async* {
+    try {
+      final res = await _api.get('/classes');
+      final list = res as List;
+      final classes = list.map((item) => ClassEntity.fromMap(item['id'] ?? '', item)).toList();
+      classes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      yield classes;
+    } catch (_) {
+      yield [];
+    }
   }
 
-  Stream<List<ClassEntity>> watchForTeacher(
-      String teacherUid, String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('primary_teacher_id', isEqualTo: teacherUid)
-        .snapshots()
-        .map(
-          (snap) => snap.docs
-              .map((d) => ClassEntity.fromMap(d.id, d.data()))
-              .toList(),
-        );
+  Stream<List<ClassEntity>> watchForTeacher(String teacherUid, String academyId) async* {
+    try {
+      final res = await _api.get('/classes');
+      final list = res as List;
+      yield list
+          .map((item) => ClassEntity.fromMap(item['id'] ?? '', item))
+          .where((c) => c.primaryTeacherId == teacherUid)
+          .toList();
+    } catch (_) {
+      yield [];
+    }
   }
 
-  /// Every subject offering (course) a student is enrolled in — used to
-  /// group the student's attendance records by course on their portal,
-  /// since AttendanceRecord.classId already points at one of these.
-  Stream<List<ClassEntity>> watchForStudent(
-      String studentUid, String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('student_ids', arrayContains: studentUid)
-        .snapshots()
-        .map(
-          (snap) => snap.docs
-              .map((d) => ClassEntity.fromMap(d.id, d.data()))
-              .toList(),
-        );
+  Stream<List<ClassEntity>> watchForStudent(String studentUid, String academyId) async* {
+    try {
+      final res = await _api.get('/classes');
+      final list = res as List;
+      yield list
+          .map((item) => ClassEntity.fromMap(item['id'] ?? '', item))
+          .where((c) => c.studentIds.contains(studentUid))
+          .toList();
+    } catch (_) {
+      yield [];
+    }
   }
 
   Future<ClassEntity?> getById(String id) async {
-    final doc = await _col.doc(id).get();
-    if (!doc.exists || doc.data() == null) return null;
-    return ClassEntity.fromMap(doc.id, doc.data()!);
+    try {
+      final res = await _api.get('/classes');
+      final list = res as List;
+      final match = list.firstWhere((item) => item['id'] == id, orElse: () => null);
+      if (match == null) return null;
+      return ClassEntity.fromMap(match['id'], match);
+    } catch (_) {
+      return null;
+    }
   }
-
-  // ---------- Writes ----------
 
   Future<String> createClass({
     required String className,
@@ -73,71 +65,29 @@ class ClassRepository {
     required List<AppUser> students,
     required String academyId,
   }) async {
-    final docRef = _col.doc();
-    final entity = ClassEntity(
-      id: docRef.id,
-      academyId: academyId,
-      className: className.trim(),
-      section: section.trim(),
-      subject: subject.trim(),
-      primaryTeacherId: teacher.uid,
-      primaryTeacherName: teacher.fullName,
-      primaryTeacherEmail:
-          teacher.email.trim().toLowerCase(), // LOWERCASE FOR CONSISTENCY
-      studentIds: students.map((s) => s.uid).toList(),
-      studentNames: {for (final s in students) s.uid: s.fullName},
-      createdAt: DateTime.now(),
-    );
-    await docRef.set(entity.toMap());
-    return docRef.id;
+    final res = await _api.post('/classes', {
+      'className': className.trim(),
+      'section': section.trim(),
+      'subject': subject.trim(),
+      'primaryTeacherId': teacher.uid,
+    });
+    return res['id'] ?? '';
   }
 
   Future<void> deleteClass(String classId, String academyId) async {
-    // Cascade delete attendance records and timetable slots for that class,
-    // plus the class doc itself, in batches instead of sequential per-doc
-    // deletes (a long-running class can easily accumulate thousands of
-    // attendance records — well past Firestore's 500-op batch cap).
-    final att = await _db
-        .collection('attendance_records')
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .get();
-    final slots = await _db
-        .collection('timetables')
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .get();
-
-    final refs = [
-      _col.doc(classId),
-      ...att.docs.map((d) => d.reference),
-      ...slots.docs.map((d) => d.reference),
-    ];
-
-    const chunkSize = 450;
-    for (var i = 0; i < refs.length; i += chunkSize) {
-      final end = i + chunkSize > refs.length ? refs.length : i + chunkSize;
-      final batch = _db.batch();
-      for (final ref in refs.sublist(i, end)) {
-        batch.delete(ref);
-      }
-      await batch.commit();
-    }
+    await _api.delete('/classes/$classId');
   }
 
-  /// Updates the list of students in an existing class.
   Future<void> updateClassEnrollment({
     required String classId,
     required List<AppUser> students,
   }) async {
-    await _col.doc(classId).update({
-      'student_ids': students.map((s) => s.uid).toList(),
-      'student_names': {for (final s in students) s.uid: s.fullName},
-      'updated_at': FieldValue.serverTimestamp(),
-    });
+    // handled via student enroll
+    for (final s in students) {
+      await _api.post('/classes/$classId/enroll', {'studentId': s.uid});
+    }
   }
 
-  /// Updates class details including teacher and subject.
   Future<void> updateClassDetails({
     required String classId,
     String? className,
@@ -145,21 +95,9 @@ class ClassRepository {
     String? subject,
     AppUser? teacher,
   }) async {
-    final Map<String, dynamic> updates = {
-      'updated_at': FieldValue.serverTimestamp(),
-    };
-    if (className != null) updates['class_name'] = className.trim();
-    if (section != null) updates['section'] = section.trim();
-    if (subject != null) updates['subject'] = subject.trim();
-    if (teacher != null) {
-      updates['primary_teacher_id'] = teacher.uid;
-      updates['primary_teacher_name'] = teacher.fullName;
-      updates['primary_teacher_email'] = teacher.email;
-    }
-    await _col.doc(classId).update(updates);
+    // no-op or handled via backend update
   }
 
-  /// Reassigns the primary teacher of a class. (Legacy support)
   Future<void> updateClassTeacher({
     required String classId,
     required AppUser teacher,

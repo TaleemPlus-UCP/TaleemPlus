@@ -111,4 +111,48 @@ class AppUser {
       extraInfo: map['extra_info'] as String?,
     );
   }
+
+  AppUser copyWith({
+    String? uid,
+    String? fullName,
+    String? email,
+    String? phoneNumber,
+    UserRole? role,
+    String? accountStatus,
+    String? academyName,
+    String? academyId,
+    String? academyAddress,
+    String? academyPhone,
+    String? academyLogo,
+    String? academyCode,
+    DateTime? createdAt,
+    DateTime? joiningDate,
+    List<String>? assignedSections,
+    List<String>? linkedChildren,
+    String? rollNumber,
+    String? subject,
+    String? extraInfo,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      role: role ?? this.role,
+      accountStatus: accountStatus ?? this.accountStatus,
+      academyName: academyName ?? this.academyName,
+      academyId: academyId ?? this.academyId,
+      academyAddress: academyAddress ?? this.academyAddress,
+      academyPhone: academyPhone ?? this.academyPhone,
+      academyLogo: academyLogo ?? this.academyLogo,
+      academyCode: academyCode ?? this.academyCode,
+      createdAt: createdAt ?? this.createdAt,
+      joiningDate: joiningDate ?? this.joiningDate,
+      assignedSections: assignedSections ?? this.assignedSections,
+      linkedChildren: linkedChildren ?? this.linkedChildren,
+      rollNumber: rollNumber ?? this.rollNumber,
+      subject: subject ?? this.subject,
+      extraInfo: extraInfo ?? this.extraInfo,
+    );
+  }
 }

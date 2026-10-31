@@ -115,13 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
     // Accounts that never set a recovery question (e.g. created before
     // this feature, or by an admin who skipped it) fall back to the plain
     // emailed reset link so they aren't locked out of recovery entirely.
-    final question = await AuthService().getSecurityQuestion(email);
+    final questionMap = await AuthService().getSecurityQuestion(email);
     if (!mounted) return;
-    if (question == null) {
+    if (questionMap == null || questionMap.isEmpty) {
       await _sendResetEmail(email);
       return;
     }
-    await _showSecurityAnswerDialog(email, question);
+    final questionStr = questionMap['question'] ?? questionMap.values.first;
+    await _showSecurityAnswerDialog(email, questionStr);
   }
 
   Future<void> _sendResetEmail(String email) async {

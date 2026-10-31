@@ -67,7 +67,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     setState(() => _processingIds.add(u.uid));
     try {
       // 1. Update status in Firebase to 'active' and tie to THIS admin's academy
-      await _authService.approveUser(u.uid, admin.uid);
+      await _authService.approveUser(u.uid);
 
       // 2. Notify the user
       await NotificationService().send(

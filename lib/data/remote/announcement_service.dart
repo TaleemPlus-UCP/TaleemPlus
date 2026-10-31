@@ -69,7 +69,7 @@ class AnnouncementService {
 
       final recipientIds = <String>{};
       for (final role in roles) {
-        final users = await _authService.getApprovedByRole(role, academyId);
+        final users = await _authService.getApprovedByRole(academyId, role);
         recipientIds
             .addAll(users.map((u) => u.uid).where((uid) => uid != excludeUid));
       }

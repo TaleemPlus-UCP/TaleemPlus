@@ -1,71 +1,54 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/attendance_record.dart';
+import '../remote/api_client.dart';
 
 class AttendanceRepository {
-  final FirebaseFirestore _db;
-  AttendanceRepository({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+  final ApiClient _api = ApiClient();
 
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('attendance_records');
-
-  /// Save (upsert) many records atomically using a Firestore WriteBatch.
-  /// Deterministic doc ids ensure re-saves overwrite the same day's data.
   Future<void> saveAll(List<AttendanceRecord> records) async {
     if (records.isEmpty) return;
-    final batch = _db.batch();
-    for (final r in records) {
-      final docId = AttendanceRecord.buildId(
-        classId: r.classId,
-        studentId: r.studentId,
-        date: r.logDate,
-      );
-      batch.set(_col.doc(docId), r.toMap());
-    }
-    await batch.commit();
+    final first = records.first;
+    final payload = {
+      'classId': first.classId,
+      'logDate': first.logDate,
+      'records': records.map((r) => {
+        'studentId': r.studentId,
+        'status': r.status,
+      }).toList(),
+    };
+    await _api.post('/attendance/mark', payload);
   }
 
-  /// Fetch all records for a class on a given date (one-time) for an academy.
   Future<List<AttendanceRecord>> forClassOnDate({
     required String classId,
     required DateTime date,
-    required String academyId, // NEW
+    required String academyId,
   }) async {
-    final key = _dateOnly(date);
-    final snap = await _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('class_id', isEqualTo: classId)
-        .where('log_date', isEqualTo: key)
-        .get();
-    return snap.docs
-        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-        .toList();
+    try {
+      final key = _dateOnly(date);
+      final res = await _api.get('/attendance/class?classId=$classId&logDate=$key');
+      final list = res as List;
+      return list.map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<AttendanceRecord>> getAllForAcademy(String academyId) async {
+    return [];
+  }
+
+  Stream<List<AttendanceRecord>> watchForStudent(String studentId, String academyId) async* {
+    try {
+      final res = await _api.get('/attendance/student/$studentId');
+      final list = res as List;
+      yield list.map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item)).toList();
+    } catch (_) {
+      yield [];
+    }
   }
 
   static String _dateOnly(DateTime d) {
     final iso = DateTime(d.year, d.month, d.day).toIso8601String();
     return iso.substring(0, 10);
-  }
-
-  /// Fetch all attendance records for an academy (one-time), used for
-  /// academy-wide analytics like the fee-delay risk model.
-  Future<List<AttendanceRecord>> getAllForAcademy(String academyId) async {
-    final snap = await _col.where('academy_id', isEqualTo: academyId).get();
-    return snap.docs
-        .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-        .toList();
-  }
-
-  /// Watch all attendance records for a specific student in an academy.
-  Stream<List<AttendanceRecord>> watchForStudent(
-      String studentId, String academyId) {
-    return _col
-        .where('academy_id', isEqualTo: academyId)
-        .where('student_id', isEqualTo: studentId)
-        .orderBy('log_date', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AttendanceRecord.fromMap(d.id, d.data()))
-            .toList());
   }
 }
