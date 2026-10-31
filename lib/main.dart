@@ -97,29 +97,36 @@ class TaleemPlusApp extends StatelessWidget {
             context.read<SessionProvider>().resetTimer(context, auth);
         return Listener(
           onPointerDown: resetTimer,
+          onPointerMove: resetTimer,
           onPointerSignal: resetTimer,
-          child: MaterialApp(
-            navigatorKey: rootNavigatorKey,
-            navigatorObservers: [_activityNavigatorObserver],
-            title: 'Taleem Plus',
-            debugShowCheckedModeBanner: false,
-            // Web gets the SaaS-redesign theme (Inter font, softer surfaces,
-            // smoother transitions); mobile keeps the original theme
-            // untouched — `kIsWeb` is a compile-time constant, so mobile
-            // builds never even include the `AppWebTheme` branch.
-            theme: kIsWeb ? AppWebTheme.light : AppTheme.light,
-            darkTheme: kIsWeb ? AppWebTheme.dark : AppTheme.dark,
-            themeMode: theme.themeMode,
-            initialRoute: AppRoutes.splash,
-            routes: {
-              AppRoutes.splash: (_) => const SplashScreen(),
-              AppRoutes.login: (_) => const LoginScreen(),
-              AppRoutes.signup: (_) => const SignupScreen(),
-              AppRoutes.adminDashboard: (_) => const AdminDashboard(),
-              AppRoutes.teacherDashboard: (_) => const TeacherDashboard(),
-              AppRoutes.studentDashboard: (_) => const StudentDashboard(),
-              AppRoutes.parentDashboard: (_) => const ParentDashboard(),
+          child: Focus(
+            onKeyEvent: (node, event) {
+              resetTimer();
+              return KeyEventResult.ignored;
             },
+            child: MaterialApp(
+              navigatorKey: rootNavigatorKey,
+              navigatorObservers: [_activityNavigatorObserver],
+              title: 'Taleem Plus',
+              debugShowCheckedModeBanner: false,
+              // Web gets the SaaS-redesign theme (Inter font, softer surfaces,
+              // smoother transitions); mobile keeps the original theme
+              // untouched — `kIsWeb` is a compile-time constant, so mobile
+              // builds never even include the `AppWebTheme` branch.
+              theme: kIsWeb ? AppWebTheme.light : AppTheme.light,
+              darkTheme: kIsWeb ? AppWebTheme.dark : AppTheme.dark,
+              themeMode: theme.themeMode,
+              initialRoute: AppRoutes.splash,
+              routes: {
+                AppRoutes.splash: (_) => const SplashScreen(),
+                AppRoutes.login: (_) => const LoginScreen(),
+                AppRoutes.signup: (_) => const SignupScreen(),
+                AppRoutes.adminDashboard: (_) => const AdminDashboard(),
+                AppRoutes.teacherDashboard: (_) => const TeacherDashboard(),
+                AppRoutes.studentDashboard: (_) => const StudentDashboard(),
+                AppRoutes.parentDashboard: (_) => const ParentDashboard(),
+              },
+            ),
           ),
         );
       },

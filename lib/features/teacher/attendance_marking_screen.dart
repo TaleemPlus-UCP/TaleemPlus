@@ -263,6 +263,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
               _summaryPill('Absent', ap.absentCount, AppColors.danger),
               const SizedBox(width: 8),
               _summaryPill('Late', ap.lateCount, AppColors.warning),
+              const SizedBox(width: 8),
+              _summaryPill('Leave', ap.leaveCount, AppColors.accent),
             ],
           ),
           const SizedBox(height: 10),
@@ -338,6 +340,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
           _statusBtn('A', 'absent', AppColors.danger, status, id),
           const SizedBox(width: 4),
           _statusBtn('L', 'late', AppColors.warning, status, id),
+          const SizedBox(width: 4),
+          _statusBtn('E', 'leave', AppColors.accent, status, id),
         ],
       ),
     );

@@ -1000,8 +1000,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   final _rollNumberCtrl = TextEditingController();
   final _qualificationCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
-  final _passwordCtrl =
-      TextEditingController(text: "123456"); // Default password
+  final _passwordCtrl = TextEditingController();
   DateTime? _joiningDate = DateTime.now();
 
   // Teacher: real class+section assignment.

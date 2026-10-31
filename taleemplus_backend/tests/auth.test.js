@@ -18,4 +18,28 @@ describe('TaleemPlus Backend Health & Auth API Suite', () => {
     const res = await request(app).get('/api/v1/auth/me');
     expect(res.statusCode).toEqual(401);
   });
+
+  it('keeps ML status, prediction, and training routes behind backend authentication', async () => {
+    const status = await request(app).get('/api/v2/admin/ml/status');
+    const prediction = await request(app).post('/api/v2/admin/ml/predict/fee-risk').send({});
+    const training = await request(app).post('/api/v2/admin/ml/retrain').send({});
+    expect(status.statusCode).toBe(401);
+    expect(prediction.statusCode).toBe(401);
+    expect(training.statusCode).toBe(401);
+  });
+
+  it('protects password changes, academy profile, and payment management endpoints', async () => {
+    const paths = [
+      ['post', '/api/v2/auth/verify-password'],
+      ['put', '/api/v2/auth/password'],
+      ['put', '/api/v2/auth/academy'],
+      ['get', '/api/v2/fees/payment-settings'],
+      ['put', '/api/v2/fees/payment-settings'],
+      ['get', '/api/v2/fees/payment-proofs/pending'],
+    ];
+    for (const [method, path] of paths) {
+      const response = await request(app)[method](path).send({});
+      expect(response.statusCode).toBe(401);
+    }
+  });
 });

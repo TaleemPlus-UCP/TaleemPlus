@@ -22,8 +22,11 @@ class AuthService {
   AppUser? _currentUser;
   AppUser? get currentUser => _currentUser;
 
-  // Firebase Auth compatibility getter
+  // Retained for older screens; session restore uses the backend token.
   dynamic get firebaseUser => null;
+
+  Future<bool> hasStoredSession() async =>
+      (await _api.getAccessToken())?.isNotEmpty ?? false;
 
   Future<AppUser> signUp({
     required String fullName,
@@ -41,14 +44,17 @@ class AuthService {
   }) async {
     try {
       if (role == UserRole.admin) {
-        final res = await _api.post('/auth/register-admin', {
-          'email': email.trim(),
-          'password': password,
-          'fullName': fullName.trim(),
-          'academyName': academyName ?? 'TaleemPlus Academy',
-          'academyAddress': academyAddress ?? '',
-          'academyPhone': academyPhone ?? phoneNumber,
-        }, withAuth: false);
+        final res = await _api.post(
+            '/auth/register-admin',
+            {
+              'email': email.trim(),
+              'password': password,
+              'fullName': fullName.trim(),
+              'academyName': academyName ?? 'TaleemPlus Academy',
+              'academyAddress': academyAddress ?? '',
+              'academyPhone': academyPhone ?? phoneNumber,
+            },
+            withAuth: false);
 
         final userData = res['user'];
         final tokens = res['tokens'];
@@ -58,14 +64,17 @@ class AuthService {
         _currentUser = _mapApiUser(userData);
         return _currentUser!;
       } else {
-        final res = await _api.post('/auth/register-user', {
-          'email': email.trim(),
-          'password': password,
-          'fullName': fullName.trim(),
-          'role': role.name,
-          'academyCode': academyCode ?? '',
-          'phoneNumber': phoneNumber.trim(),
-        }, withAuth: false);
+        final res = await _api.post(
+            '/auth/register-user',
+            {
+              'email': email.trim(),
+              'password': password,
+              'fullName': fullName.trim(),
+              'role': role.name,
+              'academyCode': academyCode ?? academyId ?? '',
+              'phoneNumber': phoneNumber.trim(),
+            },
+            withAuth: false);
 
         final userData = res['user'];
         return _mapApiUser(userData);
@@ -77,10 +86,13 @@ class AuthService {
 
   Future<AppUser> signIn(String email, String password) async {
     try {
-      final res = await _api.post('/auth/login', {
-        'email': email.trim(),
-        'password': password,
-      }, withAuth: false);
+      final res = await _api.post(
+          '/auth/login',
+          {
+            'email': email.trim(),
+            'password': password,
+          },
+          withAuth: false);
 
       final userData = res['user'];
       final tokens = res['tokens'];
@@ -106,7 +118,9 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await _api.post('/auth/logout', {});
+      final refresh = await _api.getStoredRefreshToken();
+      await _api.post('/auth/logout', {'refreshToken': refresh},
+          withAuth: false);
     } catch (_) {}
     await _api.clearTokens();
     _currentUser = null;
@@ -136,7 +150,9 @@ class AuthService {
       if (arg1 is UserRole) {
         role = arg1;
       } else {
-        role = arg2 is UserRole ? arg2 : UserRoleX.fromValue((arg2 ?? '').toString().toLowerCase());
+        role = arg2 is UserRole
+            ? arg2
+            : UserRoleX.fromValue((arg2 ?? '').toString().toLowerCase());
       }
       final res = await _api.get('/users/by-role?role=${role.name}');
       final list = res as List;
@@ -150,7 +166,8 @@ class AuthService {
     return getUsersByRole(arg1, arg2);
   }
 
-  Future<void> linkChild({required String parentId, required String studentId}) async {
+  Future<void> linkChild(
+      {required String parentId, required String studentId}) async {
     await _api.post('/users/link-child', {
       'parentId': parentId,
       'studentId': studentId,
@@ -181,15 +198,50 @@ class AuthService {
     String? address,
     String? phone,
     String? uid,
-  }) async {}
-
-  Future<void> directUpdatePassword(String newPassword) async {}
-
-  Future<bool> verifyPassword(String password) async {
-    return true;
+  }) async {
+    final data = <String, dynamic>{};
+    if (name != null || academyName != null) {
+      data['name'] = name ?? academyName;
+    }
+    if (address != null || academyAddress != null) {
+      data['address'] = address ?? academyAddress;
+    }
+    if (phone != null || academyPhone != null) {
+      data['phone'] = phone ?? academyPhone;
+    }
+    if (academyLogo != null) data['logo'] = academyLogo;
+    if (data.isEmpty) return;
+    final response = await _api.put('/auth/academy', data);
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(
+        academyName: response['academyName'] as String?,
+        academyAddress: response['academyAddress'] as String?,
+        academyPhone: response['academyPhone'] as String?,
+        academyLogo: response['academyLogo'] as String?,
+      );
+    }
   }
 
-  Future<bool> isRollNumberTaken(String academyId, String rollNumber, {String? excludeUid}) async {
+  Future<void> directUpdatePassword(String newPassword,
+      {required String currentPassword}) async {
+    await _api.put('/auth/password', {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
+
+  Future<bool> verifyPassword(String password) async {
+    try {
+      final result =
+          await _api.post('/auth/verify-password', {'password': password});
+      return result is Map && result['valid'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> isRollNumberTaken(String academyId, String rollNumber,
+      {String? excludeUid}) async {
     return false;
   }
 
@@ -248,17 +300,18 @@ class AuthService {
     if (_currentUser != null) {
       _currentUser = _currentUser!.copyWith(academyId: newAcademyCode);
     }
-    return _currentUser ?? AppUser(
-      uid: userId,
-      fullName: 'User',
-      email: '',
-      phoneNumber: '',
-      role: UserRole.student,
-      accountStatus: 'active',
-      academyId: newAcademyCode,
-      createdAt: DateTime.now(),
-      joiningDate: DateTime.now(),
-    );
+    return _currentUser ??
+        AppUser(
+          uid: userId,
+          fullName: 'User',
+          email: '',
+          phoneNumber: '',
+          role: UserRole.student,
+          accountStatus: 'active',
+          academyId: newAcademyCode,
+          createdAt: DateTime.now(),
+          joiningDate: DateTime.now(),
+        );
   }
 
   Stream<AppUser?> watchProfile(String uid) async* {
@@ -276,7 +329,8 @@ class AuthService {
     required String answer,
   }) async {}
 
-  Future<List<AppUser>> searchStudentsByName(String academyId, String query, {String? excludeUid}) async {
+  Future<List<AppUser>> searchStudentsByName(String academyId, String query,
+      {String? excludeUid}) async {
     return [];
   }
 
@@ -287,15 +341,31 @@ class AuthService {
       email: json['email'] ?? '',
       phoneNumber: json['phoneNumber'] ?? json['phone_number'] ?? '',
       role: UserRole.values.firstWhere(
-        (e) => e.name.toLowerCase() == (json['role'] ?? 'student').toString().toLowerCase(),
+        (e) =>
+            e.name.toLowerCase() ==
+            (json['role'] ?? 'student').toString().toLowerCase(),
         orElse: () => UserRole.student,
       ),
-      accountStatus: (json['accountStatus'] ?? json['account_status'] ?? 'pending').toString().toLowerCase(),
+      accountStatus:
+          (json['accountStatus'] ?? json['account_status'] ?? 'pending')
+              .toString()
+              .toLowerCase(),
       academyId: json['academyId'] ?? json['academy_id'] ?? '',
       academyName: json['academyName'] ?? json['academy_name'],
+      academyAddress: json['academyAddress'] ?? json['academy_address'],
+      academyPhone: json['academyPhone'] ?? json['academy_phone'],
+      academyLogo: json['academyLogo'] ?? json['academy_logo'],
       academyCode: json['academyCode'] ?? json['academy_code'],
-      assignedSections: (json['assignedSections'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      linkedChildren: (json['linkedChildren'] as List?)?.map((e) => (e is Map ? e['id'] : e).toString()).toList() ?? [],
+      assignedSections: (json['assignedSections'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      linkedChildren: (json['linkedChildren'] as List?)
+              ?.map((e) => (e is Map ? e['id'] : e).toString())
+              .toList() ??
+          [],
+      studentCode:
+          (json['studentCode'] ?? json['student_code'] ?? '').toString(),
     );
   }
 }

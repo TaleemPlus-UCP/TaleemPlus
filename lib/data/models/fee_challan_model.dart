@@ -4,7 +4,9 @@ class FeeChallanModel {
   final String id;
   final String academyId; // NEW
   final String challanNumber;
+  final String billingPeriod;
   final String studentId;
+  final String studentCode;
   final String studentName;
   final String fatherName;
   final String classLabel;
@@ -24,7 +26,9 @@ class FeeChallanModel {
     required this.id,
     required this.academyId, // NEW
     required this.challanNumber,
+    this.billingPeriod = '',
     required this.studentId,
+    this.studentCode = '',
     required this.studentName,
     required this.fatherName,
     required this.classLabel,
@@ -51,7 +55,9 @@ class FeeChallanModel {
     return {
       'academy_id': academyId,
       'challan_number': challanNumber,
+      'billing_period': billingPeriod,
       'student_id': studentId,
+      'student_code': studentCode,
       'student_name': studentName,
       'father_name': fatherName,
       'class_label': classLabel,
@@ -75,7 +81,9 @@ class FeeChallanModel {
       id: id,
       academyId: (map['academy_id'] ?? '') as String,
       challanNumber: map['challan_number'] ?? '',
+      billingPeriod: map['billing_period'] ?? '',
       studentId: map['student_id'] ?? '',
+      studentCode: map['student_code'] ?? '',
       studentName: map['student_name'] ?? '',
       fatherName: map['father_name'] ?? '',
       classLabel: map['class_label'] ?? '',

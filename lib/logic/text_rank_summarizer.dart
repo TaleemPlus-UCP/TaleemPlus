@@ -19,20 +19,32 @@ class TextRankSummarizer {
     'its', 'their', 'his', 'her', 'they', 'them', 'which', 'who', 'whom',
     'also', 'can', 'may', 'not', 'from', 'such', 'than', 'then', 'so', 'if',
     'when', 'while', 'has', 'have', 'had', 'will', 'we', 'you', 'your', //
+    'یہ', 'وہ', 'ایک', 'ہے', 'ہیں', 'کا', 'کی', 'کے', 'سے', 'کو', 'اور',
   };
 
   static List<String> _splitSentences(String text) {
-    final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Join OCR hyphenation, treat visual line breaks as spaces, and collapse
+    // repeated whitespace before sentence segmentation.
+    final normalized = text
+        .replaceAllMapped(RegExp(r'([A-Za-z])-\s*\n\s*([A-Za-z])'),
+            (match) => '${match[1]}${match[2]}')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final seen = <String>{};
     return normalized
-        .split(RegExp(r'(?<=[.?!])\s+'))
+        .split(RegExp(r'(?<=[.?!\u06d4\u061f])\s+'))
         .map((s) => s.trim())
-        .where((s) => s.length > 15)
-        .toList();
+        .where((s) {
+      if (s.length < 15 || _wordSet(s).length < 3) return false;
+      final canonical = _canonical(s);
+      return canonical.isNotEmpty && seen.add(canonical);
+    }).toList();
   }
 
   /// Returns the top [maxSentences] sentences from [text], in their
   /// original order (so the summary still reads coherently).
   static List<String> summarize(String text, {int maxSentences = 5}) {
+    if (maxSentences <= 0) return const [];
     final sentences = _splitSentences(text);
     if (sentences.length <= maxSentences) return sentences;
 
@@ -96,11 +108,22 @@ class TextRankSummarizer {
       ..sort((a, b) => scores[b].compareTo(scores[a]));
   }
 
-  static Set<String> _wordSet(String sentence) => sentence
+  static Set<String> _wordSet(String sentence) => _normalizeArabic(sentence)
       .toLowerCase()
-      .split(RegExp(r'[^a-z0-9]+'))
-      .where((w) => w.length > 2 && !_stopWords.contains(w))
+      .split(RegExp(r'[^a-z0-9\u0600-\u06ff]+'))
+      .where((w) => w.length > 1 && !_stopWords.contains(w))
       .toSet();
+
+  static String _canonical(String sentence) => _normalizeArabic(sentence)
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9\u0600-\u06ff]+'), ' ')
+      .trim();
+
+  static String _normalizeArabic(String text) => text
+      .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+      .replaceAll('ي', 'ی')
+      .replaceAll('ك', 'ک')
+      .replaceAll('ة', 'ه');
 
   static double _log(int x) => x <= 1 ? 0 : log(x);
 }

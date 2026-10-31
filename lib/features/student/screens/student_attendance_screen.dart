@@ -12,6 +12,7 @@ import '../../../widgets/web/web_nav_items.dart';
 import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/attendance_record.dart';
 import '../../../data/models/class_entity.dart';
+import '../../../data/remote/academic_report_pdf_service.dart';
 
 class StudentAttendanceScreen extends StatelessWidget {
   final String studentUid;
@@ -116,6 +117,35 @@ class StudentAttendanceScreen extends StatelessWidget {
                   return Column(
                     children: [
                       _buildStatsHeader(records),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            onPressed: records.isEmpty || user == null
+                                ? null
+                                : () async {
+                                    try {
+                                      await AcademicReportPdfService.attendance(
+                                        student: user,
+                                        records: records,
+                                        classes: courses,
+                                      );
+                                    } catch (error) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: Text(
+                                              'Could not create report: $error'),
+                                        ));
+                                      }
+                                    }
+                                  },
+                            icon: const Icon(Icons.picture_as_pdf_rounded),
+                            label: const Text('Print attendance report'),
+                          ),
+                        ),
+                      ),
                       Expanded(
                         child: _buildDateGroupedView(courses, records),
                       ),
@@ -131,6 +161,8 @@ class StudentAttendanceScreen extends StatelessWidget {
     final total = records.length;
     final present = records.where((r) => r.status == 'present').length;
     final late = records.where((r) => r.status == 'late').length;
+    final absent = records.where((r) => r.status == 'absent').length;
+    final leave = records.where((r) => r.status == 'leave').length;
     final percentage = total == 0 ? 0 : ((present + late) / total) * 100;
 
     return Container(
@@ -147,7 +179,8 @@ class StudentAttendanceScreen extends StatelessWidget {
           _statItem(
               "Overall", "${percentage.toStringAsFixed(1)}%", AppColors.accent),
           _statItem("Present", "$present", AppColors.success),
-          _statItem("Absent", "${total - present - late}", AppColors.danger),
+          _statItem("Absent", "$absent", AppColors.danger),
+          _statItem("Leave", "$leave", AppColors.accent),
         ],
       ),
     );
@@ -256,6 +289,10 @@ class StudentAttendanceScreen extends StatelessWidget {
       case 'late':
         statusColor = AppColors.warning;
         icon = Icons.access_time_filled_rounded;
+        break;
+      case 'leave':
+        statusColor = AppColors.accent;
+        icon = Icons.event_busy_rounded;
         break;
       default:
         statusColor = AppColors.danger;

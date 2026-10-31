@@ -6,15 +6,14 @@ import '../core/constants/app_constants.dart';
 import 'auth_provider.dart';
 
 class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
-  static const int _timeoutSeconds = 150; // 2 minutes 30 seconds
+  static const int _timeoutSeconds = 300;
   static const String _biometricKey = 'biometric_enabled';
-  static const String _savedPassKey = 'saved_pass_v1';
 
-  static const int _backgroundGraceSeconds = 15;
+  DateTime? _backgroundedAt;
+  DateTime? _lastActivityAt;
 
   final LocalAuthentication _localAuth = LocalAuthentication();
   Timer? _timer;
-  Timer? _backgroundGraceTimer;
   bool _isLocked = false;
   bool _biometricEnabled = false;
   AuthProvider? _auth;
@@ -37,7 +36,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _backgroundGraceTimer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -50,11 +49,15 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// Always pair with [resumeBackgroundLogoutTracking] in a `finally` block.
   void suppressBackgroundLogout() {
     _suppressCount++;
-    _backgroundGraceTimer?.cancel();
+    _timer?.cancel();
   }
 
   void resumeBackgroundLogoutTracking() {
     if (_suppressCount > 0) _suppressCount--;
+    if (_suppressCount == 0 && _auth?.isAuthenticated == true) {
+      _lastActivityAt = DateTime.now();
+      _startTimer(_timeoutSeconds);
+    }
   }
 
   @override
@@ -62,27 +65,28 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       if (_suppressCount > 0) return;
-      // Auto-logout when app goes to background as requested, but only
-      // after a grace period — `paused` also fires for in-app system
-      // overlays (camera picker, share sheet, biometric prompt), which
-      // should not sign the user out.
-      _backgroundGraceTimer?.cancel();
-      _backgroundGraceTimer = Timer(
-        const Duration(seconds: _backgroundGraceSeconds),
-        () {
-          if (_auth != null && _auth!.isAuthenticated) {
-            _forceSignOut(
-                'You were signed out because the app was in the background.');
-          }
-        },
-      );
+      _backgroundedAt ??= DateTime.now();
+      _timer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      _backgroundGraceTimer?.cancel();
+      final backgroundedAt = _backgroundedAt;
+      _backgroundedAt = null;
+      if (_auth?.isAuthenticated == true) {
+        final lastActivityAt = _lastActivityAt ?? backgroundedAt;
+        final elapsed = lastActivityAt == null
+            ? 0
+            : DateTime.now().difference(lastActivityAt).inSeconds;
+        if (elapsed >= _timeoutSeconds) {
+          _handleTimeout();
+        } else {
+          _startTimer(_timeoutSeconds - elapsed);
+        }
+      }
     }
   }
 
   Future<void> _loadBiometricPref() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_pass_v1');
     _biometricEnabled = prefs.getBool(_biometricKey) ?? false;
     notifyListeners();
   }
@@ -92,28 +96,31 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, value);
 
-    if (value && password != null) {
-      await prefs.setString(_savedPassKey, password);
-    } else if (!value) {
-      await prefs.remove(_savedPassKey);
-    }
+    // Older releases stored account passwords in plain SharedPreferences.
+    // Remove that legacy value and rely on the backend refresh token instead.
+    await prefs.remove('saved_pass_v1');
 
     notifyListeners();
   }
 
   Future<String?> getSavedPassword() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_savedPassKey);
+    return null;
   }
 
   void resetTimer(BuildContext context, AuthProvider auth) {
     _auth = auth;
-    _timer?.cancel();
+    if (auth.isAuthenticated) _lastActivityAt = DateTime.now();
+    if (_backgroundedAt != null) return;
     if (auth.isAuthenticated) {
-      _timer = Timer(const Duration(seconds: _timeoutSeconds), () {
-        _handleTimeout();
-      });
+      _startTimer(_timeoutSeconds);
+    } else {
+      _timer?.cancel();
     }
+  }
+
+  void _startTimer(int seconds) {
+    _timer?.cancel();
+    _timer = Timer(Duration(seconds: seconds), _handleTimeout);
   }
 
   void _handleTimeout() {

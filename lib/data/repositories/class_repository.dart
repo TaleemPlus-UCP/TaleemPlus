@@ -11,7 +11,9 @@ class ClassRepository {
     try {
       final res = await _api.get('/classes');
       final list = res as List;
-      final classes = list.map((item) => ClassEntity.fromMap(item['id'] ?? '', item)).toList();
+      final classes = list
+          .map((item) => ClassEntity.fromMap(item['id'] ?? '', item))
+          .toList();
       classes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       yield classes;
     } catch (_) {
@@ -19,7 +21,8 @@ class ClassRepository {
     }
   }
 
-  Stream<List<ClassEntity>> watchForTeacher(String teacherUid, String academyId) async* {
+  Stream<List<ClassEntity>> watchForTeacher(
+      String teacherUid, String academyId) async* {
     try {
       final res = await _api.get('/classes');
       final list = res as List;
@@ -32,7 +35,8 @@ class ClassRepository {
     }
   }
 
-  Stream<List<ClassEntity>> watchForStudent(String studentUid, String academyId) async* {
+  Stream<List<ClassEntity>> watchForStudent(
+      String studentUid, String academyId) async* {
     try {
       final res = await _api.get('/classes');
       final list = res as List;
@@ -49,7 +53,8 @@ class ClassRepository {
     try {
       final res = await _api.get('/classes');
       final list = res as List;
-      final match = list.firstWhere((item) => item['id'] == id, orElse: () => null);
+      final match =
+          list.firstWhere((item) => item['id'] == id, orElse: () => null);
       if (match == null) return null;
       return ClassEntity.fromMap(match['id'], match);
     } catch (_) {

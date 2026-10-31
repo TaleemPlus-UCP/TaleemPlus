@@ -36,6 +36,7 @@ import 'screens/unpaid_students_screen.dart';
 import 'screens/timetable_management_screen.dart';
 import 'screens/academic_structure_screen.dart';
 import 'screens/class_reports_screen.dart';
+import 'screens/academy_payment_settings_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -196,7 +197,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _showChangePasswordDialog(BuildContext context) {
     final passCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
+    final currentPasswordCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool showPassword = false;
+    bool showConfirmation = false;
 
     showDialog(
       context: context,
@@ -208,20 +212,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              LabeledField(
+                  label: "Current Password",
+                  hint: "Verify your current password",
+                  controller: currentPasswordCtrl,
+                  obscure: true),
+              const SizedBox(height: 12),
               const Text("Enter a new password for your account.",
                   style:
                       TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 20),
               LabeledField(
                   label: "New Password",
-                  hint: "Min 6 chars",
+                  hint: "At least 8 characters",
                   controller: passCtrl,
-                  obscure: true),
+                  obscure: !showPassword,
+                  suffix: IconButton(
+                    icon: Icon(
+                        showPassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () =>
+                        setState(() => showPassword = !showPassword),
+                  )),
               LabeledField(
                   label: "Confirm Password",
                   hint: "Re-enter",
                   controller: confirmCtrl,
-                  obscure: true),
+                  obscure: !showConfirmation,
+                  suffix: IconButton(
+                    icon: Icon(showConfirmation
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () =>
+                        setState(() => showConfirmation = !showConfirmation),
+                  )),
             ],
           ),
         ),
@@ -235,14 +258,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
-              if (passCtrl.text.length < 6) {
+              if (passCtrl.text.length < 8) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Minimum 6 characters required!")));
+                    content: Text("Minimum 8 characters required!")));
                 return;
               }
 
               try {
-                await AuthService().directUpdatePassword(passCtrl.text);
+                await AuthService().directUpdatePassword(passCtrl.text,
+                    currentPassword: currentPasswordCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                 }
@@ -332,12 +356,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _showAcademyInfoSettings(BuildContext context, AppUser? user) {
     if (user == null) return;
 
-    final nameCtrl =
-        TextEditingController(text: user.academyName ?? "SRS Tech Matrix");
-    final addressCtrl = TextEditingController(
-        text: user.academyAddress ?? "123 Education Lane, Lahore");
-    final phoneCtrl =
-        TextEditingController(text: user.academyPhone ?? "03014334151");
+    final nameCtrl = TextEditingController(text: user.academyName ?? "");
+    final addressCtrl = TextEditingController(text: user.academyAddress ?? "");
+    final phoneCtrl = TextEditingController(text: user.academyPhone ?? "");
 
     showModalBottomSheet(
       context: context,
@@ -393,16 +414,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
             PrimaryButton(
               label: "SAVE CHANGES",
               onPressed: () async {
-                await AuthService().updateAcademyProfile(
-                  uid: user.uid,
-                  name: nameCtrl.text,
-                  address: addressCtrl.text,
-                  phone: phoneCtrl.text,
-                );
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Info updated successfully!")));
+                try {
+                  final authProvider = context.read<AuthProvider>();
+                  await AuthService().updateAcademyProfile(
+                    uid: user.uid,
+                    name: nameCtrl.text,
+                    address: addressCtrl.text,
+                    phone: phoneCtrl.text,
+                  );
+                  await authProvider.tryRestoreSession();
+                  if (ctx.mounted && mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text("Info updated successfully!")));
+                  }
+                } catch (error) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text('Could not save profile: $error')));
+                  }
                 }
               },
             ),
@@ -627,6 +657,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const FeeLedgerScreen())),
+                  ),
+                  _gridTile(
+                    'Payment Settings',
+                    'Manage academy QR and account details',
+                    Icons.qr_code_2_rounded,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const AcademyPaymentSettingsScreen())),
                   ),
                   _gridTile(
                     'Bulk Fee Challans',
@@ -863,6 +903,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: Icons.receipt_long_rounded,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const FeeLedgerScreen())),
+              ),
+              WebNavTile(
+                title: 'Payment Settings',
+                subtitle: 'Manage academy QR and account details',
+                icon: Icons.qr_code_2_rounded,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AcademyPaymentSettingsScreen())),
               ),
               WebNavTile(
                 title: 'Bulk Fee Challans',

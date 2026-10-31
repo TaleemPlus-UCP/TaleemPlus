@@ -10,10 +10,12 @@ class AttendanceRepository {
     final payload = {
       'classId': first.classId,
       'logDate': first.logDate,
-      'records': records.map((r) => {
-        'studentId': r.studentId,
-        'status': r.status,
-      }).toList(),
+      'records': records
+          .map((r) => {
+                'studentId': r.studentId,
+                'status': r.status,
+              })
+          .toList(),
     };
     await _api.post('/attendance/mark', payload);
   }
@@ -25,9 +27,12 @@ class AttendanceRepository {
   }) async {
     try {
       final key = _dateOnly(date);
-      final res = await _api.get('/attendance/class?classId=$classId&logDate=$key');
+      final res =
+          await _api.get('/attendance/class?classId=$classId&logDate=$key');
       final list = res as List;
-      return list.map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item)).toList();
+      return list
+          .map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -37,11 +42,14 @@ class AttendanceRepository {
     return [];
   }
 
-  Stream<List<AttendanceRecord>> watchForStudent(String studentId, String academyId) async* {
+  Stream<List<AttendanceRecord>> watchForStudent(
+      String studentId, String academyId) async* {
     try {
       final res = await _api.get('/attendance/student/$studentId');
       final list = res as List;
-      yield list.map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item)).toList();
+      yield list
+          .map((item) => AttendanceRecord.fromMap(item['id'] ?? '', item))
+          .toList();
     } catch (_) {
       yield [];
     }

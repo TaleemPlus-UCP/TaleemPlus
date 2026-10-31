@@ -38,6 +38,31 @@ class Validators {
     if (v.length < AppRules.minPasswordLength) {
       return 'Password must be at least ${AppRules.minPasswordLength} characters';
     }
+    final normalized = v.toLowerCase();
+    const common = {
+      'password',
+      'password1',
+      'password123',
+      '12345678',
+      '123456789',
+      'qwerty123',
+      'admin123',
+      'letmein',
+      'welcome1',
+      'iloveyou',
+    };
+    if (common.contains(normalized) ||
+        RegExp(r'^(.)\1+$').hasMatch(normalized) ||
+        const ['12345678', 'abcdefgh', 'qwertyui'].contains(normalized)) {
+      return 'Choose a less common password';
+    }
+    return null;
+  }
+
+  /// Existing accounts are still allowed to authenticate with their original
+  /// password. The stronger policy applies when creating or changing one.
+  static String? passwordForLogin(String? value) {
+    if ((value ?? '').isEmpty) return 'Password is required';
     return null;
   }
 

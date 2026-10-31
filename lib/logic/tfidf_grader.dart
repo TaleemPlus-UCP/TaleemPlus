@@ -6,7 +6,9 @@ import 'dart:math' show log, sqrt;
 /// needed — the quiz's own question set (each question's keyword list
 /// treated as one document) supplies the corpus for IDF weighting, so
 /// keywords that are common across many questions in the same quiz count
-/// for less than keywords that are distinctive to one question.
+/// for less than keywords that are distinctive to one question. This is a
+/// deterministic lexical similarity score, not semantic understanding; it
+/// can miss paraphrases and must not replace teacher review.
 class TfIdfGrader {
   /// [corpusKeywordSets]: the gradingKeywords list from every gradable
   /// question in the quiz, used only to compute IDF weights.
@@ -15,7 +17,7 @@ class TfIdfGrader {
     required String answerText,
     required List<List<String>> corpusKeywordSets,
   }) {
-    final cleanKeywords = keywords.map((k) => k.toLowerCase().trim()).toSet();
+    final cleanKeywords = keywords.expand(_tokenize).toSet();
     if (cleanKeywords.isEmpty) return 0.0;
 
     final answerTermFreq = <String, int>{};
@@ -31,7 +33,7 @@ class TfIdfGrader {
 
     for (final kw in cleanKeywords) {
       final docFreq = corpusKeywordSets
-          .where((doc) => doc.map((k) => k.toLowerCase()).contains(kw))
+          .where((doc) => doc.expand(_tokenize).toSet().contains(kw))
           .length
           .clamp(1, n);
       // +1 keeps idf strictly positive even when the keyword appears in
@@ -55,8 +57,12 @@ class TfIdfGrader {
   }
 
   static List<String> _tokenize(String text) => text
+      .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+      .replaceAll('ي', 'ی')
+      .replaceAll('ك', 'ک')
+      .replaceAll('ة', 'ه')
       .toLowerCase()
-      .split(RegExp(r'[^a-z0-9]+'))
+      .split(RegExp(r'[^a-z0-9\u0600-\u06ff]+'))
       .where((w) => w.isNotEmpty)
       .toList();
 }

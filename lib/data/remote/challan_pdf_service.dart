@@ -1,25 +1,33 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fee_challan_model.dart';
 import '../models/app_user.dart';
+import 'payment_service.dart';
 
 class ChallanPdfService {
-  static Future<pw.Document> _buildDocument(FeeChallanModel challan) async {
-    // 1. Fetch Academy Details for Branding
-    final academyDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(challan.academyId)
-        .get();
-    AppUser? academy;
-    if (academyDoc.exists && academyDoc.data() != null) {
-      academy = AppUser.fromMap(academyDoc.id, academyDoc.data()!);
-    }
-
+  static Future<pw.Document> _buildDocument(
+      FeeChallanModel challan, AppUser? academy) async {
     final doc = pw.Document();
+    Map<String, dynamic> paymentSettings = const {};
+    try {
+      paymentSettings = await PaymentService().getSettings();
+    } catch (_) {
+      // The challan remains printable when payment settings are unavailable.
+    }
+    pw.ImageProvider? paymentQr;
+    if (paymentSettings['enabled'] == true &&
+        paymentSettings['qrImageBase64'] is String) {
+      try {
+        paymentQr = pw.MemoryImage(
+            base64Decode(paymentSettings['qrImageBase64'] as String));
+      } catch (_) {
+        paymentQr = null;
+      }
+    }
 
     // Load network image if logo exists
     pw.ImageProvider? logoImage;
@@ -32,31 +40,37 @@ class ChallanPdfService {
     }
 
     doc.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.fromLTRB(34, 34, 34, 42),
         build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(challan, academy, logoImage),
-              pw.SizedBox(height: 20),
-              _buildStudentInfo(challan),
-              pw.SizedBox(height: 20),
-              _buildFeeTable(challan),
-              pw.SizedBox(height: 20),
-              _buildFooter(challan, academy),
-            ],
-          );
+          return [
+            _buildHeader(challan, academy, logoImage),
+            pw.SizedBox(height: 16),
+            _buildStudentInfo(challan),
+            pw.SizedBox(height: 16),
+            _buildFeeTable(challan),
+            pw.SizedBox(height: 22),
+            _buildFooter(challan, academy, paymentSettings, paymentQr),
+            pw.SizedBox(height: 28),
+            _signatureBlock(),
+          ];
         },
+        footer: (context) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+        ),
       ),
     );
 
     return doc;
   }
 
-  static Future<void> generateAndPrint(FeeChallanModel challan) async {
+  static Future<void> generateAndPrint(FeeChallanModel challan,
+      {AppUser? academy}) async {
     try {
-      final doc = await _buildDocument(challan);
+      final doc = await _buildDocument(challan, academy);
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => doc.save(),
         name: 'Challan_${challan.challanNumber}',
@@ -67,9 +81,10 @@ class ChallanPdfService {
     }
   }
 
-  static Future<void> generateAndShare(FeeChallanModel challan) async {
+  static Future<void> generateAndShare(FeeChallanModel challan,
+      {AppUser? academy}) async {
     try {
-      final doc = await _buildDocument(challan);
+      final doc = await _buildDocument(challan, academy);
       final bytes = await doc.save();
       await Printing.sharePdf(
         bytes: bytes,
@@ -146,7 +161,11 @@ class ChallanPdfService {
               children: [
                 _infoRow("Student Name", challan.studentName),
                 _infoRow("Father Name", challan.fatherName),
-                _infoRow("Student ID", challan.studentId),
+                _infoRow(
+                    "Student ID",
+                    challan.studentCode.isEmpty
+                        ? challan.studentId
+                        : challan.studentCode),
               ],
             ),
           ),
@@ -241,34 +260,70 @@ class ChallanPdfService {
     );
   }
 
-  static pw.Widget _buildFooter(FeeChallanModel challan, AppUser? academy) {
+  static pw.Widget _buildFooter(FeeChallanModel challan, AppUser? academy,
+      Map<String, dynamic> paymentSettings, pw.ImageProvider? paymentQr) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text("PAYMENT INSTRUCTIONS:",
-                style: const pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, fontSize: 10)),
-            pw.Text(
-                "Account Title: ${academy?.academyName ?? 'Academy Management'}",
-                style: const pw.TextStyle(fontSize: 9)),
-            pw.Text("Account Number: ${academy?.academyPhone ?? 'N/A'}",
-                style: const pw.TextStyle(fontSize: 9)),
-            pw.Text("Please share the screenshot of payment on WhatsApp.",
-                style: const pw.TextStyle(fontSize: 9)),
-          ],
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("PAYMENT INSTRUCTIONS:",
+                  style: const pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 10)),
+              if (paymentSettings['enabled'] == true) ...[
+                if ((paymentSettings['provider'] ?? '').toString().isNotEmpty)
+                  pw.Text('Provider: ${paymentSettings['provider']}',
+                      style: const pw.TextStyle(fontSize: 9)),
+                if ((paymentSettings['accountTitle'] ?? '')
+                    .toString()
+                    .isNotEmpty)
+                  pw.Text('Account title: ${paymentSettings['accountTitle']}',
+                      style: const pw.TextStyle(fontSize: 9)),
+                if ((paymentSettings['accountDetails'] ?? '')
+                    .toString()
+                    .isNotEmpty)
+                  pw.Text(
+                      'Account details: ${paymentSettings['accountDetails']}',
+                      style: const pw.TextStyle(fontSize: 9)),
+                pw.Text(
+                    'Include challan ${challan.challanNumber} in payment reference.',
+                    style: const pw.TextStyle(fontSize: 9)),
+              ] else ...[
+                pw.Text(
+                    'Payment details: Contact ${academy?.academyName ?? 'your academy'}.',
+                    style: const pw.TextStyle(fontSize: 9)),
+                if ((academy?.academyPhone ?? '').isNotEmpty)
+                  pw.Text('Academy contact: ${academy!.academyPhone}',
+                      style: const pw.TextStyle(fontSize: 9)),
+              ],
+              pw.Text("Challan reference: ${challan.challanNumber}",
+                  style: const pw.TextStyle(fontSize: 9)),
+            ],
+          ),
         ),
-        pw.BarcodeWidget(
-          barcode: pw.Barcode.qrCode(),
-          data:
-              "Challan:${challan.challanNumber}|Student:${challan.studentId}|Amount:${challan.totalAmount}",
-          width: 60,
-          height: 60,
-        ),
+        if (paymentQr != null)
+          pw.Container(
+              width: 76,
+              height: 76,
+              margin: const pw.EdgeInsets.only(left: 12),
+              child: pw.Image(paymentQr)),
       ],
     );
   }
+
+  static pw.Widget _signatureBlock() => pw.Row(children: [
+        pw.Expanded(child: _signatureLine('Fee clerk')),
+        pw.SizedBox(width: 28),
+        pw.Expanded(child: _signatureLine('Authorized signature / stamp')),
+      ]);
+
+  static pw.Widget _signatureLine(String label) => pw.Column(children: [
+        pw.SizedBox(height: 22),
+        pw.Container(height: .7, color: PdfColors.grey700),
+        pw.SizedBox(height: 4),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
+      ]);
 }

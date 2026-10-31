@@ -1,4 +1,6 @@
 const bcrypt = require('bcryptjs');
+const { validatePassword } = require('../utils/passwordPolicy');
+const crypto = require('crypto');
 const prisma = require('../config/db');
 
 const getPendingUsers = async (req, res, next) => {
@@ -102,6 +104,7 @@ const getUsersByRole = async (req, res, next) => {
         role: true,
         accountStatus: true,
         assignedSections: true,
+        studentCode: true,
         createdAt: true
       },
       orderBy: { fullName: 'asc' }
@@ -147,6 +150,8 @@ const createUserByAdmin = async (req, res, next) => {
     if (!email || !password || !fullName || !role) {
       return res.status(400).json({ success: false, message: 'Missing required user fields.' });
     }
+    const passwordError = validatePassword(password);
+    if (passwordError) return res.status(400).json({ success: false, message: passwordError });
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -162,12 +167,16 @@ const createUserByAdmin = async (req, res, next) => {
         phoneNumber: phoneNumber || null,
         role: role.toUpperCase(),
         accountStatus: 'ACTIVE',
+        studentCode: role.toUpperCase() === 'STUDENT'
+          ? crypto.randomBytes(8).toString('hex') : null,
         academyId: req.academyId,
         assignedSections: assignedSections || []
       }
     });
 
-    res.status(201).json({ success: true, message: 'User created successfully.', data: newUser });
+    const safeUser = { ...newUser };
+    delete safeUser.passwordHash;
+    res.status(201).json({ success: true, message: 'User created successfully.', data: safeUser });
   } catch (err) {
     next(err);
   }

@@ -131,6 +131,7 @@ class _SignupScreenState extends State<SignupScreen>
       role: isAdminFlow ? UserRole.admin : _selectedRole,
       academyName: isAdminFlow ? _academyNameCtrl.text : _linkedAcademyName,
       academyId: isAdminFlow ? null : _linkedAcademyId,
+      academyCode: isAdminFlow ? null : _academyCodeCtrl.text.trim(),
       academyAddress: isAdminFlow ? _academyAddressCtrl.text : null,
       academyPhone: isAdminFlow ? _phoneCtrl.text : null,
       securityQuestion: _securityQuestion,
@@ -415,16 +416,47 @@ class _SignupScreenState extends State<SignupScreen>
                       fontSize: 12)),
             ),
         ],
-        LabeledField(
-          label: "Password",
-          hint: "Min 6 chars",
-          controller: _passCtrl,
-          obscure: _obscure,
-          validator: Validators.password,
-          suffix: IconButton(
-              icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off,
-                  color: AppColors.textMuted),
-              onPressed: () => setState(() => _obscure = !_obscure)),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _passCtrl,
+          builder: (context, value, _) {
+            final invalid = Validators.password(value.text) != null;
+            final strong = value.text.length >= 12 &&
+                RegExp(r'[A-Z]').hasMatch(value.text) &&
+                RegExp(r'[a-z]').hasMatch(value.text) &&
+                RegExp(r'[0-9]').hasMatch(value.text) &&
+                RegExp(r'[^A-Za-z0-9]').hasMatch(value.text);
+            final label = invalid ? 'Weak' : (strong ? 'Strong' : 'Fair');
+            final color = invalid
+                ? AppColors.danger
+                : (strong ? AppColors.success : AppColors.warning);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LabeledField(
+                  label: "Password",
+                  hint: "At least 8 characters",
+                  controller: _passCtrl,
+                  obscure: _obscure,
+                  validator: Validators.password,
+                  suffix: IconButton(
+                    icon: Icon(
+                        _obscure ? Icons.visibility : Icons.visibility_off,
+                        color: AppColors.textMuted),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                ),
+                if (value.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 0, bottom: 12),
+                    child: Text('Password strength: $label',
+                        style: TextStyle(
+                            color: color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            );
+          },
         ),
         LabeledField(
             label: "Confirm Password",

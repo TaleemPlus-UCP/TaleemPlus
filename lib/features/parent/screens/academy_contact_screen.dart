@@ -69,9 +69,9 @@ class AcademyContactScreen extends StatelessWidget {
         }
 
         final academy = snapshot.data;
-        final name = academy?.academyName ?? "SRS Tech Matrix";
-        final address = academy?.academyAddress ?? "123 Education Lane, Lahore";
-        final phone = academy?.academyPhone ?? "03014334151";
+        final name = academy?.academyName ?? "Academy profile unavailable";
+        final address = academy?.academyAddress ?? "Address not provided";
+        final phone = academy?.academyPhone ?? "";
 
         return ListView(
           padding: const EdgeInsets.all(24),
@@ -91,7 +91,7 @@ class AcademyContactScreen extends StatelessWidget {
               phone,
               Icons.chat_bubble_rounded,
               AppColors.success,
-              () => _openWhatsApp(context, phone),
+              phone.isEmpty ? null : () => _openWhatsApp(context, phone),
             ),
             const SizedBox(height: 12),
             _contactTile(
@@ -100,7 +100,7 @@ class AcademyContactScreen extends StatelessWidget {
               phone,
               Icons.call_rounded,
               AppColors.accent,
-              () => _callNumber(context, phone),
+              phone.isEmpty ? null : () => _callNumber(context, phone),
             ),
             const SizedBox(height: 32),
             _buildLocationCard(context, address),
@@ -158,7 +158,7 @@ class AcademyContactScreen extends StatelessWidget {
   }
 
   Widget _contactTile(BuildContext context, String title, String val,
-      IconData icon, Color color, VoidCallback onTap) {
+      IconData icon, Color color, VoidCallback? onTap) {
     return Container(
       decoration: BoxDecoration(
         color: context.appColors.surface.withValues(alpha: 0.55),
@@ -174,13 +174,15 @@ class AcademyContactScreen extends StatelessWidget {
                 color: AppColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.bold)),
-        subtitle: Text(val,
+        subtitle: Text(val.isEmpty ? 'Not configured' : val,
             style: TextStyle(
                 color: context.appColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold)),
-        trailing: const Icon(Icons.open_in_new_rounded,
-            size: 18, color: AppColors.textMuted),
+        trailing: onTap == null
+            ? null
+            : const Icon(Icons.open_in_new_rounded,
+                size: 18, color: AppColors.textMuted),
       ),
     );
   }

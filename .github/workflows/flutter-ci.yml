@@ -2,39 +2,81 @@ name: Flutter CI
 
 on:
   push:
-    branches: [ main, master, feature/firebase-to-node-postgresql ]
   pull_request:
-    branches: [ main, master, feature/firebase-to-node-postgresql ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  flutter-test:
+  flutter:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: '17'
+          cache: gradle
 
-      - name: Set up Flutter Stable
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
-          channel: 'stable'
+          channel: stable
           cache: true
 
-      - name: Install Dependencies
+      - name: Configure Firebase options
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+        run: |
+          if [ -z "$FIREBASE_OPTIONS" ]; then
+            echo "::error::Configure the FIREBASE_OPTIONS repository secret before running Flutter CI."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+
+      - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Verify Formatting
-        run: dart format --set-exit-if-changed .
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed .
 
-      - name: Run Flutter Analyze
+      - name: Analyze Flutter project
         run: flutter analyze
 
-      - name: Run Unit Tests
+      - name: Run Flutter tests
         run: flutter test
+
+      - name: Build Web release
+        run: flutter build web --release
+
+      - name: Upload Web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: taleemplus-web-release
+          path: build/web/
+          if-no-files-found: error
+
+      - name: Configure Android Firebase services
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::Configure the GOOGLE_SERVICES_JSON repository secret before building Android."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+
+      - name: Build Android release APK
+        run: flutter build apk --release
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: taleemplus-android-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

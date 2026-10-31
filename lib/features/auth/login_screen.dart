@@ -84,23 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authenticated = await session.authenticateWithBiometrics();
     if (authenticated) {
-      final email = await auth.loadSavedEmail();
-      final password = await session.getSavedPassword();
-
-      if (email != null && password != null) {
-        final ok = await auth.signIn(
-          email: email,
-          password: password,
-          rememberMe: true,
-        );
-        if (mounted && ok && auth.currentUser != null) {
-          Navigator.pushReplacementNamed(
-              context, auth.currentUser!.role.dashboardRoute);
-        } else if (auth.errorMessage != null) {
-          _showError(auth.errorMessage!);
-        }
-      } else {
-        _showError("Credentials not found. Please login with password once.");
+      final user = await auth.tryRestoreSession();
+      if (mounted && user != null) {
+        Navigator.pushReplacementNamed(context, user.role.dashboardRoute);
+      } else if (mounted) {
+        _showError('Your session expired. Sign in with your password.');
       }
     }
   }
@@ -347,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _passwordCtrl,
             obscure: _obscure,
             textInputAction: TextInputAction.done,
-            validator: Validators.password,
+            validator: Validators.passwordForLogin,
             suffix: IconButton(
               icon: Icon(
                 _obscure ? Icons.visibility : Icons.visibility_off,

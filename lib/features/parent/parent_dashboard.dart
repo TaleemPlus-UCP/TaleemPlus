@@ -345,30 +345,55 @@ class ParentDashboard extends StatelessWidget {
   void _showChangePasswordDialog(BuildContext context) {
     final passCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
+    final currentPasswordCtrl = TextEditingController();
+    bool showPassword = false;
+    bool showConfirmation = false;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appColors.surface,
         title: const Text("Change Password"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Enter a new password for your account.",
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-            const SizedBox(height: 20),
-            LabeledField(
-                label: "New Password",
-                hint: "Min 6 chars",
-                controller: passCtrl,
-                obscure: true),
-            LabeledField(
-                label: "Confirm Password",
-                hint: "Re-enter",
-                controller: confirmCtrl,
-                obscure: true),
-          ],
-        ),
+        content: StatefulBuilder(
+            builder: (ctx, setDialogState) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LabeledField(
+                        label: "Current Password",
+                        hint: "Verify your current password",
+                        controller: currentPasswordCtrl,
+                        obscure: true),
+                    const SizedBox(height: 12),
+                    const Text("Enter a new password for your account.",
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 13)),
+                    const SizedBox(height: 20),
+                    LabeledField(
+                        label: "New Password",
+                        hint: "At least 8 characters",
+                        controller: passCtrl,
+                        obscure: !showPassword,
+                        suffix: IconButton(
+                          icon: Icon(showPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setDialogState(
+                              () => showPassword = !showPassword),
+                        )),
+                    LabeledField(
+                        label: "Confirm Password",
+                        hint: "Re-enter",
+                        controller: confirmCtrl,
+                        obscure: !showConfirmation,
+                        suffix: IconButton(
+                          icon: Icon(showConfirmation
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setDialogState(
+                              () => showConfirmation = !showConfirmation),
+                        )),
+                  ],
+                )),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
@@ -379,13 +404,14 @@ class ParentDashboard extends StatelessWidget {
                     const SnackBar(content: Text("Passwords do not match!")));
                 return;
               }
-              if (passCtrl.text.length < 6) {
+              if (passCtrl.text.length < 8) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Minimum 6 characters required!")));
+                    content: Text("Minimum 8 characters required!")));
                 return;
               }
               try {
-                await AuthService().directUpdatePassword(passCtrl.text);
+                await AuthService().directUpdatePassword(passCtrl.text,
+                    currentPassword: currentPasswordCtrl.text);
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                 }

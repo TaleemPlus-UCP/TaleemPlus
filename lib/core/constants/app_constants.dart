@@ -82,7 +82,7 @@ class AppRules {
 
   /// Every institutional account must use this email domain.
   static const String emailDomain = '@taleem.edu.pk';
-  static const int minPasswordLength = 6;
+  static const int minPasswordLength = 8;
 }
 
 /// Preset security-question choices offered at signup, used to self-verify

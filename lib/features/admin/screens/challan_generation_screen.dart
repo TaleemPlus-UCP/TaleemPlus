@@ -308,10 +308,11 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
 
       // Avoid creating a second challan for a student who already has one
       // for this billing month.
-      final monthPrefix = "CH-${_selectedMonth.substring(0, 3).toUpperCase()}";
+      final billingPeriod =
+          DateFormat('yyyy-MM').format(_dueDateForMonth(_selectedMonth));
       final existingChallans = await _repo.getAll(admin.uid);
       final studentsAlreadyBilled = existingChallans
-          .where((c) => c.challanNumber.startsWith(monthPrefix))
+          .where((c) => c.billingPeriod == billingPeriod)
           .map((c) => c.studentId)
           .toSet();
 
@@ -339,6 +340,7 @@ class _ChallanGenerationScreenState extends State<ChallanGenerationScreen> {
           academyId: admin.uid,
           challanNumber:
               "CH-${_selectedMonth.substring(0, 3).toUpperCase()}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
+          billingPeriod: billingPeriod,
           studentId: studentId,
           studentName: student.fullName,
           fatherName: student.academyName ??

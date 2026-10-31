@@ -1,9 +1,79 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
+const { validatePassword } = require('../utils/passwordPolicy');
+const crypto = require('crypto');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'taleemplus_super_secret_jwt_key_2026';
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'taleemplus_refresh_token_secret_2026';
+const makeStudentCode = () => crypto.randomBytes(8).toString('hex');
+
+const verifyPassword = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.user.id, academyId: req.academyId },
+      select: { passwordHash: true },
+    });
+    const valid = Boolean(user && typeof req.body.password === 'string' &&
+      await bcrypt.compare(req.body.password, user.passwordHash));
+    return res.json({ success: true, data: { valid } });
+  } catch (err) { next(err); }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    if (typeof req.body.currentPassword !== 'string' || !req.body.currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password is required.' });
+    }
+    const current = await prisma.user.findFirst({
+      where: { id: req.user.id, academyId: req.academyId },
+      select: { passwordHash: true },
+    });
+    if (!current || !(await bcrypt.compare(req.body.currentPassword, current.passwordHash))) {
+      return res.status(403).json({ success: false, message: 'Current password is incorrect.' });
+    }
+    const passwordError = validatePassword(req.body.newPassword);
+    if (passwordError) return res.status(400).json({ success: false, message: passwordError });
+    if (req.body.currentPassword === req.body.newPassword) {
+      return res.status(400).json({ success: false, message: 'Choose a password different from the current one.' });
+    }
+    const passwordHash = await bcrypt.hash(req.body.newPassword, 12);
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { passwordHash },
+    });
+    res.json({ success: true, message: 'Password updated successfully.' });
+  } catch (err) { next(err); }
+};
+
+const updateAcademyProfile = async (req, res, next) => {
+  try {
+    const fields = [
+      ['name', 'name', 120], ['address', 'address', 240],
+      ['phone', 'phone', 40], ['logo', 'logo', 1000],
+    ];
+    const data = {};
+    for (const [input, column, maxLength] of fields) {
+      if (req.body[input] === undefined) continue;
+      const value = req.body[input];
+      if (value !== null && (typeof value !== 'string' || value.length > maxLength)) {
+        return res.status(400).json({ success: false, message: `Invalid academy ${input}.` });
+      }
+      data[column] = typeof value === 'string' ? value.trim() || null : null;
+    }
+    if (!Object.keys(data).length) return res.status(400).json({ success: false, message: 'No academy profile fields provided.' });
+    const academy = await prisma.academy.update({ where: { id: req.academyId }, data });
+    res.json({ success: true, data: {
+      academyName: academy.name, academyAddress: academy.address,
+      academyPhone: academy.phone, academyLogo: academy.logo,
+    } });
+  } catch (err) { next(err); }
+};
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
+
+if (!JWT_SECRET || !REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and REFRESH_TOKEN_SECRET must be configured.');
+}
 
 const generateTokens = (userId, academyId, role) => {
   const accessToken = jwt.sign({ userId, academyId, role }, JWT_SECRET, { expiresIn: '15m' });
@@ -18,6 +88,8 @@ const registerAdmin = async (req, res, next) => {
     if (!email || !password || !fullName || !academyName) {
       return res.status(400).json({ success: false, message: 'Missing required registration fields.' });
     }
+    const passwordError = validatePassword(password);
+    if (passwordError) return res.status(400).json({ success: false, message: passwordError });
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -71,7 +143,10 @@ const registerAdmin = async (req, res, next) => {
           accountStatus: result.user.accountStatus,
           academyId: result.user.academyId,
           academyCode: result.academy.code,
-          academyName: result.academy.name
+          academyName: result.academy.name,
+          academyAddress: result.academy.address,
+          academyPhone: result.academy.phone,
+          academyLogo: result.academy.logo
         },
         tokens
       }
@@ -88,6 +163,8 @@ const registerUser = async (req, res, next) => {
     if (!email || !password || !fullName || !role || !academyCode) {
       return res.status(400).json({ success: false, message: 'Missing required registration fields.' });
     }
+    const passwordError = validatePassword(password);
+    if (passwordError) return res.status(400).json({ success: false, message: passwordError });
 
     const academy = await prisma.academy.findUnique({ where: { code: academyCode } });
     if (!academy) {
@@ -110,6 +187,7 @@ const registerUser = async (req, res, next) => {
         phoneNumber: phoneNumber || null,
         role: userRole,
         accountStatus: 'PENDING',
+        studentCode: userRole === 'STUDENT' ? makeStudentCode() : null,
         academyId: academy.id
       }
     });
@@ -124,7 +202,12 @@ const registerUser = async (req, res, next) => {
           fullName: user.fullName,
           role: user.role,
           accountStatus: user.accountStatus,
-          academyId: user.academyId
+          academyId: user.academyId,
+          academyName: academy.name,
+          academyAddress: academy.address,
+          academyPhone: academy.phone,
+          academyLogo: academy.logo,
+          studentCode: user.studentCode
         }
       }
     });
@@ -184,7 +267,11 @@ const login = async (req, res, next) => {
           academyId: user.academyId,
           academyCode: user.academy.code,
           academyName: user.academy.name,
-          assignedSections: user.assignedSections
+          academyAddress: user.academy.address,
+          academyPhone: user.academy.phone,
+          academyLogo: user.academy.logo,
+          assignedSections: user.assignedSections,
+          studentCode: user.studentCode
         },
         tokens
       }
@@ -264,8 +351,12 @@ const getMe = async (req, res, next) => {
         accountStatus: user.accountStatus,
         academyId: user.academyId,
         academyName: user.academy.name,
+        academyAddress: user.academy.address,
+        academyPhone: user.academy.phone,
+        academyLogo: user.academy.logo,
         academyCode: user.academy.code,
         assignedSections: user.assignedSections,
+        studentCode: user.studentCode,
         linkedChildren: user.parentLinks.map((link) => ({
           id: link.student.id,
           fullName: link.student.fullName,
@@ -278,4 +369,4 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { registerAdmin, registerUser, login, refreshToken, logout, getMe };
+module.exports = { registerAdmin, registerUser, login, refreshToken, logout, getMe, verifyPassword, changePassword, updateAcademyProfile };

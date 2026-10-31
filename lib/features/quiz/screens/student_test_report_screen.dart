@@ -12,6 +12,7 @@ import '../../../widgets/gradient_background.dart';
 import '../../../widgets/web/web_nav_items.dart';
 import '../../../widgets/web/web_shell.dart';
 import '../../../data/models/test_mark_model.dart';
+import '../../../data/remote/academic_report_pdf_service.dart';
 
 class StudentTestReportScreen extends StatelessWidget {
   final String studentUid;
@@ -119,6 +120,35 @@ class StudentTestReportScreen extends StatelessWidget {
               return Column(
                 children: [
                   _buildSummaryHeader(results),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final student =
+                              context.read<AuthProvider>().currentUser;
+                          if (student == null) return;
+                          try {
+                            await AcademicReportPdfService.results(
+                              student: student,
+                              marks: results,
+                            );
+                          } catch (error) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'Could not create report: $error')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.picture_as_pdf_rounded),
+                        label: const Text('Print result report'),
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),

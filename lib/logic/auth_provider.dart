@@ -26,10 +26,9 @@ class AuthProvider extends ChangeNotifier {
   bool get pendingApproval => _pendingApproval;
 
   Future<AppUser?> tryRestoreSession() async {
-    final fbUser = _authService.firebaseUser;
-    if (fbUser == null) return null;
+    if (!await _authService.hasStoredSession()) return null;
     try {
-      final profile = await _authService.getProfile(fbUser.uid);
+      final profile = await _authService.getCurrentUserProfile();
       if (profile != null && profile.isApproved) {
         _currentUser = profile;
         _status = AuthStatus.authenticated;
@@ -52,6 +51,7 @@ class AuthProvider extends ChangeNotifier {
     required UserRole role,
     String? academyName,
     String? academyId,
+    String? academyCode,
     String? academyAddress,
     String? academyPhone,
     String? securityQuestion,
@@ -67,6 +67,7 @@ class AuthProvider extends ChangeNotifier {
         role: role,
         academyName: academyName,
         academyId: academyId,
+        academyCode: academyCode,
         academyAddress: academyAddress,
         academyPhone: academyPhone,
         securityQuestion: securityQuestion,
@@ -98,8 +99,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading();
     try {
-      _currentUser =
-          await _authService.signIn(email, password);
+      _currentUser = await _authService.signIn(email, password);
       _status = AuthStatus.authenticated;
       await _persistRememberMe(rememberMe, email);
       notifyListeners();

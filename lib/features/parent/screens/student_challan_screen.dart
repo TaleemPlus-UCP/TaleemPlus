@@ -1,8 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/web/web_breakpoints.dart';
@@ -13,6 +14,7 @@ import '../../../data/models/fee_challan_model.dart';
 import '../../../data/repositories/fee_challan_repository.dart';
 import '../../../data/remote/challan_pdf_service.dart';
 import '../../../logic/auth_provider.dart';
+import '../../../data/remote/payment_service.dart';
 
 class StudentChallanScreen extends StatefulWidget {
   final String studentUid;
@@ -27,6 +29,7 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
   bool _loading = true;
   String? _errorMessage;
   FeeChallanModel? _latestChallan;
+  Map<String, dynamic>? _paymentSettings;
   String _selectedMonth = DateFormat('MMMM').format(DateTime.now());
 
   final List<String> _months = [
@@ -64,11 +67,18 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
       // Passing the month and academyId to filter specifically
       final c = await _repo.getLatestForStudent(widget.studentUid, academyId,
-          month: _selectedMonth);
+          month: _selectedBillingPeriod);
+      Map<String, dynamic>? settings;
+      try {
+        settings = await PaymentService().getSettings();
+      } catch (_) {
+        // Keep the challan available if payment settings cannot be fetched.
+      }
 
       if (mounted) {
         setState(() {
           _latestChallan = c;
+          _paymentSettings = settings;
           _loading = false;
         });
       }
@@ -80,6 +90,13 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
         });
       }
     }
+  }
+
+  String get _selectedBillingPeriod {
+    final month = _months.indexOf(_selectedMonth) + 1;
+    var year = DateTime.now().year;
+    if (month < DateTime.now().month) year++;
+    return '$year-${month.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -300,16 +317,11 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
           if (c.fine > 0) _previewRow("Fine", "Rs. ${c.fine}", isDanger: true),
           const SizedBox(height: 24),
           Center(
-            child: QrImageView(
-              data: "Challan:${c.challanNumber}|Student:${c.studentId}",
-              version: QrVersions.auto,
-              size: 100.0,
-              eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square, color: AppColors.textPrimary),
-              dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: AppColors.textPrimary),
-            ),
+            child: Text(
+                'Use challan reference ${c.challanNumber} when contacting the academy.',
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 12)),
           ),
         ],
       ),
@@ -337,7 +349,10 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
   Future<void> _handlePrint(FeeChallanModel c) async {
     try {
-      await ChallanPdfService.generateAndPrint(c);
+      await ChallanPdfService.generateAndPrint(
+        c,
+        academy: context.read<AuthProvider>().currentUser,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -351,7 +366,10 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
 
   Future<void> _handleShare(FeeChallanModel c) async {
     try {
-      await ChallanPdfService.generateAndShare(c);
+      await ChallanPdfService.generateAndShare(
+        c,
+        academy: context.read<AuthProvider>().currentUser,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -418,49 +436,110 @@ class _StudentChallanScreenState extends State<StudentChallanScreen> {
   }
 
   void _showPaymentInstructions(FeeChallanModel c) {
+    final academy = context.read<AuthProvider>().currentUser;
     showModalBottomSheet(
       context: context,
       backgroundColor: context.appColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      isScrollControlled: true,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text("Payment Instructions",
-                style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            _instructionRow(Icons.account_balance_rounded, "Account Title",
-                "Academy Management"),
-            _instructionRow(
-                Icons.numbers_rounded, "Account Number", "03014334151"),
-            const SizedBox(height: 24),
-            const Text("Future Support:",
-                style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Opacity(
-                    opacity: 0.5,
-                    child: Text("JazzCash",
-                        style: TextStyle(color: AppColors.textMuted))),
-                Opacity(
-                    opacity: 0.5,
-                    child: Text("EasyPaisa",
-                        style: TextStyle(color: AppColors.textMuted))),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
+        padding: EdgeInsets.fromLTRB(
+            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text("Payment Instructions",
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              _instructionRow(
+                  Icons.school_rounded,
+                  "Academy",
+                  (_paymentSettings?['academyName'] ??
+                          academy?.academyName ??
+                          'TaleemPlus Academy')
+                      .toString()),
+              if (_paymentSettings?['enabled'] == true) ...[
+                if ((_paymentSettings?['provider'] ?? '').toString().isNotEmpty)
+                  _instructionRow(Icons.account_balance_wallet_rounded,
+                      'Provider', _paymentSettings!['provider'].toString()),
+                if ((_paymentSettings?['accountTitle'] ?? '')
+                    .toString()
+                    .isNotEmpty)
+                  _instructionRow(Icons.person_outline_rounded, 'Account title',
+                      _paymentSettings!['accountTitle'].toString()),
+                if ((_paymentSettings?['accountDetails'] ?? '')
+                    .toString()
+                    .isNotEmpty)
+                  _instructionRow(Icons.numbers_rounded, 'Account details',
+                      _paymentSettings!['accountDetails'].toString()),
+                if ((_paymentSettings?['qrImageBase64'] ?? '')
+                    .toString()
+                    .isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Image.memory(
+                      base64Decode(
+                          _paymentSettings!['qrImageBase64'] as String),
+                      height: 190,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                const Text(
+                    'Include the challan reference in your transfer details. Payment is recorded only after academy verification.',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: c.isPaid
+                      ? null
+                      : () async {
+                          final image = await ImagePicker().pickImage(
+                              source: ImageSource.gallery,
+                              imageQuality: 80,
+                              maxWidth: 1400,
+                              maxHeight: 1400);
+                          if (image == null) return;
+                          try {
+                            await PaymentService().submitProof(c.id, image);
+                            if (!ctx.mounted || !mounted) return;
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Payment proof submitted for academy review.')));
+                          } catch (error) {
+                            if (!ctx.mounted || !mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content:
+                                    Text('Could not submit proof: $error')));
+                          }
+                        },
+                  icon: const Icon(Icons.upload_file_rounded),
+                  label: const Text('Submit payment proof'),
+                ),
+              ] else
+                const Text(
+                    'Payment instructions are not configured for this academy. Contact the academy administrator before sending money.',
+                    style: TextStyle(
+                        color: AppColors.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              if ((academy?.academyPhone ?? '').isNotEmpty)
+                _instructionRow(
+                    Icons.phone_rounded, "Contact", academy!.academyPhone!),
+              _instructionRow(Icons.receipt_long_rounded, "Challan reference",
+                  c.challanNumber),
+              _instructionRow(Icons.payments_rounded, "Amount due",
+                  "Rs. ${c.totalAmount.toStringAsFixed(2)}"),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

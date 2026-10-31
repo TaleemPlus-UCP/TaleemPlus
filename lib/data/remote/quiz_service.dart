@@ -17,21 +17,26 @@ class QuizService {
     });
   }
 
-  Future<void> updateQuestions(String quizId, List<QuizQuestion> questions) async {
+  Future<void> updateQuestions(
+      String quizId, List<QuizQuestion> questions) async {
     // handled via quiz update
   }
 
-  Stream<List<QuizModel>> watchQuizzesByClass(String classId, String academyId) async* {
+  Stream<List<QuizModel>> watchQuizzesByClass(
+      String classId, String academyId) async* {
     try {
       final res = await _api.get('/quizzes?classId=$classId');
       final list = res as List;
-      yield list.map((item) => QuizModel.fromMap(item['id'] ?? '', item)).toList();
+      yield list
+          .map((item) => QuizModel.fromMap(item['id'] ?? '', item))
+          .toList();
     } catch (_) {
       yield [];
     }
   }
 
-  Stream<List<QuizModel>> watchQuizzesForClasses(List<String> classIds, String academyId) async* {
+  Stream<List<QuizModel>> watchQuizzesForClasses(
+      List<String> classIds, String academyId) async* {
     try {
       final res = await _api.get('/quizzes');
       final list = res as List;
@@ -57,11 +62,14 @@ class QuizService {
     });
   }
 
-  Stream<List<TestMarkModel>> watchStudentMarks(String studentId, String academyId) async* {
+  Stream<List<TestMarkModel>> watchStudentMarks(
+      String studentId, String academyId) async* {
     try {
       final res = await _api.get('/quizzes/marks/student/$studentId');
       final list = res as List;
-      yield list.map((item) => TestMarkModel.fromMap(item['id'] ?? '', item)).toList();
+      yield list
+          .map((item) => TestMarkModel.fromMap(item['id'] ?? '', item))
+          .toList();
     } catch (_) {
       yield [];
     }
@@ -81,11 +89,13 @@ class QuizService {
     // delete mark stub
   }
 
-  Stream<List<TestMarkModel>> watchMarksByQuiz(String quizId, String academyId) async* {
+  Stream<List<TestMarkModel>> watchMarksByQuiz(
+      String quizId, String academyId) async* {
     yield [];
   }
 
-  Stream<List<TestMarkModel>> watchClassMarks(String classId, String academyId) async* {
+  Stream<List<TestMarkModel>> watchClassMarks(
+      String classId, String academyId) async* {
     yield [];
   }
 }

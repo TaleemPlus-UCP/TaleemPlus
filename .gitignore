@@ -1,25 +1,26 @@
+# Secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Node
+node_modules/
+**/node_modules/
+
+# Flutter
 .dart_tool/
-.packages
 build/
+**/build/
 .flutter-plugins
 .flutter-plugins-dependencies
-pubspec.lock
-*.iml
 .idea/
-.vscode/
+*.iml
+.pub-cache/
+.pub/
 
-# Firebase secrets — do NOT commit
-lib/firebase_options.dart
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-ml_training/service_account.json
-
-# Release signing secrets — do NOT commit
-android/key.properties
-android/app/*.jks
-android/app/*.keystore
-
-# Local tool/debug output — do NOT commit
-devtools_options.yaml
-firebase-debug.log
-coverage/
+# Android keys
+*.jks
+*.keystore
+key.properties
+local.properties

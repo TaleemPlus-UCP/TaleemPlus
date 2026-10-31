@@ -27,9 +27,10 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user =
           Provider.of<AuthProvider>(context, listen: false).currentUser;
-      if (user != null) {
-        context.read<MemberProvider>().load(user.uid);
-        context.read<AdminAiProvider>().runAcademyAnalysis(user.uid);
+      if (user?.academyId != null) {
+        final academyId = user!.academyId!;
+        context.read<MemberProvider>().load(academyId);
+        context.read<AdminAiProvider>().runAcademyAnalysis(academyId);
       }
     });
   }
@@ -145,7 +146,7 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              "OFFLINE INTELLIGENCE ACTIVE",
+              "ACADEMY INSIGHTS",
               style: TextStyle(
                   color: AppColors.accent,
                   fontWeight: FontWeight.w800,
@@ -162,7 +163,7 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
   Widget _buildRiskPrediction(AdminAiProvider ai) {
     final bool hasRisk = ai.atRiskCount > 0;
     return _predictionCard(
-      title: "Student Success Risk",
+      title: "Rule-Based Student Success Screening",
       prediction: hasRisk
           ? "${ai.atRiskCount} Students at Risk"
           : "All Students Performing Well",
@@ -207,50 +208,20 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
   }
 
   Widget _buildFeeDelayRiskPrediction(AdminAiProvider ai) {
-    final bool hasRisk = ai.feeRiskCount > 0;
+    final status = ai.feeModel['status']?.toString() ?? 'NOT_READY';
+    final records = ai.feeModel['usable_records'];
+    final metadata = ai.feeModel['metadata'] as Map?;
+    final validation = metadata?['metrics']?['metrics'];
     return _predictionCard(
-      title: "Fee Payment Risk (ML Model)",
-      prediction: hasRisk
-          ? "${ai.feeRiskCount} Students Likely to Pay Late"
-          : "No High-Risk Payers Detected",
-      insight: hasRisk
-          ? "Trained on attendance and payment history: ${ai.feeRiskStudentNames.join(', ')}."
-          : "Attendance and past payment history don't indicate any students likely to delay this month.",
+      title: "Fee Payment Risk Model",
+      prediction: status,
+      insight: status == 'PRODUCTION'
+          ? "${ai.feePrediction == null ? 'Live scoring is unavailable.' : 'Scored ${ai.feePrediction?['scored'] ?? 0} students; risk counts: ${ai.feePrediction?['risk_counts'] ?? {}}; average risk ${ai.feePrediction?['average_probability'] ?? 'n/a'}. Probabilities are not calibrated.'} Version ${ai.feeModel['version'] ?? ''}; records: ${metadata?['records'] ?? 'unknown'}; validation ROC-AUC ${validation?['roc_auc'] ?? 'n/a'}, precision ${validation?['precision'] ?? 'n/a'}, recall ${validation?['recall'] ?? 'n/a'}, F1 ${validation?['f1'] ?? 'n/a'}; trained ${metadata?['trained_at'] ?? 'date unavailable'}.${ai.feeModel['last_training_error'] == null ? '' : ' Last training error: ${ai.feeModel['last_training_error']}'}"
+          : "${records == null ? ai.feeModel['reason'] ?? 'ML service unavailable or not configured.' : '$records usable labelled records are available.'} Predictions stay disabled until a validated model is promoted.",
       icon: Icons.warning_amber_rounded,
-      color: hasRisk ? AppColors.danger : AppColors.success,
-      actionLabel: "VIEW DETAILS",
-      onAction: () => _showFeeRiskDialog(context, ai),
-    );
-  }
-
-  void _showFeeRiskDialog(BuildContext context, AdminAiProvider ai) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text("Fee Payment Risk",
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: ai.feeRiskCount > 0
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: ai.feeRiskStudentNames
-                    .map((name) => ListTile(
-                          leading:
-                              const Icon(Icons.person, color: AppColors.danger),
-                          title: Text(name,
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary)),
-                        ))
-                    .toList(),
-              )
-            : const Text(
-                "No students are currently flagged as high risk for late fee payment.",
-                style: TextStyle(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
-        ],
-      ),
+      color: status == 'PRODUCTION' ? AppColors.success : AppColors.warning,
+      actionLabel: ai.training ? "TRAINING" : "TRAIN / RETRAIN",
+      onAction: ai.training ? () {} : ai.trainModels,
     );
   }
 
@@ -260,10 +231,10 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
         pending * 0.85; // Heuristic: 85% usually pay on time
 
     return _predictionCard(
-      title: "Revenue Forecast",
+      title: "Revenue Estimate (Heuristic)",
       prediction: "Predicted Rs. ${predicted.toStringAsFixed(0)}",
       insight:
-          "Expected collection for this month based on Rs. ${pending.toStringAsFixed(0)} total pending fees.",
+          "Uses a fixed 85% collection assumption on Rs. ${pending.toStringAsFixed(0)} pending fees; this is not an ML prediction.",
       icon: Icons.payments_rounded,
       color: AppColors.success,
       actionLabel: "LEDGER",
@@ -273,50 +244,20 @@ class _AdminAiPredictionScreenState extends State<AdminAiPredictionScreen> {
   }
 
   Widget _buildPerformanceForecast(AdminAiProvider ai) {
-    final bool hasUnderperformers = ai.underperformingStudentNames.isNotEmpty;
+    final status = ai.performanceModel['status']?.toString() ?? 'NOT_READY';
+    final records = ai.performanceModel['usable_records'];
+    final metadata = ai.performanceModel['metadata'] as Map?;
+    final validation = metadata?['metrics']?['metrics'];
     return _predictionCard(
-      title: "Performance Forecast (ML Model)",
-      prediction:
-          "Predicted Index: ${ai.predictedAvgPerformanceIndex.toStringAsFixed(1)}",
-      insight: hasUnderperformers
-          ? "Trained on quiz scores, attendance and payment history — likely to underperform: ${ai.underperformingStudentNames.join(', ')}."
-          : "Trained on quiz scores, attendance and payment history. No students are forecast to fall below the performance threshold.",
+      title: "Academic Performance Model",
+      prediction: status,
+      insight: status == 'PRODUCTION'
+          ? "${ai.performancePrediction == null ? 'Live scoring is unavailable.' : 'Scored ${ai.performancePrediction?['scored'] ?? 0} subject groups; predicted average marks ${ai.performancePrediction?['average_predicted_marks'] ?? 'n/a'}. '}Version ${ai.performanceModel['version'] ?? ''}; records: ${metadata?['records'] ?? 'unknown'}; validation MAE ${validation?['mae'] ?? 'n/a'}, RMSE ${validation?['rmse'] ?? 'n/a'}, R² ${validation?['r2'] ?? 'n/a'}; trained ${metadata?['trained_at'] ?? 'date unavailable'}.${ai.performanceModel['last_training_error'] == null ? '' : ' Last training error: ${ai.performanceModel['last_training_error']}'}"
+          : "${records == null ? ai.performanceModel['reason'] ?? 'ML service unavailable or not configured.' : '$records dated assessment records are usable.'} No forecast is shown until a validated model is promoted.",
       icon: Icons.trending_up_rounded,
-      color: hasUnderperformers ? AppColors.warning : AppColors.success,
-      actionLabel: "VIEW DETAILS",
-      onAction: () => _showPerformanceForecastDialog(context, ai),
-    );
-  }
-
-  void _showPerformanceForecastDialog(
-      BuildContext context, AdminAiProvider ai) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text("Forecast Underperformers",
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: ai.underperformingStudentNames.isNotEmpty
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: ai.underperformingStudentNames
-                    .map((name) => ListTile(
-                          leading: const Icon(Icons.person,
-                              color: AppColors.warning),
-                          title: Text(name,
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary)),
-                        ))
-                    .toList(),
-              )
-            : const Text(
-                "No students are forecast to fall below the performance threshold.",
-                style: TextStyle(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE")),
-        ],
-      ),
+      color: status == 'PRODUCTION' ? AppColors.success : AppColors.warning,
+      actionLabel: ai.training ? "TRAINING" : "TRAIN / RETRAIN",
+      onAction: ai.training ? () {} : ai.trainModels,
     );
   }
 

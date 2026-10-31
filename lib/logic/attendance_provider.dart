@@ -28,6 +28,7 @@ class AttendanceProvider extends ChangeNotifier {
   int get presentCount => _statuses.values.where((s) => s == 'present').length;
   int get absentCount => _statuses.values.where((s) => s == 'absent').length;
   int get lateCount => _statuses.values.where((s) => s == 'late').length;
+  int get leaveCount => _statuses.values.where((s) => s == 'leave').length;
 
   void setStatus(String studentId, String status) {
     _statuses[studentId] = status;

@@ -1,17 +1,4 @@
-# TaleemPlus Production Deployment Guide
-
-This guide outlines the production deployment strategy for the TaleemPlus Node.js Express backend and PostgreSQL database.
-
----
-
-## 1. Prerequisites
-* Node.js LTS (v18 or v20+)
-* PostgreSQL 14+ database instance
-* Reverse proxy (Nginx / Caddy) with SSL certificate (HTTPS required)
-
----
-
-## 2. Environment Configuration
+iguration
 Create a production `.env` file inside `taleemplus_backend/`:
 ```env
 PORT=5000

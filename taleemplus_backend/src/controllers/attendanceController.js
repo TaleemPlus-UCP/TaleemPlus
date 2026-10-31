@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { canReadStudent } = require('../utils/studentAccess');
 
 const markAttendance = async (req, res, next) => {
   try {
@@ -58,6 +59,9 @@ const markAttendance = async (req, res, next) => {
 const getStudentAttendance = async (req, res, next) => {
   try {
     const { studentId } = req.params;
+    if (!(await canReadStudent(req, studentId))) {
+      return res.status(403).json({ success: false, message: 'You cannot access this student’s attendance.' });
+    }
 
     const records = await prisma.attendanceRecord.findMany({
       where: {

@@ -1,4 +1,79 @@
 const prisma = require('../config/db');
+const crypto = require('crypto');
+const { canReadStudent } = require('../utils/studentAccess');
+
+const createStudentChallan = async (req, res, next) => {
+  try {
+    const { studentId, classLabel, rollNumber, dueDate } = req.body;
+    const student = await prisma.user.findFirst({
+      where: { id: studentId, academyId: req.academyId, role: 'STUDENT' },
+      select: { id: true, fullName: true, studentCode: true }
+    });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found in this academy.' });
+    const parsedDueDate = new Date(dueDate);
+    if (!dueDate || Number.isNaN(parsedDueDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'A valid dueDate is required.' });
+    }
+    const billingPeriod = req.body.billingPeriod || `${parsedDueDate.getUTCFullYear()}-${String(parsedDueDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(billingPeriod)) {
+      return res.status(400).json({ success: false, message: 'billingPeriod must use YYYY-MM format.' });
+    }
+    const existing = await prisma.feeChallan.findFirst({
+      where: { academyId: req.academyId, studentId: student.id, billingPeriod },
+      select: { id: true },
+    });
+    if (existing) return res.status(409).json({ success: false, message: 'A challan already exists for this student and billing period.' });
+    const amounts = ['monthlyFee', 'admissionFee', 'examFee', 'transportFee', 'fine'];
+    const values = {};
+    for (const field of amounts) {
+      const value = Number(req.body[field] || 0);
+      if (!Number.isFinite(value) || value < 0) {
+        return res.status(400).json({ success: false, message: `Invalid ${field}.` });
+      }
+      values[field] = value;
+    }
+    const challan = await prisma.feeChallan.create({
+      data: {
+        academyId: req.academyId,
+        challanNumber: `CH-${crypto.randomBytes(6).toString('hex').toUpperCase()}`,
+        studentId: student.id,
+        studentName: student.fullName,
+        classLabel: String(classLabel || '—').slice(0, 120),
+        rollNumber: rollNumber ? String(rollNumber).slice(0, 40) : null,
+        dueDate: parsedDueDate,
+        billingPeriod,
+        ...values,
+        totalAmount: Object.values(values).reduce((sum, amount) => sum + amount, 0),
+      },
+      include: { student: { select: { studentCode: true } } }
+    });
+    res.status(201).json({ success: true, data: { ...challan, student_code: challan.student.studentCode } });
+  } catch (err) {
+    if (err.code === 'P2002') return res.status(409).json({ success: false, message: 'A challan already exists for this student and billing period.' });
+    next(err);
+  }
+};
+
+const getAllChallans = async (req, res, next) => {
+  try {
+    const rows = await prisma.feeChallan.findMany({
+      where: { academyId: req.academyId },
+      include: { student: { select: { studentCode: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: rows.map((c) => ({
+      id: c.id, academy_id: c.academyId, challan_number: c.challanNumber,
+      student_id: c.studentId, student_code: c.student.studentCode || c.studentId,
+      student_name: c.studentName, father_name: c.fatherName || '',
+      billing_period: c.billingPeriod,
+      class_label: c.classLabel, roll_number: c.rollNumber || '',
+      issue_date: c.issueDate, due_date: c.dueDate,
+      monthly_fee: Number(c.monthlyFee), admission_fee: Number(c.admissionFee),
+      exam_fee: Number(c.examFee), transport_fee: Number(c.transportFee), fine: Number(c.fine),
+      total_amount: Number(c.totalAmount), status: c.status.toLowerCase(), created_at: c.createdAt,
+    })) });
+  } catch (err) { next(err); }
+};
 
 const generateChallans = async (req, res, next) => {
   try {
@@ -63,12 +138,16 @@ const generateChallans = async (req, res, next) => {
 const getStudentChallans = async (req, res, next) => {
   try {
     const { studentId } = req.params;
+    if (!(await canReadStudent(req, studentId))) {
+      return res.status(403).json({ success: false, message: 'You cannot access this student’s fee records.' });
+    }
 
     const challans = await prisma.feeChallan.findMany({
       where: {
         academyId: req.academyId,
         studentId
       },
+      include: { student: { select: { studentCode: true } } },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -77,6 +156,8 @@ const getStudentChallans = async (req, res, next) => {
       academy_id: c.academyId,
       challan_number: c.challanNumber,
       student_id: c.studentId,
+      student_code: c.student.studentCode || c.studentId,
+      billing_period: c.billingPeriod,
       student_name: c.studentName,
       father_name: c.fatherName || '',
       class_label: c.classLabel,
@@ -113,7 +194,7 @@ const markChallanPaid = async (req, res, next) => {
 
     const updated = await prisma.feeChallan.update({
       where: { id },
-      data: { status: 'PAID' }
+      data: { status: 'PAID', paidAt: existing.paidAt || new Date() }
     });
 
     res.json({ success: true, message: 'Fee challan marked as PAID.', data: updated });
@@ -166,4 +247,4 @@ const getFeeLedgerStats = async (req, res, next) => {
   }
 };
 
-module.exports = { generateChallans, getStudentChallans, markChallanPaid, getFeeLedgerStats };
+module.exports = { generateChallans, createStudentChallan, getAllChallans, getStudentChallans, markChallanPaid, getFeeLedgerStats };
